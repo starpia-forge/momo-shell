@@ -2,11 +2,14 @@ import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMo
 import { useTabStore, type Tab } from '../model/store'
 import { useSessionStore } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
-import { closeTab } from '../lib/closeTab'
 import { createLocalTab, createSSHTab } from '../lib/createTab'
 import './TabBar.css'
 
-export function TabBar() {
+interface TabBarProps {
+  onCloseTab: (tab: Tab) => void
+}
+
+export function TabBar({ onCloseTab }: TabBarProps) {
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
   const setActive = useTabStore((s) => s.setActive)
@@ -37,7 +40,7 @@ export function TabBar() {
   function handleMiddleClick(e: ReactMouseEvent, tab: Tab) {
     if (e.button === 1) {
       e.preventDefault()
-      closeTab(tab)
+      onCloseTab(tab)
     }
   }
 
@@ -66,7 +69,7 @@ export function TabBar() {
                 className="tab-bar__close"
                 onClick={(e) => {
                   e.stopPropagation()
-                  closeTab(tab)
+                  onCloseTab(tab)
                 }}
                 aria-label={`${tab.title} 닫기`}
               >

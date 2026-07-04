@@ -12,4 +12,5 @@ export {
 export { useSessionStore } from './model/store'
 export type { SessionMeta, SessionState, SessionKind } from './model/store'
 export { useHostKeyPromptStore } from './model/hostKeyPrompts'
+export { confirmSessionClose } from './lib/confirmClose'
 export { TerminalPane } from './ui/TerminalPane'
