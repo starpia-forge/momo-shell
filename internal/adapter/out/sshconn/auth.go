@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"momo-terminal/internal/core/domain"
+	"momo-shell/internal/core/domain"
 )
 
 var errAgentUnavailable = errors.New("sshconn: ssh-agent is not running or unreachable")

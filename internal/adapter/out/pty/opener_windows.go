@@ -11,7 +11,7 @@ import (
 	"github.com/UserExistsError/conpty"
 	"golang.org/x/sys/windows"
 
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/port/out"
 )
 
 // ErrConPtyUnsupported is returned when the OS doesn't support ConPTY

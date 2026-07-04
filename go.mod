@@ -1,4 +1,4 @@
-module momo-terminal
+module momo-shell
 
 go 1.25.0
 

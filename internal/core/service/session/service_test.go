@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"momo-terminal/internal/core/port/in"
+	"momo-shell/internal/core/port/in"
 )
 
 func waitFor(t *testing.T, timeout time.Duration, cond func() bool) {

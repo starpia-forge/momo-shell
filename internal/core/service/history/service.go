@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/in"
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/in"
+	"momo-shell/internal/core/port/out"
 )
 
 // commitQueueSize bounds how many committed lines can be queued for

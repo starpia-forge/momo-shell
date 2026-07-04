@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"momo-terminal/internal/core/domain"
+	"momo-shell/internal/core/domain"
 )
 
 func newTestDB(t *testing.T) *HostRepo {

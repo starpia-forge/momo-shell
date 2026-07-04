@@ -10,10 +10,10 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/port/out"
 )
 
-const serviceName = "momo-terminal"
+const serviceName = "momo-shell"
 
 // ErrSecretNotFound is returned by Get for an unknown ref.
 var ErrSecretNotFound = errors.New("keychain: secret not found")

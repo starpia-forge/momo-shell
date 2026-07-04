@@ -3,8 +3,8 @@ package wails
 import (
 	"encoding/base64"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/in"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/in"
 )
 
 // LocalSessionOpts is the JSON-facing request DTO for CreateLocalSession.

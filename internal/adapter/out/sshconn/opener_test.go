@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"momo-terminal/internal/core/domain"
+	"momo-shell/internal/core/domain"
 )
 
 func passwordServerConfig(want string) *ssh.ServerConfig {

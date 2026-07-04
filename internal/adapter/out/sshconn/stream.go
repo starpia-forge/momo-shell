@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/port/out"
 )
 
 // sshStream implements out.TerminalStream over an SSH session with an

@@ -9,15 +9,15 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
-	wailsfacade "momo-terminal/internal/adapter/in/wails"
-	"momo-terminal/internal/adapter/out/keychain"
-	"momo-terminal/internal/adapter/out/pty"
-	"momo-terminal/internal/adapter/out/sqlite"
-	"momo-terminal/internal/adapter/out/sshconn"
-	"momo-terminal/internal/adapter/out/wailsevent"
-	"momo-terminal/internal/core/service/history"
-	"momo-terminal/internal/core/service/host"
-	"momo-terminal/internal/core/service/session"
+	wailsfacade "momo-shell/internal/adapter/in/wails"
+	"momo-shell/internal/adapter/out/keychain"
+	"momo-shell/internal/adapter/out/pty"
+	"momo-shell/internal/adapter/out/sqlite"
+	"momo-shell/internal/adapter/out/sshconn"
+	"momo-shell/internal/adapter/out/wailsevent"
+	"momo-shell/internal/core/service/history"
+	"momo-shell/internal/core/service/host"
+	"momo-shell/internal/core/service/session"
 )
 
 //go:embed all:frontend/dist
@@ -67,7 +67,7 @@ func main() {
 	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
 
 	err = wailsapp.Run(&options.App{
-		Title:     "momo-terminal",
+		Title:     "momo-shell",
 		Width:     1024,
 		Height:    768,
 		MinWidth:  640,

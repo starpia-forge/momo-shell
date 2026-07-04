@@ -7,8 +7,8 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/in"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/in"
 )
 
 // HostDTO is the JSON-facing response DTO for a saved host. Secret material

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/port/out"
 )
 
 // KnownHostsRepo implements out.KnownHostsRepository on top of the

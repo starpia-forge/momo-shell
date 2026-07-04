@@ -12,7 +12,7 @@ import (
 
 	"github.com/creack/pty"
 
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/port/out"
 )
 
 // Opener implements out.LocalTerminalOpener for Unix-like systems via creack/pty.

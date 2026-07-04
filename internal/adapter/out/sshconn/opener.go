@@ -13,8 +13,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
 )
 
 const dialTimeout = 10 * time.Second

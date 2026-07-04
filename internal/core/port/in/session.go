@@ -1,6 +1,6 @@
 package in
 
-import "momo-terminal/internal/core/domain"
+import "momo-shell/internal/core/domain"
 
 // LocalOpts configures a new local shell session. Shell == "" means auto-detect.
 type LocalOpts struct {

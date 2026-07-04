@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/in"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/in"
 )
 
 func testSSHHost() domain.Host {

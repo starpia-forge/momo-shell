@@ -27,7 +27,7 @@ func newFileStore() (*fileStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("keychain: resolve config dir: %w", err)
 	}
-	appDir := filepath.Join(dir, "momo-terminal")
+	appDir := filepath.Join(dir, "momo-shell")
 	if err := os.MkdirAll(appDir, 0o700); err != nil {
 		return nil, fmt.Errorf("keychain: create app dir: %w", err)
 	}

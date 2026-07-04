@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"momo-terminal/internal/core/domain"
+	"momo-shell/internal/core/domain"
 )
 
 func newTestHistoryRepo(t *testing.T) *HistoryRepo {

@@ -1,6 +1,6 @@
 package out
 
-import "momo-terminal/internal/core/domain"
+import "momo-shell/internal/core/domain"
 
 // HostRepository persists Host records. Secret material is never passed
 // through this port -- see SecretStore.

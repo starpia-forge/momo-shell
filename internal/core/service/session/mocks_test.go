@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
 )
 
 var errBoom = errors.New("boom")

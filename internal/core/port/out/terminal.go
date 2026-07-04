@@ -3,7 +3,7 @@ package out
 import (
 	"io"
 
-	"momo-terminal/internal/core/domain"
+	"momo-shell/internal/core/domain"
 )
 
 // TerminalStream is the driven port implemented by any terminal transport

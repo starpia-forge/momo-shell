@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"momo-terminal/internal/core/domain"
+	"momo-shell/internal/core/domain"
 )
 
 var errFakeNotFound = errors.New("fake: not found")

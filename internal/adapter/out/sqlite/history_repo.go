@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
 )
 
 // ErrHistoryEntryNotFound is returned by TouchLast/Delete for an unknown ID.

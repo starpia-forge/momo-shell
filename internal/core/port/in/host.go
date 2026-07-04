@@ -1,6 +1,6 @@
 package in
 
-import "momo-terminal/internal/core/domain"
+import "momo-shell/internal/core/domain"
 
 // HostInput carries every Host field except secret material (password/key
 // passphrase), which flows only through SetHostSecret so it never appears

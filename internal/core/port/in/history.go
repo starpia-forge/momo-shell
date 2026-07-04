@@ -1,6 +1,6 @@
 package in
 
-import "momo-terminal/internal/core/domain"
+import "momo-shell/internal/core/domain"
 
 // HistoryUseCase is the driving port for browsing and managing captured
 // command history. Capture itself isn't part of this interface -- it's

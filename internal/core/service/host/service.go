@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/in"
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/in"
+	"momo-shell/internal/core/port/out"
 )
 
 // Service implements in.HostUseCase, delegating storage to out.HostRepository

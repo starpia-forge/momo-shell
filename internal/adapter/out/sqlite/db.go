@@ -19,7 +19,7 @@ func DefaultPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("sqlite: resolve config dir: %w", err)
 	}
-	appDir := filepath.Join(dir, "momo-terminal")
+	appDir := filepath.Join(dir, "momo-shell")
 	if err := os.MkdirAll(appDir, 0o700); err != nil {
 		return "", fmt.Errorf("sqlite: create app dir: %w", err)
 	}

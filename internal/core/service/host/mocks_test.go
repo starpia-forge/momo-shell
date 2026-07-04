@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"momo-terminal/internal/core/domain"
-	"momo-terminal/internal/core/port/out"
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
 )
 
 var errNotFound = errors.New("host: not found")
