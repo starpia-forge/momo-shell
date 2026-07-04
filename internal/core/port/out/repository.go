@@ -20,3 +20,20 @@ type KnownHostsRepository interface {
 	Put(address string, port int, algo string, fingerprint string) error
 	Delete(address string, port int, algo string) error
 }
+
+// HistoryRepository persists captured command-history entries.
+type HistoryRepository interface {
+	// Append inserts a new entry and returns it with its assigned ID.
+	Append(hostID *string, command string, executedAt int64) (domain.HistoryEntry, error)
+	// TouchLast bumps an existing entry's executedAt, used to update a
+	// consecutive-duplicate command in place instead of inserting a new row.
+	TouchLast(id int64, executedAt int64) error
+	// LastForHost returns the most recent entry for hostID (nil = local),
+	// used to detect consecutive-duplicate commands.
+	LastForHost(hostID *string) (entry domain.HistoryEntry, found bool, err error)
+	List(q domain.HistoryQuery) ([]domain.HistoryEntry, error)
+	Delete(id int64) error
+	// Clear deletes entries for hostID, or every entry (local and every
+	// host) when hostID is nil.
+	Clear(hostID *string) error
+}
