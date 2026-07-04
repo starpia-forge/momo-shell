@@ -1,22 +1,31 @@
 package main
 
 import (
+	"context"
 	"embed"
 
-	"github.com/wailsapp/wails/v2"
+	wailsapp "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+
+	sessionfacade "momo-terminal/internal/adapter/in/wails"
+	"momo-terminal/internal/adapter/out/pty"
+	"momo-terminal/internal/adapter/out/wailsevent"
+	"momo-terminal/internal/core/service/session"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	// Create an instance of the app structure
-	app := NewApp()
+	// Composition root: wire ports to adapters. Nothing above this function
+	// (internal/core/...) knows about Wails or any concrete adapter.
+	publisher := wailsevent.New()
+	opener := pty.NewOpener()
+	sessionSvc := session.New(opener, publisher)
+	sessionService := sessionfacade.NewSessionService(sessionSvc)
 
-	// Create application with options
-	err := wails.Run(&options.App{
+	err := wailsapp.Run(&options.App{
 		Title:  "momo-terminal",
 		Width:  1024,
 		Height: 768,
@@ -24,9 +33,14 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
+		OnStartup: func(ctx context.Context) {
+			publisher.SetContext(ctx)
+		},
+		OnShutdown: func(ctx context.Context) {
+			sessionSvc.CloseAll()
+		},
 		Bind: []interface{}{
-			app,
+			sessionService,
 		},
 	})
 
