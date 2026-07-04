@@ -33,6 +33,8 @@ type Deps struct {
 	Secrets     out.SecretStore
 	KnownHosts  out.KnownHostsRepository
 	Publisher   out.EventPublisher
+	// Tap observes input/output for command-history capture. Nil disables it.
+	Tap CommandTap
 }
 
 // Service implements in.SessionUseCase. It owns session lifecycle and
@@ -48,6 +50,7 @@ type Service struct {
 	secrets     out.SecretStore
 	knownHosts  out.KnownHostsRepository
 	pub         out.EventPublisher
+	tap         CommandTap
 	wg          sync.WaitGroup
 }
 
@@ -92,6 +95,7 @@ func New(deps Deps) *Service {
 		secrets:     deps.Secrets,
 		knownHosts:  deps.KnownHosts,
 		pub:         deps.Publisher,
+		tap:         deps.Tap,
 	}
 }
 
@@ -115,6 +119,10 @@ func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
 	s.sessions[id] = live
 	s.mu.Unlock()
 
+	if s.tap != nil {
+		s.tap.Attach(id, "")
+	}
+
 	s.wg.Add(2)
 	go s.readLoop(live)
 	go s.pump(id, live)
@@ -134,6 +142,9 @@ func (s *Service) Write(id string, data []byte) error {
 		return ErrSessionConnecting
 	}
 	_, err := stream.Write(data)
+	if err == nil && s.tap != nil {
+		s.tap.OnInput(id, data)
+	}
 	return err
 }
 

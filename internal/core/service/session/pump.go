@@ -59,6 +59,9 @@ func (s *Service) pump(id string, live *liveSession) {
 		if r := recover(); r != nil {
 			_ = live.getStream().Close()
 			s.remove(id)
+			if s.tap != nil {
+				s.tap.Detach(id)
+			}
 			_ = live.session.TransitionTo(domain.StateError)
 			s.pub.Publish(out.TopicSessionState(id), StatePayload{State: string(domain.StateError), Error: fmt.Sprint(r)})
 		}
@@ -83,6 +86,9 @@ loop:
 			if !ok {
 				break loop
 			}
+			if s.tap != nil {
+				s.tap.OnOutput(id, chunk)
+			}
 			acc = append(acc, chunk...)
 			if len(acc) >= flushThreshold {
 				flush()
@@ -96,6 +102,9 @@ loop:
 	exitCode, _ := live.getStream().Wait()
 	_ = live.getStream().Close()
 	s.remove(id)
+	if s.tap != nil {
+		s.tap.Detach(id)
+	}
 	_ = live.session.TransitionTo(domain.StateClosed)
 
 	s.pub.Publish(out.TopicSessionState(id), StatePayload{State: string(domain.StateClosed)})

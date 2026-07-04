@@ -24,3 +24,10 @@ func TopicSessionClosed(id string) string {
 func TopicSessionHostKey(id string) string {
 	return "session:hostkey:" + id
 }
+
+// TopicHistoryAppended notifies the frontend a new command-history entry
+// was saved (or an existing one's timestamp was bumped). Not scoped to one
+// session ID -- the history panel shows entries from every session.
+func TopicHistoryAppended() string {
+	return "history:appended"
+}

@@ -15,6 +15,7 @@ import (
 	"momo-terminal/internal/adapter/out/sqlite"
 	"momo-terminal/internal/adapter/out/sshconn"
 	"momo-terminal/internal/adapter/out/wailsevent"
+	"momo-terminal/internal/core/service/history"
 	"momo-terminal/internal/core/service/host"
 	"momo-terminal/internal/core/service/session"
 )
@@ -42,10 +43,12 @@ func main() {
 	publisher := wailsevent.New()
 	hostRepo := sqlite.NewHostRepo(db)
 	knownHostsRepo := sqlite.NewKnownHostsRepo(db)
+	historyRepo := sqlite.NewHistoryRepo(db)
 	sshOpener := sshconn.New()
 	localOpener := pty.NewOpener()
 
 	hostSvc := host.New(hostRepo, secretStore, knownHostsRepo, sshOpener)
+	historySvc := history.New(historyRepo, publisher)
 	sessionSvc := session.New(session.Deps{
 		LocalOpener: localOpener,
 		SSHOpener:   sshOpener,
@@ -53,6 +56,7 @@ func main() {
 		Secrets:     secretStore,
 		KnownHosts:  knownHostsRepo,
 		Publisher:   publisher,
+		Tap:         historySvc,
 	})
 
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
@@ -75,6 +79,7 @@ func main() {
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()
+			historySvc.Close()
 			db.Close()
 		},
 		Bind: []interface{}{
