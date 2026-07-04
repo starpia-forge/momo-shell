@@ -9,7 +9,8 @@ import { bytesToB64 } from '../lib/base64'
 export interface SessionInfo {
   id: string
   kind: string
-  shell: string
+  shell?: string
+  hostId?: string
   cols: number
   rows: number
 }

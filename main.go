@@ -3,14 +3,19 @@ package main
 import (
 	"context"
 	"embed"
+	"log"
 
 	wailsapp "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
-	sessionfacade "momo-terminal/internal/adapter/in/wails"
+	wailsfacade "momo-terminal/internal/adapter/in/wails"
+	"momo-terminal/internal/adapter/out/keychain"
 	"momo-terminal/internal/adapter/out/pty"
+	"momo-terminal/internal/adapter/out/sqlite"
+	"momo-terminal/internal/adapter/out/sshconn"
 	"momo-terminal/internal/adapter/out/wailsevent"
+	"momo-terminal/internal/core/service/host"
 	"momo-terminal/internal/core/service/session"
 )
 
@@ -20,15 +25,40 @@ var assets embed.FS
 func main() {
 	// Composition root: wire ports to adapters. Nothing above this function
 	// (internal/core/...) knows about Wails or any concrete adapter.
+	dbPath, err := sqlite.DefaultPath()
+	if err != nil {
+		log.Fatalf("resolve database path: %v", err)
+	}
+	db, err := sqlite.Open(dbPath)
+	if err != nil {
+		log.Fatalf("open database: %v", err)
+	}
+
+	secretStore, err := keychain.New()
+	if err != nil {
+		log.Fatalf("open secret store: %v", err)
+	}
+
 	publisher := wailsevent.New()
-	opener := pty.NewOpener()
+	hostRepo := sqlite.NewHostRepo(db)
+	knownHostsRepo := sqlite.NewKnownHostsRepo(db)
+	sshOpener := sshconn.New()
+	localOpener := pty.NewOpener()
+
+	hostSvc := host.New(hostRepo, secretStore, knownHostsRepo, sshOpener)
 	sessionSvc := session.New(session.Deps{
-		LocalOpener: opener,
+		LocalOpener: localOpener,
+		SSHOpener:   sshOpener,
+		HostRepo:    hostRepo,
+		Secrets:     secretStore,
+		KnownHosts:  knownHostsRepo,
 		Publisher:   publisher,
 	})
-	sessionService := sessionfacade.NewSessionService(sessionSvc)
 
-	err := wailsapp.Run(&options.App{
+	sessionService := wailsfacade.NewSessionService(sessionSvc)
+	hostService := wailsfacade.NewHostService(hostSvc)
+
+	err = wailsapp.Run(&options.App{
 		Title:  "momo-terminal",
 		Width:  1024,
 		Height: 768,
@@ -41,9 +71,11 @@ func main() {
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()
+			db.Close()
 		},
 		Bind: []interface{}{
 			sessionService,
+			hostService,
 		},
 	})
 

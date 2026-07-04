@@ -123,7 +123,7 @@ export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<st
 
   useSessionStore.getState().upsert({
     id: info.id,
-    shell: info.shell,
+    shell: info.shell ?? '',
     cols: info.cols,
     rows: info.rows,
     state: 'running',

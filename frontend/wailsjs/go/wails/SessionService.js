@@ -10,8 +10,16 @@ export function CreateLocalSession(arg1) {
   return window['go']['wails']['SessionService']['CreateLocalSession'](arg1);
 }
 
+export function CreateSSHSession(arg1) {
+  return window['go']['wails']['SessionService']['CreateSSHSession'](arg1);
+}
+
 export function ResizeSession(arg1, arg2, arg3) {
   return window['go']['wails']['SessionService']['ResizeSession'](arg1, arg2, arg3);
+}
+
+export function RespondHostKey(arg1, arg2) {
+  return window['go']['wails']['SessionService']['RespondHostKey'](arg1, arg2);
 }
 
 export function WriteSession(arg1, arg2) {

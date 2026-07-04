@@ -15,13 +15,21 @@ type LocalSessionOpts struct {
 	Rows  int    `json:"rows"`
 }
 
+// SSHSessionOpts is the JSON-facing request DTO for CreateSSHSession.
+type SSHSessionOpts struct {
+	HostID string `json:"hostId"`
+	Cols   int    `json:"cols"`
+	Rows   int    `json:"rows"`
+}
+
 // SessionInfoDTO is the JSON-facing response DTO for session queries.
 type SessionInfoDTO struct {
-	ID    string `json:"id"`
-	Kind  string `json:"kind"`
-	Shell string `json:"shell"`
-	Cols  int    `json:"cols"`
-	Rows  int    `json:"rows"`
+	ID     string `json:"id"`
+	Kind   string `json:"kind"`
+	Shell  string `json:"shell,omitempty"`
+	HostID string `json:"hostId,omitempty"`
+	Cols   int    `json:"cols"`
+	Rows   int    `json:"rows"`
 }
 
 // SessionService is the Wails-bound facade over in.SessionUseCase. It only
@@ -47,6 +55,24 @@ func (s *SessionService) CreateLocalSession(opts LocalSessionOpts) (SessionInfoD
 	return toDTO(info), nil
 }
 
+func (s *SessionService) CreateSSHSession(opts SSHSessionOpts) (SessionInfoDTO, error) {
+	info, err := s.uc.CreateSSH(in.SSHOpts{
+		HostID: opts.HostID,
+		Cols:   opts.Cols,
+		Rows:   opts.Rows,
+	})
+	if err != nil {
+		return SessionInfoDTO{}, err
+	}
+	return toDTO(info), nil
+}
+
+// RespondHostKey answers a pending session:hostkey:{id} prompt. decision is
+// one of "trust", "once", or "cancel".
+func (s *SessionService) RespondHostKey(sessionID string, decision string) error {
+	return s.uc.RespondHostKey(sessionID, decision)
+}
+
 func (s *SessionService) WriteSession(id string, dataB64 string) error {
 	data, err := base64.StdEncoding.DecodeString(dataB64)
 	if err != nil {
@@ -65,10 +91,11 @@ func (s *SessionService) CloseSession(id string) error {
 
 func toDTO(info domain.SessionInfo) SessionInfoDTO {
 	return SessionInfoDTO{
-		ID:    info.ID,
-		Kind:  string(info.Kind),
-		Shell: info.Shell,
-		Cols:  info.Cols,
-		Rows:  info.Rows,
+		ID:     info.ID,
+		Kind:   string(info.Kind),
+		Shell:  info.Shell,
+		HostID: info.HostID,
+		Cols:   info.Cols,
+		Rows:   info.Rows,
 	}
 }
