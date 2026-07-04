@@ -6,6 +6,7 @@ import {
   SetHostSecret,
   TestConnection,
   ListLabels,
+  BrowseForKeyFile,
 } from '../../../wailsjs/go/wails/HostService'
 
 export type AuthType = 'password' | 'privateKey' | 'agent'
@@ -92,4 +93,9 @@ export async function testConnection(id: string): Promise<TestResult> {
 export async function listLabels(): Promise<string[]> {
   const labels = await ListLabels()
   return labels ?? []
+}
+
+// browseForKeyFile opens a native file picker; returns "" if cancelled.
+export async function browseForKeyFile(): Promise<string> {
+  return BrowseForKeyFile()
 }

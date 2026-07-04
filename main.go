@@ -55,8 +55,9 @@ func main() {
 		Publisher:   publisher,
 	})
 
+	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	sessionService := wailsfacade.NewSessionService(sessionSvc)
-	hostService := wailsfacade.NewHostService(hostSvc)
+	hostService := wailsfacade.NewHostService(hostSvc, keyFileBrowser)
 
 	err = wailsapp.Run(&options.App{
 		Title:  "momo-terminal",
@@ -68,6 +69,7 @@ func main() {
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup: func(ctx context.Context) {
 			publisher.SetContext(ctx)
+			keyFileBrowser.SetContext(ctx)
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()

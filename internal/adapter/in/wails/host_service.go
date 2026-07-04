@@ -1,6 +1,12 @@
 package wails
 
 import (
+	"context"
+	"errors"
+	"sync/atomic"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"momo-terminal/internal/core/domain"
 	"momo-terminal/internal/core/port/in"
 )
@@ -42,14 +48,49 @@ type TestResultDTO struct {
 	Message string `json:"message,omitempty"`
 }
 
+// KeyFileBrowser owns the Wails context needed for native file dialogs. It
+// is a separate, unbound type (like wailsevent.Publisher) specifically so
+// its SetContext method never ends up in HostService's bound method set --
+// Wails binds every exported method of a bound struct, and SetContext isn't
+// something the frontend should be able to call.
+type KeyFileBrowser struct {
+	ctx atomic.Pointer[context.Context]
+}
+
+func NewKeyFileBrowser() *KeyFileBrowser {
+	return &KeyFileBrowser{}
+}
+
+// SetContext must be called from OnStartup before Browse is used.
+func (b *KeyFileBrowser) SetContext(ctx context.Context) {
+	b.ctx.Store(&ctx)
+}
+
+func (b *KeyFileBrowser) Browse() (string, error) {
+	ctxPtr := b.ctx.Load()
+	if ctxPtr == nil {
+		return "", errors.New("key file browser: context not set")
+	}
+	return runtime.OpenFileDialog(*ctxPtr, runtime.OpenDialogOptions{
+		Title: "SSH 개인 키 선택",
+	})
+}
+
 // HostService is the Wails-bound facade over in.HostUseCase. It only
 // converts between JSON-facing DTOs and domain types -- no business logic.
 type HostService struct {
-	uc in.HostUseCase
+	uc      in.HostUseCase
+	browser *KeyFileBrowser
 }
 
-func NewHostService(uc in.HostUseCase) *HostService {
-	return &HostService{uc: uc}
+func NewHostService(uc in.HostUseCase, browser *KeyFileBrowser) *HostService {
+	return &HostService{uc: uc, browser: browser}
+}
+
+// BrowseForKeyFile opens a native file picker and returns the chosen path,
+// or "" if the user cancelled.
+func (s *HostService) BrowseForKeyFile() (string, error) {
+	return s.browser.Browse()
 }
 
 func (s *HostService) ListHosts() ([]HostDTO, error) {
