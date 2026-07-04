@@ -4,11 +4,13 @@ import {
   equalize as treeEqualize,
   findLeaf,
   leaves,
+  moveLeaf as treeMoveLeaf,
   neighborLeaf,
   removeLeaf,
   setSizes as treeSetSizes,
   splitLeaf as treeSplitLeaf,
   type ArrowDirection,
+  type DropZone,
   type PaneNode,
   type SplitDirection,
 } from './tree'
@@ -34,6 +36,7 @@ interface WorkspaceLayoutStore {
   moveFocus: (tabId: string, direction: ArrowDirection) => void
   splitLeaf: (tabId: string, leafId: string, direction: SplitDirection, newLeafId: string, newSessionId: string, splitId: string) => void
   equalize: (tabId: string, splitId: string) => void
+  moveLeafInTab: (tabId: string, srcLeafId: string, targetLeafId: string, zone: DropZone, splitId: string) => void
 }
 
 function omit<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -132,6 +135,17 @@ export const useWorkspaceLayoutStore = create<WorkspaceLayoutStore>((set, get) =
       return {
         trees: { ...s.trees, [tabId]: treeEqualize(tree, splitId) },
         splitVersion: { ...s.splitVersion, [splitId]: (s.splitVersion[splitId] ?? 0) + 1 },
+      }
+    }),
+
+  moveLeafInTab: (tabId, srcLeafId, targetLeafId, zone, splitId) =>
+    set((s) => {
+      const tree = s.trees[tabId]
+      if (!tree) return s
+      const newTree = treeMoveLeaf(tree, srcLeafId, targetLeafId, zone, splitId)
+      return {
+        trees: { ...s.trees, [tabId]: newTree },
+        focusedLeaf: { ...s.focusedLeaf, [tabId]: srcLeafId },
       }
     }),
 }))

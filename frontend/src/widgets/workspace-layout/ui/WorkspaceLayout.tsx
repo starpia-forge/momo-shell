@@ -1,7 +1,9 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useRef, useState, type DragEvent } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { disposeSession, openSSHSession, TerminalPane, useSessionStore } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
+import { AltDragOverlay, computeDropZone, dragSourceProps, DropZoneOverlay } from '../../../features/pane-dnd'
+import { decodePaneDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import { closeLeafOrEscalate } from '../lib/closeLeaf'
 import { splitFocused } from '../lib/splitFocused'
@@ -83,13 +85,40 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   const hosts = useHostStore((s) => s.hosts)
   const isFocused = useWorkspaceLayoutStore((s) => s.focusedLeaf[tabId] === leaf.id)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [dropZone, setDropZone] = useState<DropZone | null>(null)
   const isSSH = session?.kind === 'ssh'
   const host = isSSH && session?.hostId ? hosts[session.hostId] : undefined
   const title = isSSH ? (host?.name ?? '연결 중...') : '로컬 쉘'
   const subtitle = isSSH ? (host?.address ?? '') : (session?.shell ?? '')
+  const dragPayload = { tabId, leafId: leaf.id, sessionId: leaf.sessionId }
 
   function focusThis() {
     useWorkspaceLayoutStore.getState().setFocus(tabId, leaf.id)
+  }
+
+  function handleDragOver(e: DragEvent) {
+    if (!isPaneDrag(e.dataTransfer)) return
+    e.preventDefault()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const relX = (e.clientX - rect.left) / rect.width
+    const relY = (e.clientY - rect.top) / rect.height
+    setDropZone(computeDropZone(relX, relY))
+  }
+
+  function handleDragLeave(e: DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropZone(null)
+  }
+
+  function handleDrop(e: DragEvent) {
+    e.preventDefault()
+    const zone = dropZone
+    setDropZone(null)
+    if (!zone) return
+    const payload = decodePaneDrag(e.dataTransfer)
+    // Cross-tab pane docking isn't supported yet -- Step 5 handles moving a
+    // pane between tabs via the tab bar, a separate (detach-to-new-tab) flow.
+    if (!payload || payload.tabId !== tabId || payload.leafId === leaf.id) return
+    useWorkspaceLayoutStore.getState().moveLeafInTab(tabId, payload.leafId, leaf.id, zone, crypto.randomUUID())
   }
 
   async function handleReconnect() {
@@ -116,8 +145,14 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   ]
 
   return (
-    <div className={`pane-view ${isFocused ? 'pane-view--focused' : ''}`} onClick={focusThis}>
-      <div className="pane-view__header" onContextMenu={openContextMenu}>
+    <div
+      className={`pane-view ${isFocused ? 'pane-view--focused' : ''}`}
+      onClick={focusThis}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="pane-view__header" onContextMenu={openContextMenu} {...dragSourceProps(dragPayload)}>
         <div className="pane-view__text">
           <span className="pane-view__title">{title}</span>
           {subtitle && <span className="pane-view__subtitle">{subtitle}</span>}
@@ -128,7 +163,9 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
       </div>
       <div className="pane-view__body">
         <TerminalPane key={leaf.sessionId} sessionId={leaf.sessionId} onReconnect={isSSH ? () => void handleReconnect() : undefined} />
+        <AltDragOverlay payload={dragPayload} />
       </div>
+      <DropZoneOverlay zone={dropZone} />
       {menuPos && <ContextMenu x={menuPos.x} y={menuPos.y} items={contextMenuItems} onClose={() => setMenuPos(null)} />}
     </div>
   )

@@ -8,6 +8,10 @@
 // promoted to that child. Node ids are always supplied by the caller (never
 // generated in here) so the module stays pure and deterministic for tests.
 
+import type { DropZone } from '../../../shared/lib/paneDnd'
+
+export type { DropZone }
+
 export interface LeafNode {
   type: 'leaf'
   id: string
@@ -24,7 +28,6 @@ export interface SplitNode {
 
 export type PaneNode = LeafNode | SplitNode
 export type SplitDirection = 'row' | 'column'
-export type DropZone = 'top' | 'bottom' | 'left' | 'right' | 'center'
 export type ArrowDirection = 'up' | 'down' | 'left' | 'right'
 
 export function createLeaf(id: string, sessionId: string): LeafNode {

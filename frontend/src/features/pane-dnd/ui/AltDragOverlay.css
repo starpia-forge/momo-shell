@@ -1,0 +1,8 @@
+.pane-dnd-alt-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  cursor: grab;
+  outline: 1px dashed var(--color-accent);
+  outline-offset: -1px;
+}
