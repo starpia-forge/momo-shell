@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SessionState = 'starting' | 'running' | 'closed' | 'error'
+export type SessionState = 'connecting' | 'starting' | 'running' | 'closed' | 'error'
 
 export interface SessionMeta {
   id: string

@@ -4,15 +4,23 @@ export const topics = {
   sessionData: (id: string) => `session:data:${id}`,
   sessionState: (id: string) => `session:state:${id}`,
   sessionClosed: (id: string) => `session:closed:${id}`,
+  sessionHostKey: (id: string) => `session:hostkey:${id}`,
 }
 
 export interface SessionStatePayload {
-  state: 'starting' | 'running' | 'closed' | 'error'
+  state: 'connecting' | 'starting' | 'running' | 'closed' | 'error'
   error?: string
 }
 
 export interface SessionClosedPayload {
   exitCode?: number
+}
+
+export interface SessionHostKeyPayload {
+  address: string
+  port: number
+  algo: string
+  fingerprint: string
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

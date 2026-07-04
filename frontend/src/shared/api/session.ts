@@ -1,5 +1,7 @@
 import {
   CreateLocalSession,
+  CreateSSHSession,
+  RespondHostKey,
   WriteSession,
   ResizeSession,
   CloseSession,
@@ -29,6 +31,26 @@ export async function createLocalSession(opts: CreateLocalSessionOpts): Promise<
     cols: opts.cols,
     rows: opts.rows,
   })
+}
+
+export interface CreateSSHSessionOpts {
+  hostId: string
+  cols: number
+  rows: number
+}
+
+export async function createSSHSession(opts: CreateSSHSessionOpts): Promise<SessionInfo> {
+  return CreateSSHSession({
+    hostId: opts.hostId,
+    cols: opts.cols,
+    rows: opts.rows,
+  })
+}
+
+export type HostKeyDecision = 'trust' | 'once' | 'cancel'
+
+export async function respondHostKey(sessionId: string, decision: HostKeyDecision): Promise<void> {
+  await RespondHostKey(sessionId, decision)
 }
 
 export async function writeSession(id: string, data: Uint8Array): Promise<void> {

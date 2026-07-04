@@ -1,0 +1,33 @@
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.text-input__label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.text-input__field {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.text-input__field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.text-input__field--error {
+  border-color: var(--color-danger);
+}
+
+.text-input__error {
+  font-size: 12px;
+  color: var(--color-danger);
+}
