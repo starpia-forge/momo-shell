@@ -60,9 +60,11 @@ func main() {
 	hostService := wailsfacade.NewHostService(hostSvc, keyFileBrowser)
 
 	err = wailsapp.Run(&options.App{
-		Title:  "momo-terminal",
-		Width:  1024,
-		Height: 768,
+		Title:     "momo-terminal",
+		Width:     1024,
+		Height:    768,
+		MinWidth:  640,
+		MinHeight: 480,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

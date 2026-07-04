@@ -7,7 +7,7 @@ import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import './HostSidebar.css'
 
 interface HostSidebarProps {
-  onConnect: (sessionId: string) => void
+  onConnect: (host: Host, sessionId: string) => void
 }
 
 type SortMode = 'recent' | 'name'
@@ -54,7 +54,7 @@ export function HostSidebar({ onConnect }: HostSidebarProps) {
 
   async function handleConnect(host: Host) {
     const sessionId = await connectHost(host.id)
-    onConnect(sessionId)
+    onConnect(host, sessionId)
   }
 
   function openContextMenu(e: MouseEvent, host: Host) {

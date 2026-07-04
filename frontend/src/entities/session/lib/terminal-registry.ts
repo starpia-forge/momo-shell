@@ -191,10 +191,17 @@ export function fitSession(id: string): void {
   if (entry) fitNow(entry)
 }
 
+// Below this, FitAddon computes a degenerate 0-2 col/row terminal -- fitting
+// (and pushing that size to the backend PTY) at that point corrupts the
+// terminal's rendering in a way a later, normal-sized fit doesn't recover
+// from. A pane this small isn't usable anyway, so skip the fit entirely
+// rather than let it run with near-zero dimensions.
+const MIN_FIT_SIZE = 50
+
 function fitNow(entry: TerminalEntry): void {
   if (!entry.attached) return
   const { clientWidth, clientHeight } = entry.attached
-  if (clientWidth === 0 || clientHeight === 0) return
+  if (clientWidth < MIN_FIT_SIZE || clientHeight < MIN_FIT_SIZE) return
   entry.fit.fit()
 }
 

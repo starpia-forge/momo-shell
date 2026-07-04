@@ -1,4 +1,5 @@
 import { getFontSize, setFontSize, resetFontSize } from '../entities/session'
+import { useTabStore } from '../widgets/tab-bar'
 
 const FONT_STEP = 1
 
@@ -21,6 +22,14 @@ export function registerGlobalShortcuts(): () => void {
       e.preventDefault()
       e.stopPropagation()
       resetFontSize()
+    } else if (e.key.toLowerCase() === 't') {
+      e.preventDefault()
+      e.stopPropagation()
+      useTabStore.getState().openNewTabPopover()
+    } else if (e.key >= '1' && e.key <= '9') {
+      e.preventDefault()
+      e.stopPropagation()
+      useTabStore.getState().activateByIndex(Number(e.key) - 1)
     }
   }
 
