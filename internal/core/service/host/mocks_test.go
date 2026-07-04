@@ -2,6 +2,7 @@ package host
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"momo-terminal/internal/core/domain"
@@ -137,12 +138,49 @@ func (s *fakeSecretStore) has(ref string) bool {
 type fakeProber struct {
 	result out.TestResult
 
-	lastHost   domain.Host
-	lastSecret string
+	lastHost     domain.Host
+	lastSecret   string
+	lastVerifier out.HostKeyVerifier
 }
 
-func (p *fakeProber) Probe(h domain.Host, secret string) out.TestResult {
+func (p *fakeProber) Probe(h domain.Host, secret string, verifier out.HostKeyVerifier) out.TestResult {
 	p.lastHost = h
 	p.lastSecret = secret
+	p.lastVerifier = verifier
 	return p.result
+}
+
+// fakeKnownHostsRepo is an in-memory out.KnownHostsRepository for tests.
+type fakeKnownHostsRepo struct {
+	mu      sync.Mutex
+	entries map[string]string // "address:port:algo" -> fingerprint
+}
+
+func newFakeKnownHostsRepo() *fakeKnownHostsRepo {
+	return &fakeKnownHostsRepo{entries: make(map[string]string)}
+}
+
+func knownHostsKey(address string, port int, algo string) string {
+	return fmt.Sprintf("%s:%d:%s", address, port, algo)
+}
+
+func (r *fakeKnownHostsRepo) Get(address string, port int, algo string) (string, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	fp, ok := r.entries[knownHostsKey(address, port, algo)]
+	return fp, ok, nil
+}
+
+func (r *fakeKnownHostsRepo) Put(address string, port int, algo string, fingerprint string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.entries[knownHostsKey(address, port, algo)] = fingerprint
+	return nil
+}
+
+func (r *fakeKnownHostsRepo) Delete(address string, port int, algo string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.entries, knownHostsKey(address, port, algo))
+	return nil
 }

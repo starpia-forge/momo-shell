@@ -1,6 +1,7 @@
 package host
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,15 +14,33 @@ import (
 // Service implements in.HostUseCase, delegating storage to out.HostRepository
 // and secret material to out.SecretStore.
 type Service struct {
-	repo   out.HostRepository
-	secret out.SecretStore
-	prober out.SSHProber
+	repo       out.HostRepository
+	secret     out.SecretStore
+	knownHosts out.KnownHostsRepository
+	prober     out.SSHProber
 }
 
 var _ in.HostUseCase = (*Service)(nil)
 
-func New(repo out.HostRepository, secret out.SecretStore, prober out.SSHProber) *Service {
-	return &Service{repo: repo, secret: secret, prober: prober}
+func New(repo out.HostRepository, secret out.SecretStore, knownHosts out.KnownHostsRepository, prober out.SSHProber) *Service {
+	return &Service{repo: repo, secret: secret, knownHosts: knownHosts, prober: prober}
+}
+
+// nonInteractiveVerifier lets a connection test proceed past both a known,
+// matching host key and a never-seen one (there's no user to prompt during
+// a quick test) but fails the handshake on a recorded fingerprint mismatch
+// -- the one case a test genuinely should catch before saving a host.
+func nonInteractiveVerifier(knownHosts out.KnownHostsRepository, address string, port int) out.HostKeyVerifier {
+	return func(algo, fingerprint string) (out.HostKeyDecision, error) {
+		known, found, err := knownHosts.Get(address, port, algo)
+		if err != nil {
+			return out.HostKeyCancel, err
+		}
+		if found && known != fingerprint {
+			return out.HostKeyCancel, fmt.Errorf("host key mismatch for %s:%d (%s)", address, port, algo)
+		}
+		return out.HostKeyOnce, nil
+	}
 }
 
 func secretRef(id string) string {
@@ -93,7 +112,7 @@ func (s *Service) TestConnection(id string) (in.TestResult, error) {
 		}
 	}
 
-	result := s.prober.Probe(h, secretVal)
+	result := s.prober.Probe(h, secretVal, nonInteractiveVerifier(s.knownHosts, h.Address, h.Port))
 	return in.TestResult{Stage: string(result.Stage), OK: result.OK, Message: result.Message}, nil
 }
 

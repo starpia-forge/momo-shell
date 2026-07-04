@@ -21,7 +21,7 @@ func validInput() in.HostInput {
 
 func TestSaveHost_CreatesWithGeneratedID(t *testing.T) {
 	repo := newFakeRepo()
-	svc := New(repo, newFakeSecretStore(), &fakeProber{})
+	svc := New(repo, newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	h, err := svc.SaveHost(validInput())
 	if err != nil {
@@ -37,7 +37,7 @@ func TestSaveHost_CreatesWithGeneratedID(t *testing.T) {
 
 func TestSaveHost_UpdatePreservesCreatedAt(t *testing.T) {
 	repo := newFakeRepo()
-	svc := New(repo, newFakeSecretStore(), &fakeProber{})
+	svc := New(repo, newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	created, err := svc.SaveHost(validInput())
 	if err != nil {
@@ -61,7 +61,7 @@ func TestSaveHost_UpdatePreservesCreatedAt(t *testing.T) {
 }
 
 func TestSaveHost_UpdateUnknownID(t *testing.T) {
-	svc := New(newFakeRepo(), newFakeSecretStore(), &fakeProber{})
+	svc := New(newFakeRepo(), newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	input := validInput()
 	input.ID = "does-not-exist"
@@ -72,7 +72,7 @@ func TestSaveHost_UpdateUnknownID(t *testing.T) {
 }
 
 func TestSaveHost_ValidationRejected(t *testing.T) {
-	svc := New(newFakeRepo(), newFakeSecretStore(), &fakeProber{})
+	svc := New(newFakeRepo(), newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	input := validInput()
 	input.Name = ""
@@ -83,7 +83,7 @@ func TestSaveHost_ValidationRejected(t *testing.T) {
 }
 
 func TestSaveHost_PrivateKeyRequiresKeyPath(t *testing.T) {
-	svc := New(newFakeRepo(), newFakeSecretStore(), &fakeProber{})
+	svc := New(newFakeRepo(), newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	input := validInput()
 	input.AuthType = domain.AuthPrivateKey
@@ -96,7 +96,7 @@ func TestSaveHost_PrivateKeyRequiresKeyPath(t *testing.T) {
 func TestDeleteHost_RemovesHostAndSecret(t *testing.T) {
 	repo := newFakeRepo()
 	secrets := newFakeSecretStore()
-	svc := New(repo, secrets, &fakeProber{})
+	svc := New(repo, secrets, newFakeKnownHostsRepo(), &fakeProber{})
 
 	h, _ := svc.SaveHost(validInput())
 	if err := svc.SetHostSecret(h.ID, "hunter2"); err != nil {
@@ -119,7 +119,7 @@ func TestDeleteHost_RemovesHostAndSecret(t *testing.T) {
 }
 
 func TestSetHostSecret_UnknownHost(t *testing.T) {
-	svc := New(newFakeRepo(), newFakeSecretStore(), &fakeProber{})
+	svc := New(newFakeRepo(), newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	if err := svc.SetHostSecret("nope", "secret"); err == nil {
 		t.Fatal("expected error setting secret for unknown host")
@@ -130,7 +130,7 @@ func TestTestConnection_PassesStoredSecretToProber(t *testing.T) {
 	repo := newFakeRepo()
 	secrets := newFakeSecretStore()
 	prober := &fakeProber{result: out.TestResult{Stage: out.StageAuth, OK: true}}
-	svc := New(repo, secrets, prober)
+	svc := New(repo, secrets, newFakeKnownHostsRepo(), prober)
 
 	h, _ := svc.SaveHost(validInput())
 	_ = svc.SetHostSecret(h.ID, "hunter2")
@@ -153,7 +153,7 @@ func TestTestConnection_PassesStoredSecretToProber(t *testing.T) {
 func TestTestConnection_AgentAuthSkipsSecretLookup(t *testing.T) {
 	repo := newFakeRepo()
 	prober := &fakeProber{result: out.TestResult{Stage: out.StageAuth, OK: true}}
-	svc := New(repo, newFakeSecretStore(), prober)
+	svc := New(repo, newFakeSecretStore(), newFakeKnownHostsRepo(), prober)
 
 	input := validInput()
 	input.AuthType = domain.AuthAgent
@@ -167,9 +167,49 @@ func TestTestConnection_AgentAuthSkipsSecretLookup(t *testing.T) {
 	}
 }
 
+func TestTestConnection_VerifierAcceptsKnownMatchAndUnknownHostKey(t *testing.T) {
+	repo := newFakeRepo()
+	knownHosts := newFakeKnownHostsRepo()
+	_ = knownHosts.Put("10.0.1.15", 22, "ssh-ed25519", "SHA256:matches")
+	prober := &fakeProber{result: out.TestResult{Stage: out.StageAuth, OK: true}}
+	svc := New(repo, newFakeSecretStore(), knownHosts, prober)
+
+	h, _ := svc.SaveHost(validInput())
+	if _, err := svc.TestConnection(h.ID); err != nil {
+		t.Fatalf("TestConnection() error = %v", err)
+	}
+
+	decision, err := prober.lastVerifier("ssh-ed25519", "SHA256:matches")
+	if err != nil || decision != out.HostKeyOnce {
+		t.Fatalf("expected known-matching key to be accepted, got decision=%v err=%v", decision, err)
+	}
+
+	decision, err = prober.lastVerifier("rsa-sha2-512", "SHA256:never-seen-before")
+	if err != nil || decision != out.HostKeyOnce {
+		t.Fatalf("expected unknown algo to be accepted (no one to prompt), got decision=%v err=%v", decision, err)
+	}
+}
+
+func TestTestConnection_VerifierRejectsMismatchedHostKey(t *testing.T) {
+	repo := newFakeRepo()
+	knownHosts := newFakeKnownHostsRepo()
+	_ = knownHosts.Put("10.0.1.15", 22, "ssh-ed25519", "SHA256:original")
+	prober := &fakeProber{result: out.TestResult{Stage: out.StageAuth, OK: true}}
+	svc := New(repo, newFakeSecretStore(), knownHosts, prober)
+
+	h, _ := svc.SaveHost(validInput())
+	if _, err := svc.TestConnection(h.ID); err != nil {
+		t.Fatalf("TestConnection() error = %v", err)
+	}
+
+	if _, err := prober.lastVerifier("ssh-ed25519", "SHA256:tampered"); err == nil {
+		t.Fatal("expected mismatched host key to be rejected")
+	}
+}
+
 func TestListLabels_DedupesAcrossHosts(t *testing.T) {
 	repo := newFakeRepo()
-	svc := New(repo, newFakeSecretStore(), &fakeProber{})
+	svc := New(repo, newFakeSecretStore(), newFakeKnownHostsRepo(), &fakeProber{})
 
 	a := validInput()
 	a.Labels = []string{"prod", "web"}

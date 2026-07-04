@@ -67,5 +67,5 @@ type TestResult struct {
 
 // SSHProber runs a staged connection test without creating a live session.
 type SSHProber interface {
-	Probe(host domain.Host, secret string) TestResult
+	Probe(host domain.Host, secret string, verifier HostKeyVerifier) TestResult
 }

@@ -3,10 +3,13 @@ module momo-terminal
 go 1.25.0
 
 require (
+	github.com/Microsoft/go-winio v0.6.2
 	github.com/UserExistsError/conpty v0.1.4
 	github.com/creack/pty v1.1.24
 	github.com/google/uuid v1.6.0
 	github.com/wailsapp/wails/v2 v2.12.0
+	github.com/zalando/go-keyring v0.2.8
+	golang.org/x/crypto v0.33.0
 	golang.org/x/sys v0.44.0
 	modernc.org/sqlite v1.53.0
 )
@@ -39,8 +42,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	github.com/zalando/go-keyring v0.2.8 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	modernc.org/libc v1.73.4 // indirect
