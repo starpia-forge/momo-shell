@@ -3,6 +3,7 @@ import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
+import { HistoryPanel } from '../../../widgets/history-panel'
 import { HostSidebar } from '../../../widgets/host-sidebar'
 import { StatusBar } from '../../../widgets/status-bar'
 import { TabBar, createLocalTab, useTabStore, type Tab } from '../../../widgets/tab-bar'
@@ -129,6 +130,10 @@ export function WorkspacePage() {
         <div className="workspace__pane">
           {activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />}
         </div>
+        <HistoryPanel
+          focusedSessionId={activeTab?.sessionId ?? null}
+          currentHostId={activeTab ? (activeTab.kind === 'ssh' ? (activeTab.hostId ?? '') : 'local') : ''}
+        />
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
       <HostKeyPrompt />

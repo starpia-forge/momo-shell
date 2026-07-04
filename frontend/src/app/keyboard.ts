@@ -1,4 +1,5 @@
 import { getFontSize, setFontSize, resetFontSize } from '../entities/session'
+import { useHistoryPanelStore } from '../widgets/history-panel'
 import { useTabStore } from '../widgets/tab-bar'
 import { closeLeafOrEscalate, splitFocused, useWorkspaceLayoutStore, type ArrowDirection } from '../widgets/workspace-layout'
 
@@ -59,6 +60,10 @@ export function registerGlobalShortcuts(): () => void {
       e.preventDefault()
       e.stopPropagation()
       useTabStore.getState().openNewTabPopover()
+    } else if (e.key.toLowerCase() === 'h') {
+      e.preventDefault()
+      e.stopPropagation()
+      useHistoryPanelStore.getState().toggle()
     } else if (e.key >= '1' && e.key <= '9') {
       e.preventDefault()
       e.stopPropagation()
