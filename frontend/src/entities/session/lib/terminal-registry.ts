@@ -34,6 +34,20 @@ interface TerminalEntry {
 
 const registry = new Map<string, TerminalEntry>()
 
+const DEFAULT_FONT_SIZE = 14
+const MIN_FONT_SIZE = 8
+const MAX_FONT_SIZE = 32
+let currentFontSize = DEFAULT_FONT_SIZE
+
+// Cell metrics depend on the font actually being loaded; re-fit every
+// attached terminal once it is, correcting any fallback-font sizing done
+// before that point.
+if (typeof document !== 'undefined' && document.fonts) {
+  document.fonts.ready.then(() => {
+    registry.forEach((entry) => fitNow(entry))
+  })
+}
+
 export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<string> {
   const info = await createLocalSession(opts)
   const { id } = info
@@ -42,6 +56,7 @@ export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<st
     scrollback: 10000,
     allowProposedApi: true,
     fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+    fontSize: currentFontSize,
     theme: { background: '#1b2636' },
   })
 
@@ -134,6 +149,22 @@ function fitNow(entry: TerminalEntry): void {
   const { clientWidth, clientHeight } = entry.attached
   if (clientWidth === 0 || clientHeight === 0) return
   entry.fit.fit()
+}
+
+export function getFontSize(): number {
+  return currentFontSize
+}
+
+export function setFontSize(size: number): void {
+  currentFontSize = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size))
+  registry.forEach((entry) => {
+    entry.term.options.fontSize = currentFontSize
+    fitNow(entry)
+  })
+}
+
+export function resetFontSize(): void {
+  setFontSize(DEFAULT_FONT_SIZE)
 }
 
 export function disposeSession(id: string): void {

@@ -121,23 +121,23 @@ type fakeOpener struct {
 	err    error
 }
 
-func (o *fakeOpener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, error) {
+func (o *fakeOpener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
 	if o.err != nil {
-		return nil, o.err
+		return nil, "", o.err
 	}
-	return o.stream, nil
+	return o.stream, shell, nil
 }
 
 // openerFunc hands back a fresh stream (by calling next) on every Open call,
 // for tests that create multiple sessions and need a distinct fake per one.
 type openerFunc func() (*fakeStream, error)
 
-func (f openerFunc) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, error) {
+func (f openerFunc) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
 	s, err := f()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return s, nil
+	return s, shell, nil
 }
 
 // recordingPublisher records every Publish call and can be told to panic

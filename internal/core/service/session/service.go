@@ -47,13 +47,13 @@ func New(opener out.LocalTerminalOpener, pub out.EventPublisher) *Service {
 }
 
 func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
-	stream, err := s.opener.Open(opts.Shell, nil, opts.Env, opts.Cwd, opts.Cols, opts.Rows)
+	stream, resolvedShell, err := s.opener.Open(opts.Shell, nil, opts.Env, opts.Cwd, opts.Cols, opts.Rows)
 	if err != nil {
 		return domain.SessionInfo{}, err
 	}
 
 	id := uuid.NewString()
-	sess := domain.NewSession(id, domain.KindLocal, opts.Shell, opts.Cols, opts.Rows)
+	sess := domain.NewSession(id, domain.KindLocal, resolvedShell, opts.Cols, opts.Rows)
 	_ = sess.TransitionTo(domain.StateRunning)
 
 	live := &liveSession{

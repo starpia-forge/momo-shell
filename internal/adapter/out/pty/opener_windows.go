@@ -23,7 +23,7 @@ type Opener struct{}
 
 func NewOpener() *Opener { return &Opener{} }
 
-func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, error) {
+func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
 	if shell == "" {
 		shell = resolveShellWindows(exec.LookPath, os.Getenv("COMSPEC"))
 	}
@@ -41,16 +41,16 @@ func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows i
 		conpty.ConPtyEnv(fullEnv),
 	)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	job, err := newKillOnCloseJob(uint32(cpty.Pid()))
 	if err != nil {
 		_ = cpty.Close()
-		return nil, err
+		return nil, "", err
 	}
 
-	return newWindowsStream(cpty, job), nil
+	return newWindowsStream(cpty, job), shell, nil
 }
 
 // windowsStream implements out.TerminalStream over UserExistsError/conpty.

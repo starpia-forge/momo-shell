@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@xterm/addon-canvas": "^0.7.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",

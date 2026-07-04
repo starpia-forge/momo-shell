@@ -20,7 +20,7 @@ type Opener struct{}
 
 func NewOpener() *Opener { return &Opener{} }
 
-func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, error) {
+func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
 	if shell == "" {
 		shell = resolveShell(os.Getenv("SHELL"), runtime.GOOS)
 	}
@@ -31,10 +31,10 @@ func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows i
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &unixStream{ptmx: ptmx, cmd: cmd}, nil
+	return &unixStream{ptmx: ptmx, cmd: cmd}, shell, nil
 }
 
 // unixStream implements out.TerminalStream over a creack/pty master file.
