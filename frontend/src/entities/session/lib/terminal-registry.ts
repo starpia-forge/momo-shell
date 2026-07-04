@@ -3,7 +3,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { CanvasAddon } from '@xterm/addon-canvas'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { SearchAddon } from '@xterm/addon-search'
+import { SearchAddon, type ISearchOptions } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import '@xterm/xterm/css/xterm.css'
 
@@ -35,6 +35,7 @@ import { useHostKeyPromptStore } from '../model/hostKeyPrompts'
 interface TerminalEntry {
   term: Terminal
   fit: FitAddon
+  search: SearchAddon
   host: HTMLDivElement
   unsubs: Array<() => void>
   attached: HTMLElement | null
@@ -74,7 +75,8 @@ function createTerminalEntry(id: string): void {
 
   const fit = new FitAddon()
   term.loadAddon(fit)
-  term.loadAddon(new SearchAddon())
+  const search = new SearchAddon()
+  term.loadAddon(search)
   term.loadAddon(new WebLinksAddon())
   term.loadAddon(new Unicode11Addon())
   term.unicode.activeVersion = '11'
@@ -135,7 +137,7 @@ function createTerminalEntry(id: string): void {
     })
   )
 
-  registry.set(id, { term, fit, host, unsubs, attached: null, closed: false })
+  registry.set(id, { term, fit, search, host, unsubs, attached: null, closed: false })
 }
 
 export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<string> {
@@ -189,6 +191,36 @@ export function detach(id: string): void {
 export function fitSession(id: string): void {
   const entry = registry.get(id)
   if (entry) fitNow(entry)
+}
+
+const SEARCH_DECORATIONS: ISearchOptions = {
+  decorations: {
+    matchBackground: '#3a4d6e',
+    matchOverviewRuler: '#3a4d6e',
+    activeMatchBackground: '#5b7fb5',
+    activeMatchColorOverviewRuler: '#5b7fb5',
+  },
+}
+
+/** Returns whether a match was found. Highlights every match, not just the current one. */
+export function searchSession(id: string, term: string, direction: 'next' | 'prev'): boolean {
+  const entry = registry.get(id)
+  if (!entry || !term) return false
+  return direction === 'next'
+    ? entry.search.findNext(term, SEARCH_DECORATIONS)
+    : entry.search.findPrevious(term, SEARCH_DECORATIONS)
+}
+
+export function clearSearchSession(id: string): void {
+  const entry = registry.get(id)
+  if (!entry) return
+  entry.search.clearDecorations()
+  entry.search.clearActiveDecoration()
+  entry.term.clearSelection()
+}
+
+export function focusSession(id: string): void {
+  registry.get(id)?.term.focus()
 }
 
 // Below this, FitAddon computes a degenerate 0-2 col/row terminal -- fitting

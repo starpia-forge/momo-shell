@@ -8,6 +8,9 @@ export {
   getFontSize,
   setFontSize,
   resetFontSize,
+  searchSession,
+  clearSearchSession,
+  focusSession,
 } from './lib/terminal-registry'
 export { useSessionStore } from './model/store'
 export type { SessionMeta, SessionState, SessionKind } from './model/store'

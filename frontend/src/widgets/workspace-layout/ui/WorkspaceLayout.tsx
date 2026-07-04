@@ -3,6 +3,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { disposeSession, openSSHSession, TerminalPane, useSessionStore } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
 import { AltDragOverlay, computeDropZone, dragSourceProps, DropZoneOverlay } from '../../../features/pane-dnd'
+import { SearchOverlay, useTerminalSearchStore } from '../../../features/terminal-search'
 import { decodePaneDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import { closeLeafOrEscalate } from '../lib/closeLeaf'
@@ -84,6 +85,7 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   const session = useSessionStore((s) => s.sessions[leaf.sessionId])
   const hosts = useHostStore((s) => s.hosts)
   const isFocused = useWorkspaceLayoutStore((s) => s.focusedLeaf[tabId] === leaf.id)
+  const searchOpen = useTerminalSearchStore((s) => s.openForLeafId === leaf.id)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [dropZone, setDropZone] = useState<DropZone | null>(null)
   const isSSH = session?.kind === 'ssh'
@@ -176,6 +178,9 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
       <div className="pane-view__body">
         <TerminalPane key={leaf.sessionId} sessionId={leaf.sessionId} onReconnect={isSSH ? () => void handleReconnect() : undefined} />
         <AltDragOverlay payload={dragPayload} />
+        {searchOpen && (
+          <SearchOverlay sessionId={leaf.sessionId} onClose={() => useTerminalSearchStore.getState().close()} />
+        )}
       </div>
       <DropZoneOverlay zone={dropZone} />
       {menuPos && <ContextMenu x={menuPos.x} y={menuPos.y} items={contextMenuItems} onClose={() => setMenuPos(null)} />}

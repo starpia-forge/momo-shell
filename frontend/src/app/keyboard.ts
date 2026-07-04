@@ -1,4 +1,5 @@
 import { getFontSize, setFontSize, resetFontSize } from '../entities/session'
+import { useTerminalSearchStore } from '../features/terminal-search'
 import { useHistoryPanelStore } from '../widgets/history-panel'
 import { useTabStore } from '../widgets/tab-bar'
 import { closeLeafOrEscalate, splitFocused, useWorkspaceLayoutStore, type ArrowDirection } from '../widgets/workspace-layout'
@@ -64,6 +65,12 @@ export function registerGlobalShortcuts(): () => void {
       e.preventDefault()
       e.stopPropagation()
       useHistoryPanelStore.getState().toggle()
+    } else if (e.key.toLowerCase() === 'f') {
+      e.preventDefault()
+      e.stopPropagation()
+      const tabId = useTabStore.getState().activeId
+      const leafId = tabId ? useWorkspaceLayoutStore.getState().focusedLeaf[tabId] : undefined
+      if (leafId) useTerminalSearchStore.getState().openFor(leafId)
     } else if (e.key >= '1' && e.key <= '9') {
       e.preventDefault()
       e.stopPropagation()
