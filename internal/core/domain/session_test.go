@@ -12,6 +12,10 @@ func TestSession_TransitionTo(t *testing.T) {
 		{"starting to running", StateStarting, StateRunning, false},
 		{"starting to error", StateStarting, StateError, false},
 		{"starting to closed", StateStarting, StateClosed, false},
+		{"connecting to running", StateConnecting, StateRunning, false},
+		{"connecting to error", StateConnecting, StateError, false},
+		{"connecting to closed", StateConnecting, StateClosed, false},
+		{"connecting to starting", StateConnecting, StateStarting, true},
 		{"running to closed", StateRunning, StateClosed, false},
 		{"running to error", StateRunning, StateError, false},
 		{"running to starting", StateRunning, StateStarting, true},
@@ -44,6 +48,20 @@ func TestSession_TransitionTo(t *testing.T) {
 				t.Fatalf("expected state %s, got %s", tc.to, s.State)
 			}
 		})
+	}
+}
+
+func TestNewSSHSession_StartsConnecting(t *testing.T) {
+	s := NewSSHSession("id", "host-1", 80, 24)
+
+	if s.Kind != KindSSH {
+		t.Fatalf("expected Kind=ssh, got %s", s.Kind)
+	}
+	if s.State != StateConnecting {
+		t.Fatalf("expected State=connecting, got %s", s.State)
+	}
+	if s.HostID != "host-1" {
+		t.Fatalf("expected HostID=host-1, got %s", s.HostID)
 	}
 }
 

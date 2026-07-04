@@ -22,7 +22,10 @@ func main() {
 	// (internal/core/...) knows about Wails or any concrete adapter.
 	publisher := wailsevent.New()
 	opener := pty.NewOpener()
-	sessionSvc := session.New(opener, publisher)
+	sessionSvc := session.New(session.Deps{
+		LocalOpener: opener,
+		Publisher:   publisher,
+	})
 	sessionService := sessionfacade.NewSessionService(sessionSvc)
 
 	err := wailsapp.Run(&options.App{

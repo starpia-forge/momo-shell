@@ -18,3 +18,9 @@ func TopicSessionState(id string) string {
 func TopicSessionClosed(id string) string {
 	return "session:closed:" + id
 }
+
+// TopicSessionHostKey notifies the frontend of an unrecognized SSH host
+// key awaiting a trust/once/cancel decision via RespondHostKey.
+func TopicSessionHostKey(id string) string {
+	return "session:hostkey:" + id
+}

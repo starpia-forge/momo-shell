@@ -2,9 +2,11 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 
+	"momo-terminal/internal/core/domain"
 	"momo-terminal/internal/core/port/out"
 )
 
@@ -179,4 +181,161 @@ func (p *recordingPublisher) all() []recordedEvent {
 
 func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+}
+
+var errHostNotFound = errors.New("host: not found")
+
+// fakeHostRepo is an in-memory out.HostRepository for SSH session tests.
+type fakeHostRepo struct {
+	mu      sync.Mutex
+	hosts   map[string]domain.Host
+	touched []string
+}
+
+func newFakeHostRepo(hosts ...domain.Host) *fakeHostRepo {
+	m := make(map[string]domain.Host, len(hosts))
+	for _, h := range hosts {
+		m[h.ID] = h
+	}
+	return &fakeHostRepo{hosts: m}
+}
+
+func (r *fakeHostRepo) List() ([]domain.Host, error) { return nil, nil }
+
+func (r *fakeHostRepo) Get(id string) (domain.Host, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	h, ok := r.hosts[id]
+	if !ok {
+		return domain.Host{}, errHostNotFound
+	}
+	return h, nil
+}
+
+func (r *fakeHostRepo) Save(h domain.Host) (domain.Host, error) { return h, nil }
+func (r *fakeHostRepo) Delete(id string) error                  { return nil }
+
+func (r *fakeHostRepo) TouchConnected(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.touched = append(r.touched, id)
+	return nil
+}
+
+func (r *fakeHostRepo) ListLabels() ([]string, error) { return nil, nil }
+
+func (r *fakeHostRepo) touchedIDs() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]string, len(r.touched))
+	copy(out, r.touched)
+	return out
+}
+
+// fakeSecretStore is an in-memory out.SecretStore for SSH session tests.
+type fakeSecretStore struct {
+	mu      sync.Mutex
+	secrets map[string][]byte
+}
+
+func newFakeSecretStore() *fakeSecretStore {
+	return &fakeSecretStore{secrets: make(map[string][]byte)}
+}
+
+func (s *fakeSecretStore) Set(ref string, secret []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.secrets[ref] = secret
+	return nil
+}
+
+func (s *fakeSecretStore) Get(ref string) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.secrets[ref]
+	if !ok {
+		return nil, errors.New("secret: not found")
+	}
+	return v, nil
+}
+
+func (s *fakeSecretStore) Delete(ref string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.secrets, ref)
+	return nil
+}
+
+// fakeKnownHostsRepo is an in-memory out.KnownHostsRepository for SSH
+// session tests.
+type fakeKnownHostsRepo struct {
+	mu      sync.Mutex
+	entries map[string]string
+}
+
+func newFakeKnownHostsRepo() *fakeKnownHostsRepo {
+	return &fakeKnownHostsRepo{entries: make(map[string]string)}
+}
+
+func knownHostsKey(address string, port int, algo string) string {
+	return fmt.Sprintf("%s:%d:%s", address, port, algo)
+}
+
+func (r *fakeKnownHostsRepo) Get(address string, port int, algo string) (string, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	fp, ok := r.entries[knownHostsKey(address, port, algo)]
+	return fp, ok, nil
+}
+
+func (r *fakeKnownHostsRepo) Put(address string, port int, algo string, fingerprint string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.entries[knownHostsKey(address, port, algo)] = fingerprint
+	return nil
+}
+
+func (r *fakeKnownHostsRepo) Delete(address string, port int, algo string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.entries, knownHostsKey(address, port, algo))
+	return nil
+}
+
+// fakeSSHOpener is an out.SSHTerminalOpener stub. If probeAlgo is set, Open
+// invokes the verifier with (probeAlgo, probeFingerprint) before deciding
+// what to return, letting tests exercise the real host-key round trip
+// (including CreateSSH's Connecting-state prompt/response wiring) without a
+// real network connection.
+type fakeSSHOpener struct {
+	stream *fakeStream
+	err    error
+
+	probeAlgo        string
+	probeFingerprint string
+
+	mu         sync.Mutex
+	lastSecret string
+}
+
+func (o *fakeSSHOpener) Open(host domain.Host, secret string, verifier out.HostKeyVerifier, cols, rows int) (out.TerminalStream, error) {
+	o.mu.Lock()
+	o.lastSecret = secret
+	o.mu.Unlock()
+
+	if o.probeAlgo != "" {
+		if _, err := verifier(o.probeAlgo, o.probeFingerprint); err != nil {
+			return nil, err
+		}
+	}
+	if o.err != nil {
+		return nil, o.err
+	}
+	return o.stream, nil
+}
+
+func (o *fakeSSHOpener) secretSeen() string {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.lastSecret
 }

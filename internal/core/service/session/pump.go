@@ -34,7 +34,7 @@ func (s *Service) readLoop(live *liveSession) {
 	defer s.wg.Done()
 	buf := make([]byte, readBufSize)
 	for {
-		n, err := live.stream.Read(buf)
+		n, err := live.getStream().Read(buf)
 		if n > 0 {
 			chunk := make([]byte, n)
 			copy(chunk, buf[:n])
@@ -57,7 +57,7 @@ func (s *Service) pump(id string, live *liveSession) {
 	defer s.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			_ = live.stream.Close()
+			_ = live.getStream().Close()
 			s.remove(id)
 			_ = live.session.TransitionTo(domain.StateError)
 			s.pub.Publish(out.TopicSessionState(id), StatePayload{State: string(domain.StateError), Error: fmt.Sprint(r)})
@@ -93,8 +93,8 @@ loop:
 	}
 	flush()
 
-	exitCode, _ := live.stream.Wait()
-	_ = live.stream.Close()
+	exitCode, _ := live.getStream().Wait()
+	_ = live.getStream().Close()
 	s.remove(id)
 	_ = live.session.TransitionTo(domain.StateClosed)
 

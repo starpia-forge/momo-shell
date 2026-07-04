@@ -24,7 +24,7 @@ func waitFor(t *testing.T, timeout time.Duration, cond func() bool) {
 
 func newTestService(stream *fakeStream) (*Service, *recordingPublisher) {
 	pub := &recordingPublisher{}
-	svc := New(&fakeOpener{stream: stream}, pub)
+	svc := New(Deps{LocalOpener: &fakeOpener{stream: stream}, Publisher: pub})
 	return svc, pub
 }
 
@@ -84,7 +84,7 @@ func TestCreateLocal_PublishesRunningStateAndReturnsInfo(t *testing.T) {
 
 func TestCreateLocal_OpenerError(t *testing.T) {
 	pub := &recordingPublisher{}
-	svc := New(&fakeOpener{err: errBoom}, pub)
+	svc := New(Deps{LocalOpener: &fakeOpener{err: errBoom}, Publisher: pub})
 
 	_, err := svc.CreateLocal(in.LocalOpts{})
 	if err == nil {
@@ -270,7 +270,7 @@ func TestClose_IsIdempotentAfterSessionRemoved(t *testing.T) {
 func TestPumpPanic_RecoversAndPublishesErrorState(t *testing.T) {
 	stream := newFakeStream()
 	pub := &recordingPublisher{panicOnPrefix: "session:data:"}
-	svc := New(&fakeOpener{stream: stream}, pub)
+	svc := New(Deps{LocalOpener: &fakeOpener{stream: stream}, Publisher: pub})
 
 	info, err := svc.CreateLocal(in.LocalOpts{})
 	if err != nil {
@@ -296,11 +296,14 @@ func TestCloseAll_DrainsEverySession(t *testing.T) {
 
 	callCount := 0
 	streams := []*fakeStream{stream1, stream2}
-	svc := New(openerFunc(func() (*fakeStream, error) {
-		s := streams[callCount]
-		callCount++
-		return s, nil
-	}), pub)
+	svc := New(Deps{
+		LocalOpener: openerFunc(func() (*fakeStream, error) {
+			s := streams[callCount]
+			callCount++
+			return s, nil
+		}),
+		Publisher: pub,
+	})
 
 	info1, err := svc.CreateLocal(in.LocalOpts{})
 	if err != nil {

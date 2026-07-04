@@ -7,37 +7,44 @@ type SessionKind string
 
 const (
 	KindLocal SessionKind = "local"
+	KindSSH   SessionKind = "ssh"
 )
 
 // SessionState is the session lifecycle state.
 type SessionState string
 
 const (
-	StateStarting SessionState = "starting"
-	StateRunning  SessionState = "running"
-	StateClosed   SessionState = "closed"
-	StateError    SessionState = "error"
+	// StateConnecting is SSH-only: dialing, handshaking, and (if needed)
+	// waiting on a host key confirmation. Local sessions skip it and start
+	// at StateStarting since a local shell spawns synchronously.
+	StateConnecting SessionState = "connecting"
+	StateStarting   SessionState = "starting"
+	StateRunning    SessionState = "running"
+	StateClosed     SessionState = "closed"
+	StateError      SessionState = "error"
 )
 
 // legalTransitions encodes the allowed state machine; terminal states (Closed, Error) have none.
 var legalTransitions = map[SessionState]map[SessionState]bool{
-	StateStarting: {StateRunning: true, StateClosed: true, StateError: true},
-	StateRunning:  {StateClosed: true, StateError: true},
-	StateClosed:   {},
-	StateError:    {},
+	StateConnecting: {StateRunning: true, StateClosed: true, StateError: true},
+	StateStarting:   {StateRunning: true, StateClosed: true, StateError: true},
+	StateRunning:    {StateClosed: true, StateError: true},
+	StateClosed:     {},
+	StateError:      {},
 }
 
-// Session is the core entity representing one terminal (local shell or, in later phases, SSH).
+// Session is the core entity representing one terminal (local shell or SSH).
 type Session struct {
-	ID    string
-	Kind  SessionKind
-	Shell string
-	Cols  int
-	Rows  int
-	State SessionState
+	ID     string
+	Kind   SessionKind
+	Shell  string // local only; empty for SSH
+	HostID string // SSH only; empty for local
+	Cols   int
+	Rows   int
+	State  SessionState
 }
 
-// NewSession creates a session in the initial Starting state.
+// NewSession creates a local session in the initial Starting state.
 func NewSession(id string, kind SessionKind, shell string, cols, rows int) *Session {
 	return &Session{
 		ID:    id,
@@ -46,6 +53,18 @@ func NewSession(id string, kind SessionKind, shell string, cols, rows int) *Sess
 		Cols:  cols,
 		Rows:  rows,
 		State: StateStarting,
+	}
+}
+
+// NewSSHSession creates an SSH session in the initial Connecting state.
+func NewSSHSession(id, hostID string, cols, rows int) *Session {
+	return &Session{
+		ID:     id,
+		Kind:   KindSSH,
+		HostID: hostID,
+		Cols:   cols,
+		Rows:   rows,
+		State:  StateConnecting,
 	}
 }
 
@@ -60,14 +79,15 @@ func (s *Session) TransitionTo(next SessionState) error {
 
 // SessionInfo is the read-only DTO handed back across the in-port boundary.
 type SessionInfo struct {
-	ID    string      `json:"id"`
-	Kind  SessionKind `json:"kind"`
-	Shell string      `json:"shell"`
-	Cols  int         `json:"cols"`
-	Rows  int         `json:"rows"`
+	ID     string      `json:"id"`
+	Kind   SessionKind `json:"kind"`
+	Shell  string      `json:"shell,omitempty"`
+	HostID string      `json:"hostId,omitempty"`
+	Cols   int         `json:"cols"`
+	Rows   int         `json:"rows"`
 }
 
 // Info snapshots the session as a SessionInfo DTO.
 func (s *Session) Info() SessionInfo {
-	return SessionInfo{ID: s.ID, Kind: s.Kind, Shell: s.Shell, Cols: s.Cols, Rows: s.Rows}
+	return SessionInfo{ID: s.ID, Kind: s.Kind, Shell: s.Shell, HostID: s.HostID, Cols: s.Cols, Rows: s.Rows}
 }

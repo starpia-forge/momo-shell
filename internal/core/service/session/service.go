@@ -15,39 +15,88 @@ import (
 // ErrSessionNotFound is returned by operations on an unknown or already-closed session ID.
 var ErrSessionNotFound = errors.New("session: not found")
 
+// ErrSessionConnecting is returned by Write/Resize on an SSH session that
+// hasn't finished connecting yet.
+var ErrSessionConnecting = errors.New("session: still connecting")
+
 // closeAllGrace bounds how long CloseAll waits for every session's pump to
 // finish draining before giving up (used during app shutdown).
 const closeAllGrace = 3 * time.Second
 
+// Deps are the out-ports Service needs. SSHOpener/HostRepo/Secrets/KnownHosts
+// are only used by CreateSSH; a Service used purely for local sessions may
+// leave them nil.
+type Deps struct {
+	LocalOpener out.LocalTerminalOpener
+	SSHOpener   out.SSHTerminalOpener
+	HostRepo    out.HostRepository
+	Secrets     out.SecretStore
+	KnownHosts  out.KnownHostsRepository
+	Publisher   out.EventPublisher
+}
+
 // Service implements in.SessionUseCase. It owns session lifecycle and
-// delegates transport to whatever out.LocalTerminalOpener it's given.
+// delegates transport to whatever TerminalStream-producing adapters it's
+// given -- local PTY and SSH are treated identically once a stream exists.
 type Service struct {
 	mu       sync.Mutex
 	sessions map[string]*liveSession
 
-	opener out.LocalTerminalOpener
-	pub    out.EventPublisher
-	wg     sync.WaitGroup
+	localOpener out.LocalTerminalOpener
+	sshOpener   out.SSHTerminalOpener
+	hostRepo    out.HostRepository
+	secrets     out.SecretStore
+	knownHosts  out.KnownHostsRepository
+	pub         out.EventPublisher
+	wg          sync.WaitGroup
 }
 
+// liveSession tracks one session's runtime state. For a local session,
+// stream is set at construction and never changes. For an SSH session,
+// stream starts nil (Connecting) and is set once by connectSSH; mu guards
+// that single handoff since Write/Resize/Close may run concurrently with it.
 type liveSession struct {
 	session *domain.Session
-	stream  out.TerminalStream
 	readCh  chan []byte
+
+	mu     sync.Mutex
+	stream out.TerminalStream
+
+	// hostKeyResp and cancelCh are only used while an SSH session is
+	// Connecting; nil for local sessions.
+	hostKeyResp chan string
+	cancelCh    chan struct{}
+	cancelOnce  sync.Once
+}
+
+func (live *liveSession) setStream(stream out.TerminalStream) {
+	live.mu.Lock()
+	live.stream = stream
+	live.mu.Unlock()
+}
+
+func (live *liveSession) getStream() out.TerminalStream {
+	live.mu.Lock()
+	defer live.mu.Unlock()
+	return live.stream
 }
 
 var _ in.SessionUseCase = (*Service)(nil)
 
-func New(opener out.LocalTerminalOpener, pub out.EventPublisher) *Service {
+func New(deps Deps) *Service {
 	return &Service{
-		sessions: make(map[string]*liveSession),
-		opener:   opener,
-		pub:      pub,
+		sessions:    make(map[string]*liveSession),
+		localOpener: deps.LocalOpener,
+		sshOpener:   deps.SSHOpener,
+		hostRepo:    deps.HostRepo,
+		secrets:     deps.Secrets,
+		knownHosts:  deps.KnownHosts,
+		pub:         deps.Publisher,
 	}
 }
 
 func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
-	stream, resolvedShell, err := s.opener.Open(opts.Shell, nil, opts.Env, opts.Cwd, opts.Cols, opts.Rows)
+	stream, resolvedShell, err := s.localOpener.Open(opts.Shell, nil, opts.Env, opts.Cwd, opts.Cols, opts.Rows)
 	if err != nil {
 		return domain.SessionInfo{}, err
 	}
@@ -80,7 +129,11 @@ func (s *Service) Write(id string, data []byte) error {
 	if !ok {
 		return ErrSessionNotFound
 	}
-	_, err := live.stream.Write(data)
+	stream := live.getStream()
+	if stream == nil {
+		return ErrSessionConnecting
+	}
+	_, err := stream.Write(data)
 	return err
 }
 
@@ -89,15 +142,28 @@ func (s *Service) Resize(id string, cols, rows int) error {
 	if !ok {
 		return ErrSessionNotFound
 	}
-	return live.stream.Resize(cols, rows)
+	stream := live.getStream()
+	if stream == nil {
+		return ErrSessionConnecting
+	}
+	return stream.Resize(cols, rows)
 }
 
+// Close closes a running session's stream, or -- for an SSH session still
+// Connecting -- cancels the in-flight connect/host-key wait and removes the
+// session immediately (there's no stream or pump goroutine yet to drain).
 func (s *Service) Close(id string) error {
 	live, ok := s.get(id)
 	if !ok {
 		return ErrSessionNotFound
 	}
-	return live.stream.Close()
+	stream := live.getStream()
+	if stream == nil {
+		live.cancelOnce.Do(func() { close(live.cancelCh) })
+		s.remove(id)
+		return nil
+	}
+	return stream.Close()
 }
 
 // CloseAll synchronously closes every live session, waiting up to
