@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { disposeSession, useSessionStore } from '../../../entities/session'
-import type { Host } from '../../../entities/host'
+import { useHostStore, type Host } from '../../../entities/host'
 import { HostKeyPrompt } from '../../../features/session-connect'
+import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { HostSidebar } from '../../../widgets/host-sidebar'
 import { StatusBar } from '../../../widgets/status-bar'
 import { TabBar, createLocalTab, useTabStore, type Tab } from '../../../widgets/tab-bar'
@@ -89,9 +90,38 @@ export function WorkspacePage() {
     useTabStore.getState().removeTab(tabId)
   }
 
+  // Dropping a dragged pane onto a tab: hovering a tab already activates it
+  // (TabBar's own timer) so the drag can continue onto one of its panes --
+  // an actual drop on the tab item itself just finalizes that activation.
+  // Dropping on empty tab-bar space detaches the pane into a brand new tab.
+  function handlePaneDrop(payload: PaneDragPayload, targetTabId: string | null) {
+    if (targetTabId !== null) {
+      useTabStore.getState().setActive(targetTabId)
+      return
+    }
+
+    const sourceTree = useWorkspaceLayoutStore.getState().trees[payload.tabId]
+    if (sourceTree && leaves(sourceTree).length <= 1) return // already alone in its tab
+
+    const removed = useWorkspaceLayoutStore.getState().closeLeaf(payload.tabId, payload.leafId)
+    if (!removed) return
+
+    const session = useSessionStore.getState().sessions[payload.sessionId]
+    const host = session?.hostId ? useHostStore.getState().hosts[session.hostId] : undefined
+    useTabStore.getState().addTab({
+      id: payload.sessionId,
+      kind: session?.kind === 'ssh' ? 'ssh' : 'local',
+      hostId: session?.hostId,
+      sessionId: payload.sessionId,
+      title: session?.kind === 'ssh' ? (host?.name ?? '연결 중...') : '로컬 쉘',
+      subtitle: session?.kind === 'ssh' ? (host?.address ?? '') : (session?.shell ?? ''),
+    })
+    if (removed.becameEmpty) useTabStore.getState().removeTab(payload.tabId)
+  }
+
   return (
     <div className="workspace">
-      <TabBar onCloseTab={handleCloseTab} />
+      <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} />
       <div className="workspace__body">
         <div className="workspace__sidebar">
           <HostSidebar onConnect={handleHostConnect} />

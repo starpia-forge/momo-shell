@@ -115,10 +115,22 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
     setDropZone(null)
     if (!zone) return
     const payload = decodePaneDrag(e.dataTransfer)
-    // Cross-tab pane docking isn't supported yet -- Step 5 handles moving a
-    // pane between tabs via the tab bar, a separate (detach-to-new-tab) flow.
-    if (!payload || payload.tabId !== tabId || payload.leafId === leaf.id) return
-    useWorkspaceLayoutStore.getState().moveLeafInTab(tabId, payload.leafId, leaf.id, zone, crypto.randomUUID())
+    if (!payload || payload.leafId === leaf.id) return
+
+    const layout = useWorkspaceLayoutStore.getState()
+    if (payload.tabId === tabId) {
+      layout.moveLeafInTab(tabId, payload.leafId, leaf.id, zone, crypto.randomUUID())
+      return
+    }
+
+    // Cross-tab: this pane arrived here via the tab bar's hover-to-activate
+    // (dragging over a tab for 500ms switches to it, letting the drag
+    // continue onto one of its panes). Detach the leaf from its source
+    // tab's tree (without touching the session itself) and insert it here.
+    const removed = layout.closeLeaf(payload.tabId, payload.leafId)
+    if (!removed) return
+    layout.insertLeafAtZone(tabId, leaf.id, zone, payload.leafId, removed.sessionId, crypto.randomUUID())
+    if (removed.becameEmpty) onTabBecameEmpty(payload.tabId)
   }
 
   async function handleReconnect() {

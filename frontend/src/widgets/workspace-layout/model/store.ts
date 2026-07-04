@@ -37,6 +37,7 @@ interface WorkspaceLayoutStore {
   splitLeaf: (tabId: string, leafId: string, direction: SplitDirection, newLeafId: string, newSessionId: string, splitId: string) => void
   equalize: (tabId: string, splitId: string) => void
   moveLeafInTab: (tabId: string, srcLeafId: string, targetLeafId: string, zone: DropZone, splitId: string) => void
+  insertLeafAtZone: (tabId: string, targetLeafId: string, zone: DropZone, newLeafId: string, newSessionId: string, splitId: string) => void
 }
 
 function omit<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -146,6 +147,26 @@ export const useWorkspaceLayoutStore = create<WorkspaceLayoutStore>((set, get) =
       return {
         trees: { ...s.trees, [tabId]: newTree },
         focusedLeaf: { ...s.focusedLeaf, [tabId]: srcLeafId },
+      }
+    }),
+
+  // Inserts a leaf transplanted from another tab's tree next to `targetLeafId`.
+  // Unlike moveLeafInTab, there's no same-tree sibling to swap with on
+  // 'center' -- swapping would mean also transplanting the target leaf back
+  // into the source tab, which the drop UI doesn't offer -- so center just
+  // falls through the same direction/before mapping as the column zones
+  // (insert below), never destroys the target's session.
+  insertLeafAtZone: (tabId, targetLeafId, zone, newLeafId, newSessionId, splitId) =>
+    set((s) => {
+      const tree = s.trees[tabId]
+      if (!tree) return s
+      const direction: SplitDirection = zone === 'left' || zone === 'right' ? 'row' : 'column'
+      const before = zone === 'left' || zone === 'top'
+      const newLeaf = createLeaf(newLeafId, newSessionId)
+      const newTree = treeSplitLeaf(tree, targetLeafId, direction, before, newLeaf, splitId)
+      return {
+        trees: { ...s.trees, [tabId]: newTree },
+        focusedLeaf: { ...s.focusedLeaf, [tabId]: newLeafId },
       }
     }),
 }))

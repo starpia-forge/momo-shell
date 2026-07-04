@@ -2,14 +2,19 @@ import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMo
 import { useTabStore, type Tab } from '../model/store'
 import { useSessionStore } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
+import { decodePaneDrag, isPaneDrag, type PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { createLocalTab, createSSHTab } from '../lib/createTab'
 import './TabBar.css'
 
+const HOVER_ACTIVATE_MS = 500
+
 interface TabBarProps {
   onCloseTab: (tab: Tab) => void
+  /** A dragged pane was dropped on tab `targetTabId`, or on empty tab-bar space (null). */
+  onPaneDrop: (payload: PaneDragPayload, targetTabId: string | null) => void
 }
 
-export function TabBar({ onCloseTab }: TabBarProps) {
+export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
   const setActive = useTabStore((s) => s.setActive)
@@ -22,6 +27,7 @@ export function TabBar({ onCloseTab }: TabBarProps) {
 
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const hoverRef = useRef<{ timer: number; tabId: string } | null>(null)
 
   useEffect(() => {
     if (!popoverOpen) return
@@ -32,7 +38,14 @@ export function TabBar({ onCloseTab }: TabBarProps) {
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [popoverOpen, closePopover])
 
-  function handleDrop(index: number) {
+  function clearHover() {
+    if (hoverRef.current) {
+      window.clearTimeout(hoverRef.current.timer)
+      hoverRef.current = null
+    }
+  }
+
+  function handleReorderDrop(index: number) {
     if (dragIndex !== null && dragIndex !== index) reorder(dragIndex, index)
     setDragIndex(null)
   }
@@ -44,8 +57,51 @@ export function TabBar({ onCloseTab }: TabBarProps) {
     }
   }
 
+  // Always preventDefault (needed for both tab-reorder and pane-drop to
+  // register as a valid drop target); a pane drag additionally starts a
+  // hover-to-activate timer so the user can keep dragging into that tab's
+  // panes once it comes to the front.
+  function handleTabDragOver(e: DragEvent, tab: Tab) {
+    e.preventDefault()
+    if (!isPaneDrag(e.dataTransfer)) return
+    if (hoverRef.current?.tabId === tab.id) return
+    clearHover()
+    const timer = window.setTimeout(() => {
+      setActive(tab.id)
+      hoverRef.current = null
+    }, HOVER_ACTIVATE_MS)
+    hoverRef.current = { timer, tabId: tab.id }
+  }
+
+  function handleTabDragLeave(tab: Tab) {
+    if (hoverRef.current?.tabId === tab.id) clearHover()
+  }
+
+  function handleTabDrop(e: DragEvent, tab: Tab, index: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    clearHover()
+    if (isPaneDrag(e.dataTransfer)) {
+      const payload = decodePaneDrag(e.dataTransfer)
+      if (payload) onPaneDrop(payload, tab.id)
+      return
+    }
+    handleReorderDrop(index)
+  }
+
+  function handleBarDragOver(e: DragEvent) {
+    if (isPaneDrag(e.dataTransfer)) e.preventDefault()
+  }
+
+  function handleBarDrop(e: DragEvent) {
+    if (!isPaneDrag(e.dataTransfer)) return
+    e.preventDefault()
+    const payload = decodePaneDrag(e.dataTransfer)
+    if (payload) onPaneDrop(payload, null)
+  }
+
   return (
-    <div className="tab-bar">
+    <div className="tab-bar" onDragOver={handleBarDragOver} onDrop={handleBarDrop}>
       <div className="tab-bar__tabs">
         {tabs.map((tab, index) => {
           const state = sessions[tab.sessionId]?.state ?? 'idle'
@@ -55,8 +111,9 @@ export function TabBar({ onCloseTab }: TabBarProps) {
               className={`tab-bar__tab ${tab.id === activeId ? 'tab-bar__tab--active' : ''}`}
               draggable
               onDragStart={() => setDragIndex(index)}
-              onDragOver={(e: DragEvent) => e.preventDefault()}
-              onDrop={() => handleDrop(index)}
+              onDragOver={(e: DragEvent) => handleTabDragOver(e, tab)}
+              onDragLeave={() => handleTabDragLeave(tab)}
+              onDrop={(e: DragEvent) => handleTabDrop(e, tab, index)}
               onClick={() => setActive(tab.id)}
               onMouseDown={(e) => handleMiddleClick(e, tab)}
             >
