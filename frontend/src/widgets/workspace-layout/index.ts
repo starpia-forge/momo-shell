@@ -9,3 +9,5 @@ export type {
 export { findLeaf, leaves } from './model/tree'
 export { useWorkspaceLayoutStore } from './model/store'
 export { WorkspaceLayout } from './ui/WorkspaceLayout'
+export { splitFocused } from './lib/splitFocused'
+export { closeLeafOrEscalate } from './lib/closeLeaf'
