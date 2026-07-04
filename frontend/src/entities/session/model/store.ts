@@ -1,10 +1,13 @@
 import { create } from 'zustand'
 
 export type SessionState = 'connecting' | 'starting' | 'running' | 'closed' | 'error'
+export type SessionKind = 'local' | 'ssh'
 
 export interface SessionMeta {
   id: string
+  kind: SessionKind
   shell: string
+  hostId?: string
   cols: number
   rows: number
   state: SessionState

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { openLocalSession, TerminalPane } from '../../../entities/session'
+import { HostKeyPrompt } from '../../../features/session-connect'
+import { HostSidebar } from '../../../widgets/host-sidebar'
 import { StatusBar } from '../../../widgets/status-bar'
 import './WorkspacePage.css'
 
@@ -17,10 +19,13 @@ export function WorkspacePage() {
     <div className="workspace">
       <div className="workspace__tab-bar" />
       <div className="workspace__body">
-        <div className="workspace__sidebar" />
+        <div className="workspace__sidebar">
+          <HostSidebar onConnect={setSessionId} />
+        </div>
         <div className="workspace__pane">{sessionId && <TerminalPane sessionId={sessionId} />}</div>
       </div>
       <StatusBar sessionId={sessionId} />
+      <HostKeyPrompt />
     </div>
   )
 }

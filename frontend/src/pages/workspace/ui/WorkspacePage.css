@@ -23,8 +23,6 @@
 .workspace__sidebar {
   flex: none;
   width: 220px;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
 }
 
 .workspace__pane {

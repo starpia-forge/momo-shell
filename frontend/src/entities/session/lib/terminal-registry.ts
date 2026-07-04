@@ -9,14 +9,22 @@ import '@xterm/xterm/css/xterm.css'
 
 import {
   createLocalSession,
+  createSSHSession,
   writeSession,
   resizeSession,
   closeSession,
   type CreateLocalSessionOpts,
 } from '../../../shared/api/session'
-import { subscribe, topics, type SessionStatePayload, type SessionClosedPayload } from '../../../shared/api/events'
+import {
+  subscribe,
+  topics,
+  type SessionStatePayload,
+  type SessionClosedPayload,
+  type SessionHostKeyPayload,
+} from '../../../shared/api/events'
 import { b64ToBytes } from '../../../shared/lib/base64'
 import { useSessionStore } from '../model/store'
+import { useHostKeyPromptStore } from '../model/hostKeyPrompts'
 
 // The xterm.js instance is owned here, outside React, in a detached host
 // div. TerminalPane only ever attaches/detaches that div -- it never
@@ -49,10 +57,13 @@ if (typeof document !== 'undefined' && document.fonts) {
   })
 }
 
-export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<string> {
-  const info = await createLocalSession(opts)
-  const { id } = info
-
+// createTerminalEntry builds the xterm.js instance + addons + detached host
+// div + the event wiring every session needs (input, resize, output,
+// state/closed, and the SSH host-key prompt -- harmless to wire for local
+// sessions too, since the backend simply never publishes that topic for
+// them). openLocalSession/openSSHSession differ only in which RPC they call
+// and what they seed the session store with.
+function createTerminalEntry(id: string): void {
   const term = new Terminal({
     scrollback: 10000,
     allowProposedApi: true,
@@ -118,18 +129,46 @@ export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<st
       if (entry) entry.closed = true
     })
   )
+  unsubs.push(
+    subscribe<SessionHostKeyPayload>(topics.sessionHostKey(id), (payload) => {
+      useHostKeyPromptStore.getState().setPrompt(id, payload)
+    })
+  )
 
   registry.set(id, { term, fit, host, unsubs, attached: null, closed: false })
+}
+
+export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<string> {
+  const info = await createLocalSession(opts)
+  createTerminalEntry(info.id)
 
   useSessionStore.getState().upsert({
     id: info.id,
+    kind: 'local',
     shell: info.shell ?? '',
     cols: info.cols,
     rows: info.rows,
     state: 'running',
   })
 
-  return id
+  return info.id
+}
+
+export async function openSSHSession(hostId: string, cols: number, rows: number): Promise<string> {
+  const info = await createSSHSession({ hostId, cols, rows })
+  createTerminalEntry(info.id)
+
+  useSessionStore.getState().upsert({
+    id: info.id,
+    kind: 'ssh',
+    hostId: info.hostId,
+    shell: '',
+    cols: info.cols,
+    rows: info.rows,
+    state: 'connecting',
+  })
+
+  return info.id
 }
 
 export function attach(id: string, container: HTMLElement): void {
@@ -183,4 +222,5 @@ export function disposeSession(id: string): void {
   void closeSession(id)
   registry.delete(id)
   useSessionStore.getState().remove(id)
+  useHostKeyPromptStore.getState().clearPrompt(id)
 }

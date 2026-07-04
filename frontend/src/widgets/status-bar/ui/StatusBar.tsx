@@ -12,7 +12,7 @@ export function StatusBar({ sessionId }: StatusBarProps) {
     <div className="status-bar">
       {session ? (
         <>
-          <span>{session.shell || 'shell'}</span>
+          <span>{session.kind === 'ssh' ? 'SSH' : session.shell || 'shell'}</span>
           <span>
             {session.cols}×{session.rows}
           </span>
