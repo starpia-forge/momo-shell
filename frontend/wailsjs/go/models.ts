@@ -1,5 +1,41 @@
 export namespace wails {
 	
+	export class HistoryEntryDTO {
+	    id: number;
+	    hostId?: string;
+	    command: string;
+	    executedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new HistoryEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.hostId = source["hostId"];
+	        this.command = source["command"];
+	        this.executedAt = source["executedAt"];
+	    }
+	}
+	export class HistoryQueryDTO {
+	    hostId: string;
+	    search: string;
+	    limit: number;
+	    offset: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new HistoryQueryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hostId = source["hostId"];
+	        this.search = source["search"];
+	        this.limit = source["limit"];
+	        this.offset = source["offset"];
+	    }
+	}
 	export class HostDTO {
 	    id: string;
 	    name: string;

@@ -1,3 +1,5 @@
 export * from './session'
 export * from './events'
 export * from './host'
+export * from './history'
+export * from './clipboard'

@@ -64,6 +64,20 @@ func TestHistoryRepo_List_FiltersByHostID(t *testing.T) {
 	}
 }
 
+func TestHistoryRepo_List_FiltersToLocalOnly(t *testing.T) {
+	repo := newTestHistoryRepo(t)
+	_, _ = repo.Append(nil, "local cmd", 1000)
+	_, _ = repo.Append(strPtr("host-1"), "remote cmd", 2000)
+
+	got, err := repo.List(domain.HistoryQuery{HostID: strPtr("")})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(got) != 1 || got[0].Command != "local cmd" {
+		t.Fatalf("List() = %+v, want only the local entry (HostID: ptr(\"\") means local-only)", got)
+	}
+}
+
 func TestHistoryRepo_List_FiltersBySearch(t *testing.T) {
 	repo := newTestHistoryRepo(t)
 	_, _ = repo.Append(nil, "docker compose up", 1000)
@@ -175,6 +189,23 @@ func TestHistoryRepo_Clear_ByHost(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].Command != "local cmd" {
 		t.Fatalf("List() = %+v, want only the local entry left", got)
+	}
+}
+
+func TestHistoryRepo_Clear_LocalOnly(t *testing.T) {
+	repo := newTestHistoryRepo(t)
+	_, _ = repo.Append(nil, "local cmd", 1000)
+	_, _ = repo.Append(strPtr("host-1"), "remote cmd", 2000)
+
+	if err := repo.Clear(strPtr("")); err != nil {
+		t.Fatalf("Clear() error = %v", err)
+	}
+	got, err := repo.List(domain.HistoryQuery{})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(got) != 1 || got[0].Command != "remote cmd" {
+		t.Fatalf("List() = %+v, want only the remote entry left", got)
 	}
 }
 

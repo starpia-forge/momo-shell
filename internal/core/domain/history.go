@@ -9,8 +9,12 @@ type HistoryEntry struct {
 	ExecutedAt int64 // Unix seconds
 }
 
-// HistoryQuery filters HistoryRepository.List. HostID nil means "every
-// session, local and SSH alike"; Limit <= 0 means "no limit".
+// HistoryQuery filters HistoryRepository.List. HostID has three states,
+// same as HistoryRepository.Clear: nil means every session (local and every
+// host); a pointer to "" means local sessions only; a pointer to a host ID
+// scopes to that host. (This differs from Append/LastForHost, where nil
+// alone means local -- those never need an "every session" state.)
+// Limit <= 0 means "no limit".
 type HistoryQuery struct {
 	HostID *string
 	Search string

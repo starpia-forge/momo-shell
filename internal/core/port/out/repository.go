@@ -31,9 +31,11 @@ type HistoryRepository interface {
 	// LastForHost returns the most recent entry for hostID (nil = local),
 	// used to detect consecutive-duplicate commands.
 	LastForHost(hostID *string) (entry domain.HistoryEntry, found bool, err error)
+	// List filters per domain.HistoryQuery's three-state HostID (nil = all,
+	// pointer to "" = local only, pointer to an ID = that host only).
 	List(q domain.HistoryQuery) ([]domain.HistoryEntry, error)
 	Delete(id int64) error
-	// Clear deletes entries for hostID, or every entry (local and every
-	// host) when hostID is nil.
+	// Clear deletes local entries (hostID points to ""), one host's entries
+	// (hostID points to its ID), or every entry (hostID is nil).
 	Clear(hostID *string) error
 }

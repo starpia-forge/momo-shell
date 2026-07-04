@@ -60,8 +60,11 @@ func main() {
 	})
 
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
+	clipboardWriter := wailsfacade.NewClipboardWriter()
 	sessionService := wailsfacade.NewSessionService(sessionSvc)
 	hostService := wailsfacade.NewHostService(hostSvc, keyFileBrowser)
+	historyService := wailsfacade.NewHistoryService(historySvc)
+	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-terminal",
@@ -76,6 +79,7 @@ func main() {
 		OnStartup: func(ctx context.Context) {
 			publisher.SetContext(ctx)
 			keyFileBrowser.SetContext(ctx)
+			clipboardWriter.SetContext(ctx)
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()
@@ -85,6 +89,8 @@ func main() {
 		Bind: []interface{}{
 			sessionService,
 			hostService,
+			historyService,
+			clipboardService,
 		},
 	})
 

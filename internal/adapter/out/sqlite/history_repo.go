@@ -76,8 +76,12 @@ func (r *HistoryRepo) List(q domain.HistoryQuery) ([]domain.HistoryEntry, error)
 	query := `SELECT ` + historyColumns + ` FROM command_history WHERE 1=1`
 	var args []any
 	if q.HostID != nil {
-		query += ` AND host_id = ?`
-		args = append(args, *q.HostID)
+		if *q.HostID == "" {
+			query += ` AND host_id IS NULL`
+		} else {
+			query += ` AND host_id = ?`
+			args = append(args, *q.HostID)
+		}
 	}
 	if q.Search != "" {
 		query += ` AND command LIKE ?`
@@ -125,6 +129,12 @@ func (r *HistoryRepo) Clear(hostID *string) error {
 	if hostID == nil {
 		if _, err := r.db.Exec(`DELETE FROM command_history`); err != nil {
 			return fmt.Errorf("sqlite: clear all history: %w", err)
+		}
+		return nil
+	}
+	if *hostID == "" {
+		if _, err := r.db.Exec(`DELETE FROM command_history WHERE host_id IS NULL`); err != nil {
+			return fmt.Errorf("sqlite: clear local history: %w", err)
 		}
 		return nil
 	}

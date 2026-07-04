@@ -5,6 +5,7 @@ export const topics = {
   sessionState: (id: string) => `session:state:${id}`,
   sessionClosed: (id: string) => `session:closed:${id}`,
   sessionHostKey: (id: string) => `session:hostkey:${id}`,
+  historyAppended: () => `history:appended`,
 }
 
 export interface SessionStatePayload {
@@ -21,6 +22,13 @@ export interface SessionHostKeyPayload {
   port: number
   algo: string
   fingerprint: string
+}
+
+export interface HistoryAppendedPayload {
+  id: number
+  hostId?: string
+  command: string
+  executedAt: number
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe
