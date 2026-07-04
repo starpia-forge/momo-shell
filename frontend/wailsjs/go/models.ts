@@ -114,6 +114,30 @@ export namespace wails {
 	        this.rows = source["rows"];
 	    }
 	}
+	export class RemoteEntryDTO {
+	    name: string;
+	    path: string;
+	    size: number;
+	    mode: number;
+	    modeText: string;
+	    modTime: number;
+	    isDir: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemoteEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.size = source["size"];
+	        this.mode = source["mode"];
+	        this.modeText = source["modeText"];
+	        this.modTime = source["modTime"];
+	        this.isDir = source["isDir"];
+	    }
+	}
 	export class SSHSessionOpts {
 	    hostId: string;
 	    cols: number;
@@ -150,6 +174,38 @@ export namespace wails {
 	        this.hostId = source["hostId"];
 	        this.cols = source["cols"];
 	        this.rows = source["rows"];
+	    }
+	}
+	export class TaskInfoDTO {
+	    id: string;
+	    sessionId: string;
+	    kind: string;
+	    state: string;
+	    src: string;
+	    dst: string;
+	    currentFile?: string;
+	    bytes: number;
+	    total: number;
+	    offset: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TaskInfoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.sessionId = source["sessionId"];
+	        this.kind = source["kind"];
+	        this.state = source["state"];
+	        this.src = source["src"];
+	        this.dst = source["dst"];
+	        this.currentFile = source["currentFile"];
+	        this.bytes = source["bytes"];
+	        this.total = source["total"];
+	        this.offset = source["offset"];
+	        this.error = source["error"];
 	    }
 	}
 	export class TestResultDTO {

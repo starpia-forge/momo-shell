@@ -64,11 +64,12 @@ func main() {
 
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	clipboardWriter := wailsfacade.NewClipboardWriter()
+	transferDialogs := wailsfacade.NewTransferDialogs()
 	sessionService := wailsfacade.NewSessionService(sessionSvc)
 	hostService := wailsfacade.NewHostService(hostSvc, keyFileBrowser)
 	historyService := wailsfacade.NewHistoryService(historySvc)
 	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
-	transferService := wailsfacade.NewTransferService(transferSvc)
+	transferService := wailsfacade.NewTransferService(transferSvc, transferDialogs)
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-shell",
@@ -84,6 +85,7 @@ func main() {
 			publisher.SetContext(ctx)
 			keyFileBrowser.SetContext(ctx)
 			clipboardWriter.SetContext(ctx)
+			transferDialogs.SetContext(ctx)
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()

@@ -1,6 +1,6 @@
 import { getFontSize, setFontSize, resetFontSize } from '../entities/session'
 import { useTerminalSearchStore } from '../features/terminal-search'
-import { useHistoryPanelStore } from '../widgets/history-panel'
+import { useRightDockStore } from '../widgets/right-dock'
 import { useTabStore } from '../widgets/tab-bar'
 import { closeLeafOrEscalate, splitFocused, useWorkspaceLayoutStore, type ArrowDirection } from '../widgets/workspace-layout'
 
@@ -64,8 +64,12 @@ export function registerGlobalShortcuts(): () => void {
     } else if (e.key.toLowerCase() === 'h') {
       e.preventDefault()
       e.stopPropagation()
-      useHistoryPanelStore.getState().toggle()
-    } else if (e.key.toLowerCase() === 'f') {
+      useRightDockStore.getState().toggle('history')
+    } else if (e.shiftKey && e.key.toLowerCase() === 'f') {
+      e.preventDefault()
+      e.stopPropagation()
+      useRightDockStore.getState().toggle('files')
+    } else if (!e.shiftKey && e.key.toLowerCase() === 'f') {
       e.preventDefault()
       e.stopPropagation()
       const tabId = useTabStore.getState().activeId

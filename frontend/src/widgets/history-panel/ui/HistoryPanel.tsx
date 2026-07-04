@@ -28,7 +28,6 @@ function matchesScope(entry: HistoryEntry, effectiveHostId: string): boolean {
 }
 
 export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelProps) {
-  const open = useHistoryPanelStore((s) => s.open)
   const entries = useHistoryPanelStore((s) => s.entries)
   const filter = useHistoryPanelStore((s) => s.filter)
   const scopeMode = useHistoryPanelStore((s) => s.scopeMode)
@@ -38,8 +37,9 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
 
   const effectiveHostId = scopeMode === 'current' ? currentHostId : ''
 
+  // Only mounted while RightDock has this tab active, so no visibility gate
+  // is needed here -- mounting itself is the signal to (re)load.
   useEffect(() => {
-    if (!open) return
     let cancelled = false
     void listHistory({ hostId: effectiveHostId }).then((result) => {
       if (!cancelled) useHistoryPanelStore.getState().setEntries(result)
@@ -47,7 +47,7 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
     return () => {
       cancelled = true
     }
-  }, [open, effectiveHostId])
+  }, [effectiveHostId])
 
   useEffect(
     () =>
@@ -62,8 +62,6 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
       }),
     [effectiveHostId]
   )
-
-  if (!open) return null
 
   const visible = entries.filter((e) => e.command.toLowerCase().includes(filter.toLowerCase()))
 
@@ -84,7 +82,6 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
 
   return (
     <div className="history-panel">
-      <div className="history-panel__header">히스토리</div>
       <div className="history-panel__filters">
         <input
           className="history-panel__search"

@@ -221,9 +221,42 @@ func (s *Service) start(sessionID string, t *task, run func(*task)) {
 	q.enqueue(t, run)
 }
 
+// taskPayload is the transfer:task wire shape -- in.TaskInfo itself carries
+// no json tags (it's a core DTO, not a wire payload), matching how
+// session.StatePayload/ClosedPayload stay separate from domain.Session.
+type taskPayload struct {
+	ID          string `json:"id"`
+	SessionID   string `json:"sessionId"`
+	Kind        string `json:"kind"`
+	State       string `json:"state"`
+	Src         string `json:"src"`
+	Dst         string `json:"dst"`
+	CurrentFile string `json:"currentFile,omitempty"`
+	Bytes       int64  `json:"bytes"`
+	Total       int64  `json:"total"`
+	Offset      int64  `json:"offset"`
+	Error       string `json:"error,omitempty"`
+}
+
+func toTaskPayload(info in.TaskInfo) taskPayload {
+	return taskPayload{
+		ID:          info.ID,
+		SessionID:   info.SessionID,
+		Kind:        string(info.Kind),
+		State:       string(info.State),
+		Src:         info.Src,
+		Dst:         info.Dst,
+		CurrentFile: info.CurrentFile,
+		Bytes:       info.Bytes,
+		Total:       info.Total,
+		Offset:      info.Offset,
+		Error:       info.Error,
+	}
+}
+
 func (s *Service) publishTask(t *task) {
 	if s.pub != nil {
-		s.pub.Publish(out.TopicTransferTask(), t.snapshot())
+		s.pub.Publish(out.TopicTransferTask(), toTaskPayload(t.snapshot()))
 	}
 }
 

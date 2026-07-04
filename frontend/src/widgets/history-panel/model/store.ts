@@ -4,11 +4,9 @@ import type { HistoryEntry } from '../../../shared/api'
 export type HistoryScopeMode = 'all' | 'current'
 
 interface HistoryPanelStore {
-  open: boolean
   entries: HistoryEntry[]
   filter: string
   scopeMode: HistoryScopeMode
-  toggle: () => void
   setFilter: (text: string) => void
   setScopeMode: (mode: HistoryScopeMode) => void
   setEntries: (entries: HistoryEntry[]) => void
@@ -18,11 +16,9 @@ interface HistoryPanelStore {
 }
 
 export const useHistoryPanelStore = create<HistoryPanelStore>((set) => ({
-  open: false,
   entries: [],
   filter: '',
   scopeMode: 'all',
-  toggle: () => set((s) => ({ open: !s.open })),
   setFilter: (filter) => set({ filter }),
   setScopeMode: (scopeMode) => set({ scopeMode }),
   setEntries: (entries) => set({ entries }),

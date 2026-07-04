@@ -1,0 +1,109 @@
+import {
+  BrowseForDownloadDirectory,
+  BrowseForUploadFiles,
+  CancelTransfer,
+  Chmod,
+  Download,
+  HomeDir,
+  ListRemoteDir,
+  ListTasks,
+  Mkdir,
+  Remove,
+  Rename,
+  StatRemote,
+  Upload,
+} from '../../../wailsjs/go/wails/TransferService'
+
+export interface RemoteEntry {
+  name: string
+  path: string
+  size: number
+  mode: number
+  modeText: string
+  modTime: number // unix ms
+  isDir: boolean
+}
+
+export type ConflictPolicy = 'overwrite' | 'rename' | 'skip'
+export type TaskKind = 'upload' | 'download'
+export type TaskState = 'queued' | 'running' | 'done' | 'failed' | 'canceled'
+
+export interface TaskInfo {
+  id: string
+  sessionId: string
+  kind: TaskKind
+  state: TaskState
+  src: string
+  dst: string
+  currentFile?: string
+  bytes: number
+  total: number
+  offset: number
+  error?: string
+}
+
+export async function listRemoteDir(sessionId: string, path: string): Promise<RemoteEntry[]> {
+  return ListRemoteDir(sessionId, path)
+}
+
+export async function homeDir(sessionId: string): Promise<string> {
+  return HomeDir(sessionId)
+}
+
+/** Wails only supports (value, error) returns; Go folds "not found" into a
+ * nil pointer, which crosses the wire as null. */
+export async function statRemote(sessionId: string, path: string): Promise<RemoteEntry | null> {
+  return (await StatRemote(sessionId, path)) as unknown as RemoteEntry | null
+}
+
+export async function uploadFiles(
+  sessionId: string,
+  localPaths: string[],
+  remoteDir: string,
+  policy: ConflictPolicy = 'overwrite'
+): Promise<string[]> {
+  return Upload(sessionId, localPaths, remoteDir, policy)
+}
+
+export async function downloadFiles(
+  sessionId: string,
+  remotePaths: string[],
+  localDir: string,
+  policy: ConflictPolicy = 'overwrite'
+): Promise<string[]> {
+  return Download(sessionId, remotePaths, localDir, policy)
+}
+
+export async function mkdirRemote(sessionId: string, path: string): Promise<void> {
+  await Mkdir(sessionId, path)
+}
+
+export async function renameRemote(sessionId: string, oldPath: string, newPath: string): Promise<void> {
+  await Rename(sessionId, oldPath, newPath)
+}
+
+export async function removeRemote(sessionId: string, path: string): Promise<void> {
+  await Remove(sessionId, path)
+}
+
+export async function chmodRemote(sessionId: string, path: string, mode: number): Promise<void> {
+  await Chmod(sessionId, path, mode)
+}
+
+export async function cancelTransfer(taskId: string): Promise<void> {
+  await CancelTransfer(taskId)
+}
+
+export async function listTasks(): Promise<TaskInfo[]> {
+  return (await ListTasks()) as unknown as TaskInfo[]
+}
+
+/** Opens a native multi-file picker; returns [] if the user cancelled. */
+export async function browseForUploadFiles(): Promise<string[]> {
+  return BrowseForUploadFiles()
+}
+
+/** Opens a native folder picker; returns "" if the user cancelled. */
+export async function browseForDownloadDirectory(): Promise<string> {
+  return BrowseForDownloadDirectory()
+}
