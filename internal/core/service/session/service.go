@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,6 +52,7 @@ type Service struct {
 	knownHosts  out.KnownHostsRepository
 	pub         out.EventPublisher
 	tap         CommandTap
+	middleware  OutputMiddleware
 	wg          sync.WaitGroup
 }
 
@@ -73,6 +75,12 @@ type liveSession struct {
 	hostKeyResp chan string
 	cancelCh    chan struct{}
 	cancelOnce  sync.Once
+
+	// inputBlocked drops keystrokes while a ZMODEM transfer owns the shell
+	// channel, so stray typing can't corrupt the protocol stream. The
+	// frontend's own overlay is the primary defense; this is the backend
+	// backstop.
+	inputBlocked atomic.Bool
 }
 
 func (live *liveSession) setStream(stream out.TerminalStream) {
@@ -158,6 +166,9 @@ func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
 	if s.tap != nil {
 		s.tap.Attach(id, "")
 	}
+	if s.middleware != nil {
+		s.middleware.Attach(id, domain.KindLocal)
+	}
 
 	s.wg.Add(2)
 	go s.readLoop(live)
@@ -173,6 +184,9 @@ func (s *Service) Write(id string, data []byte) error {
 	if !ok {
 		return ErrSessionNotFound
 	}
+	if live.inputBlocked.Load() {
+		return nil
+	}
 	stream := live.getStream()
 	if stream == nil {
 		return ErrSessionConnecting
@@ -182,6 +196,35 @@ func (s *Service) Write(id string, data []byte) error {
 		s.tap.OnInput(id, data)
 	}
 	return err
+}
+
+// WriteRaw writes directly to the stream, bypassing CommandTap.OnInput and
+// the input-blocked guard -- for ZMODEM protocol bytes, which must never
+// pollute command-history capture and must flow even while user input is
+// blocked (the transfer service is the one blocking it).
+func (s *Service) WriteRaw(id string, data []byte) error {
+	live, ok := s.get(id)
+	if !ok {
+		return ErrSessionNotFound
+	}
+	stream := live.getStream()
+	if stream == nil {
+		return ErrSessionConnecting
+	}
+	_, err := stream.Write(data)
+	return err
+}
+
+// SetInputBlocked drops (Write returns nil without writing) or resumes
+// keystrokes for a session -- used by the transfer service while a ZMODEM
+// exchange owns the shell channel.
+func (s *Service) SetInputBlocked(id string, blocked bool) error {
+	live, ok := s.get(id)
+	if !ok {
+		return ErrSessionNotFound
+	}
+	live.inputBlocked.Store(blocked)
+	return nil
 }
 
 // FileSystem lazily opens (and caches, per session) the SFTP subsystem on

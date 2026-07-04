@@ -14,6 +14,10 @@ export function CancelTransfer(arg1) {
   return window['go']['wails']['TransferService']['CancelTransfer'](arg1);
 }
 
+export function CancelZmodem(arg1) {
+  return window['go']['wails']['TransferService']['CancelZmodem'](arg1);
+}
+
 export function Chmod(arg1, arg2, arg3) {
   return window['go']['wails']['TransferService']['Chmod'](arg1, arg2, arg3);
 }
@@ -44,6 +48,10 @@ export function Remove(arg1, arg2) {
 
 export function Rename(arg1, arg2, arg3) {
   return window['go']['wails']['TransferService']['Rename'](arg1, arg2, arg3);
+}
+
+export function StartZmodemSend(arg1, arg2) {
+  return window['go']['wails']['TransferService']['StartZmodemSend'](arg1, arg2);
 }
 
 export function StatRemote(arg1, arg2) {

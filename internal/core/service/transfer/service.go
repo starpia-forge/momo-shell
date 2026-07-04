@@ -1,7 +1,6 @@
 // Package transfer implements in.TransferUseCase: SFTP file-browser
-// operations and the upload/download task queue. ZMODEM (rz/sz) is added on
-// top of this same Service in a later milestone via the session output
-// middleware seam.
+// operations, the upload/download task queue, and ZMODEM (rz/sz) detection
+// over the session output middleware seam (see middleware.go).
 package transfer
 
 import (
@@ -35,34 +34,59 @@ const (
 // is defined by its consumer rather than by session itself.
 type ShellAccess interface {
 	FileSystem(sessionID string) (out.RemoteFileSystem, error)
+	// WriteRaw sends ZMODEM protocol bytes directly, bypassing command-
+	// history capture and the input-blocked guard (session.Service.WriteRaw).
+	WriteRaw(sessionID string, data []byte) error
+	// SetInputBlocked drops/resumes user keystrokes while a ZMODEM exchange
+	// owns the shell channel (session.Service.SetInputBlocked).
+	SetInputBlocked(sessionID string, blocked bool) error
 }
 
-// Deps are the out-ports/collaborators Service needs.
+// Deps are the out-ports/collaborators Service needs. Zmodem is nil-able:
+// a Service without one still serves the SFTP file-browser/task-queue API,
+// just never detects or drives rz/sz.
 type Deps struct {
-	Shell ShellAccess
-	Pub   out.EventPublisher
+	Shell  ShellAccess
+	Pub    out.EventPublisher
+	Zmodem out.StreamTransfer
+	// DownloadDir is where an auto-detected ZMODEM download (remote sz)
+	// saves files. Empty defaults to "~/Downloads"; tests inject a temp dir.
+	DownloadDir string
 }
 
 // Service implements in.TransferUseCase with an in-memory task registry and
 // a per-session concurrency-limited queue (v1 has no persistence or resume;
-// see TaskInfo.Offset).
+// see TaskInfo.Offset). It also implements session.OutputMiddleware (see
+// middleware.go) to detect and drive ZMODEM transfers.
 type Service struct {
-	shell ShellAccess
-	pub   out.EventPublisher
+	shell       ShellAccess
+	pub         out.EventPublisher
+	zmodem      out.StreamTransfer
+	downloadDir string
 
 	mu     sync.Mutex
 	tasks  map[string]*task
 	queues map[string]*sessionQueue
+
+	zmu     sync.Mutex
+	zstates map[string]*zmodemState
 }
 
 var _ in.TransferUseCase = (*Service)(nil)
 
 func New(deps Deps) *Service {
+	downloadDir := deps.DownloadDir
+	if downloadDir == "" {
+		downloadDir = defaultDownloadDir()
+	}
 	return &Service{
-		shell:  deps.Shell,
-		pub:    deps.Pub,
-		tasks:  make(map[string]*task),
-		queues: make(map[string]*sessionQueue),
+		shell:       deps.Shell,
+		pub:         deps.Pub,
+		zmodem:      deps.Zmodem,
+		downloadDir: downloadDir,
+		tasks:       make(map[string]*task),
+		queues:      make(map[string]*sessionQueue),
+		zstates:     make(map[string]*zmodemState),
 	}
 }
 

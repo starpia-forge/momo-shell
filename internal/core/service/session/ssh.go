@@ -92,6 +92,9 @@ func (s *Service) connectSSH(id string, host domain.Host, secret string, live *l
 	if s.tap != nil {
 		s.tap.Attach(id, host.ID)
 	}
+	if s.middleware != nil {
+		s.middleware.Attach(id, domain.KindSSH)
+	}
 
 	s.wg.Add(2)
 	go s.readLoop(live)

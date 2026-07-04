@@ -12,6 +12,63 @@ import (
 
 var errBoom = errors.New("boom")
 
+// fakeMiddleware records every hook call and applies a caller-supplied
+// transform to each output chunk (returning nil suppresses it), so tests
+// can exercise the passthrough and suppression paths through pump.
+type fakeMiddleware struct {
+	mu         sync.Mutex
+	attached   []string
+	detached   []string
+	seenOutput [][]byte
+	transform  func(sessionID string, chunk []byte) []byte
+}
+
+func (m *fakeMiddleware) Attach(sessionID string, kind domain.SessionKind) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.attached = append(m.attached, sessionID)
+}
+
+func (m *fakeMiddleware) OnOutput(sessionID string, chunk []byte) []byte {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp := make([]byte, len(chunk))
+	copy(cp, chunk)
+	m.seenOutput = append(m.seenOutput, cp)
+	if m.transform == nil {
+		return chunk
+	}
+	return m.transform(sessionID, chunk)
+}
+
+func (m *fakeMiddleware) Detach(sessionID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.detached = append(m.detached, sessionID)
+}
+
+func (m *fakeMiddleware) attachedIDs() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]string, len(m.attached))
+	copy(out, m.attached)
+	return out
+}
+
+func (m *fakeMiddleware) detachedIDs() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]string, len(m.detached))
+	copy(out, m.detached)
+	return out
+}
+
+func (m *fakeMiddleware) outputCallCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.seenOutput)
+}
+
 // fakeStream is a fully in-memory out.TerminalStream for tests.
 type fakeStream struct {
 	mu      sync.Mutex

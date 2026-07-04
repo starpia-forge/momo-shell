@@ -4,6 +4,7 @@ import { disposeSession, openSSHSession, TerminalPane, useSessionStore } from '.
 import { useHostStore } from '../../../entities/host'
 import { AltDragOverlay, computeDropZone, dragSourceProps, DropZoneOverlay } from '../../../features/pane-dnd'
 import { SearchOverlay, useTerminalSearchStore } from '../../../features/terminal-search'
+import { ZmodemOverlay } from '../../../features/zmodem'
 import { decodePaneDrag, isFileDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
 import { markDropTargetHovered } from '../../../shared/lib/fileDropTarget'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
@@ -194,6 +195,7 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
         {searchOpen && (
           <SearchOverlay sessionId={leaf.sessionId} onClose={() => useTerminalSearchStore.getState().close()} />
         )}
+        {isSSH && <ZmodemOverlay sessionId={leaf.sessionId} />}
       </div>
       <DropZoneOverlay zone={dropZone} />
       {menuPos && <ContextMenu x={menuPos.x} y={menuPos.y} items={contextMenuItems} onClose={() => setMenuPos(null)} />}

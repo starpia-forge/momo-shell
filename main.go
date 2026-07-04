@@ -16,6 +16,7 @@ import (
 	"momo-shell/internal/adapter/out/sqlite"
 	"momo-shell/internal/adapter/out/sshconn"
 	"momo-shell/internal/adapter/out/wailsevent"
+	"momo-shell/internal/adapter/out/zmodem"
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
 	"momo-shell/internal/core/service/session"
@@ -51,6 +52,10 @@ func main() {
 
 	hostSvc := host.New(hostRepo, secretStore, knownHostsRepo, sshOpener)
 	historySvc := history.New(historyRepo, publisher)
+	// Two-phase wiring breaks the sessionSvc <-> transferSvc cycle: transferSvc
+	// needs sessionSvc as its ShellAccess, and sessionSvc needs transferSvc as
+	// its output middleware (for ZMODEM detection). Safe only because this
+	// all happens before wailsapp.Run -- no session exists yet.
 	sessionSvc := session.New(session.Deps{
 		LocalOpener: localOpener,
 		SSHOpener:   sshOpener,
@@ -60,7 +65,8 @@ func main() {
 		Publisher:   publisher,
 		Tap:         historySvc,
 	})
-	transferSvc := transfer.New(transfer.Deps{Shell: sessionSvc, Pub: publisher})
+	transferSvc := transfer.New(transfer.Deps{Shell: sessionSvc, Pub: publisher, Zmodem: zmodem.New()})
+	sessionSvc.SetMiddleware(transferSvc)
 
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	clipboardWriter := wailsfacade.NewClipboardWriter()

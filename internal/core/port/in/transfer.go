@@ -67,4 +67,12 @@ type TransferUseCase interface {
 
 	Cancel(taskID string) error
 	Tasks() []TaskInfo
+
+	// StartZmodemSend answers a pending rz-upload detection (see
+	// transfer:zmodem:{sessionId} "detected" events) with the files the
+	// user picked or dropped.
+	StartZmodemSend(sessionID string, localPaths []string) (taskID string, err error)
+	// CancelZmodem aborts any in-flight ZMODEM transfer, or a pending
+	// awaiting-send prompt, on a session.
+	CancelZmodem(sessionID string) error
 }

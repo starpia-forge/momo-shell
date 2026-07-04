@@ -8,6 +8,7 @@ export const topics = {
   historyAppended: () => `history:appended`,
   transferTask: () => `transfer:task`,
   transferProgress: (taskId: string) => `transfer:progress:${taskId}`,
+  transferZmodem: (sessionId: string) => `transfer:zmodem:${sessionId}`,
   osFileDrop: () => `os:filedrop`,
 }
 
@@ -61,6 +62,12 @@ export interface FileDropPayload {
   x: number
   y: number
   paths: string[]
+}
+
+export interface TransferZmodemPayload {
+  direction: 'upload' | 'download'
+  phase: 'detected' | 'active' | 'done' | 'failed' | 'canceled'
+  taskId?: string
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

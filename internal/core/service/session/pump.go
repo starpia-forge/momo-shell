@@ -63,6 +63,9 @@ func (s *Service) pump(id string, live *liveSession) {
 			if s.tap != nil {
 				s.tap.Detach(id)
 			}
+			if s.middleware != nil {
+				s.middleware.Detach(id)
+			}
 			_ = live.session.TransitionTo(domain.StateError)
 			s.pub.Publish(out.TopicSessionState(id), StatePayload{State: string(domain.StateError), Error: fmt.Sprint(r)})
 		}
@@ -87,6 +90,12 @@ loop:
 			if !ok {
 				break loop
 			}
+			if s.middleware != nil {
+				chunk = s.middleware.OnOutput(id, chunk)
+				if len(chunk) == 0 {
+					continue
+				}
+			}
 			if s.tap != nil {
 				s.tap.OnOutput(id, chunk)
 			}
@@ -106,6 +115,9 @@ loop:
 	s.remove(id)
 	if s.tap != nil {
 		s.tap.Detach(id)
+	}
+	if s.middleware != nil {
+		s.middleware.Detach(id)
 	}
 	_ = live.session.TransitionTo(domain.StateClosed)
 

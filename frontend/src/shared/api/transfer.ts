@@ -2,6 +2,7 @@ import {
   BrowseForDownloadDirectory,
   BrowseForUploadFiles,
   CancelTransfer,
+  CancelZmodem,
   Chmod,
   Download,
   HomeDir,
@@ -10,6 +11,7 @@ import {
   Mkdir,
   Remove,
   Rename,
+  StartZmodemSend,
   StatRemote,
   Upload,
 } from '../../../wailsjs/go/wails/TransferService'
@@ -106,4 +108,14 @@ export async function browseForUploadFiles(): Promise<string[]> {
 /** Opens a native folder picker; returns "" if the user cancelled. */
 export async function browseForDownloadDirectory(): Promise<string> {
   return BrowseForDownloadDirectory()
+}
+
+/** Answers a pending transfer:zmodem "detected" (upload) event with the
+ * files the user picked or dropped. Returns the new task's ID. */
+export async function startZmodemSend(sessionId: string, localPaths: string[]): Promise<string> {
+  return StartZmodemSend(sessionId, localPaths)
+}
+
+export async function cancelZmodem(sessionId: string): Promise<void> {
+  await CancelZmodem(sessionId)
 }

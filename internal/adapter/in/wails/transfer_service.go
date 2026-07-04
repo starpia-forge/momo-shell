@@ -159,6 +159,16 @@ func (s *TransferService) ListTasks() []TaskInfoDTO {
 	return dtos
 }
 
+// StartZmodemSend answers a pending transfer:zmodem "detected" (upload)
+// event with the files the user picked or dropped.
+func (s *TransferService) StartZmodemSend(sessionID string, localPaths []string) (string, error) {
+	return s.uc.StartZmodemSend(sessionID, localPaths)
+}
+
+func (s *TransferService) CancelZmodem(sessionID string) error {
+	return s.uc.CancelZmodem(sessionID)
+}
+
 func remoteEntryToDTO(e domain.RemoteEntry) RemoteEntryDTO {
 	return RemoteEntryDTO{
 		Name:     e.Name,

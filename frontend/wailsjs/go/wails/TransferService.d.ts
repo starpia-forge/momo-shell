@@ -8,6 +8,8 @@ export function BrowseForUploadFiles():Promise<Array<string>>;
 
 export function CancelTransfer(arg1:string):Promise<void>;
 
+export function CancelZmodem(arg1:string):Promise<void>;
+
 export function Chmod(arg1:string,arg2:string,arg3:number):Promise<void>;
 
 export function Download(arg1:string,arg2:Array<string>,arg3:string,arg4:string):Promise<Array<string>>;
@@ -23,6 +25,8 @@ export function Mkdir(arg1:string,arg2:string):Promise<void>;
 export function Remove(arg1:string,arg2:string):Promise<void>;
 
 export function Rename(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function StartZmodemSend(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function StatRemote(arg1:string,arg2:string):Promise<wails.RemoteEntryDTO>;
 

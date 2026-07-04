@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -137,15 +138,100 @@ var errNoFileSystem = errors.New("shell: no file system for session")
 
 // fakeShellAccess is a ShellAccess stub mapping session IDs to pre-built
 // RemoteFileSystems (or errors), letting tests control per-session SFTP
-// availability without a real session service or SSH connection.
+// availability without a real session service or SSH connection. It also
+// records WriteRaw calls and input-blocked state for ZMODEM middleware tests.
 type fakeShellAccess struct {
-	mu   sync.Mutex
-	fs   map[string]out.RemoteFileSystem
-	errs map[string]error
+	mu           sync.Mutex
+	fs           map[string]out.RemoteFileSystem
+	errs         map[string]error
+	writtenRaw   map[string][][]byte
+	inputBlocked map[string]bool
 }
 
 func newFakeShellAccess() *fakeShellAccess {
-	return &fakeShellAccess{fs: make(map[string]out.RemoteFileSystem), errs: make(map[string]error)}
+	return &fakeShellAccess{
+		fs:           make(map[string]out.RemoteFileSystem),
+		errs:         make(map[string]error),
+		writtenRaw:   make(map[string][][]byte),
+		inputBlocked: make(map[string]bool),
+	}
+}
+
+func (s *fakeShellAccess) WriteRaw(sessionID string, data []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cp := make([]byte, len(data))
+	copy(cp, data)
+	s.writtenRaw[sessionID] = append(s.writtenRaw[sessionID], cp)
+	return nil
+}
+
+func (s *fakeShellAccess) SetInputBlocked(sessionID string, blocked bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.inputBlocked[sessionID] = blocked
+	return nil
+}
+
+func (s *fakeShellAccess) isInputBlocked(sessionID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.inputBlocked[sessionID]
+}
+
+func (s *fakeShellAccess) rawWrittenTo(sessionID string) [][]byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([][]byte{}, s.writtenRaw[sessionID]...)
+}
+
+// fakeZmodemEngine is an out.StreamTransfer stub: tests configure sendFunc/
+// receiveFunc to control what happens on the conduit, or leave them nil to
+// get default behavior that just blocks until ctx is canceled (simulating
+// an in-progress transfer, useful for exercising the "active" phase and
+// CancelZmodem without needing real protocol bytes).
+type fakeZmodemEngine struct {
+	mu          sync.Mutex
+	sendCalls   int
+	recvCalls   int
+	sendFunc    func(ctx context.Context, rw io.ReadWriter, paths []string, progress func(out.TransferProgress)) error
+	receiveFunc func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error)
+}
+
+func (f *fakeZmodemEngine) Send(ctx context.Context, rw io.ReadWriter, localPaths []string, progress func(out.TransferProgress)) error {
+	f.mu.Lock()
+	f.sendCalls++
+	fn := f.sendFunc
+	f.mu.Unlock()
+	if fn != nil {
+		return fn(ctx, rw, localPaths, progress)
+	}
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func (f *fakeZmodemEngine) Receive(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+	f.mu.Lock()
+	f.recvCalls++
+	fn := f.receiveFunc
+	f.mu.Unlock()
+	if fn != nil {
+		return fn(ctx, rw, destDir, progress)
+	}
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+func (f *fakeZmodemEngine) sendCallCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.sendCalls
+}
+
+func (f *fakeZmodemEngine) recvCallCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.recvCalls
 }
 
 func (s *fakeShellAccess) set(sessionID string, fs out.RemoteFileSystem) {
