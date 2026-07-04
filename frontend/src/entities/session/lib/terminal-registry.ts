@@ -30,6 +30,7 @@ interface TerminalEntry {
   host: HTMLDivElement
   unsubs: Array<() => void>
   attached: HTMLElement | null
+  closed: boolean
 }
 
 const registry = new Map<string, TerminalEntry>()
@@ -86,6 +87,7 @@ export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<st
   const unsubs: Array<() => void> = []
 
   const dataDisposable = term.onData((data) => {
+    if (registry.get(id)?.closed) return
     void writeSession(id, new TextEncoder().encode(data))
   })
   unsubs.push(() => dataDisposable.dispose())
@@ -103,15 +105,21 @@ export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<st
   unsubs.push(
     subscribe<SessionStatePayload>(topics.sessionState(id), (payload) => {
       useSessionStore.getState().setState(id, payload.state, { error: payload.error })
+      if (payload.state === 'closed' || payload.state === 'error') {
+        const entry = registry.get(id)
+        if (entry) entry.closed = true
+      }
     })
   )
   unsubs.push(
     subscribe<SessionClosedPayload>(topics.sessionClosed(id), (payload) => {
       useSessionStore.getState().setState(id, 'closed', { exitCode: payload.exitCode })
+      const entry = registry.get(id)
+      if (entry) entry.closed = true
     })
   )
 
-  registry.set(id, { term, fit, host, unsubs, attached: null })
+  registry.set(id, { term, fit, host, unsubs, attached: null, closed: false })
 
   useSessionStore.getState().upsert({
     id: info.id,

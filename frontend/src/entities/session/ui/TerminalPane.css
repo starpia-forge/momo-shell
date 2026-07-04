@@ -1,0 +1,32 @@
+.terminal-pane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.terminal-pane__host {
+  width: 100%;
+  height: 100%;
+}
+
+.terminal-pane__host--dimmed {
+  opacity: 0.4;
+}
+
+.terminal-pane__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.terminal-pane__overlay-message {
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 13px;
+}
