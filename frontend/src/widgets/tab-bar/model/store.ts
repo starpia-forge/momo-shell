@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 
-// Tab.id doubles as the session ID -- Phase 2 is one pane per tab, so
-// there's no reason to mint a separate identifier yet (Phase 3's split
-// layouts are what actually need tab != pane).
+// Tab.id starts out equal to sessionId (Phase 2 is one pane per tab, so
+// there's no reason to mint a separate identifier at creation time), but
+// they diverge on reconnect: id stays put as the tab's stable identity
+// while sessionId is repointed at the freshly-opened session.
 export interface Tab {
   id: string
   kind: 'local' | 'ssh'
@@ -23,6 +24,7 @@ interface TabBarStore {
   openNewTabPopover: () => void
   closeNewTabPopover: () => void
   activateByIndex: (index: number) => void
+  replaceSession: (tabId: string, sessionId: string) => void
 }
 
 export const useTabStore = create<TabBarStore>((set) => ({
@@ -56,4 +58,8 @@ export const useTabStore = create<TabBarStore>((set) => ({
       const tab = s.tabs[index]
       return tab ? { activeId: tab.id } : {}
     }),
+  replaceSession: (tabId, sessionId) =>
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, sessionId } : t)),
+    })),
 }))

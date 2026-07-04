@@ -5,11 +5,13 @@ import './TerminalPane.css'
 
 interface TerminalPaneProps {
   sessionId: string
+  /** Only meaningful for kind: 'ssh' -- shows a [재연결] button on the disconnect overlay. */
+  onReconnect?: () => void
 }
 
 // Attach/detach only -- the Terminal instance itself lives in the registry
 // for the session's lifetime, independent of this component's mount state.
-export function TerminalPane({ sessionId }: TerminalPaneProps) {
+export function TerminalPane({ sessionId, onReconnect }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const session = useSessionStore((s) => s.sessions[sessionId])
 
@@ -37,6 +39,7 @@ export function TerminalPane({ sessionId }: TerminalPaneProps) {
   }, [sessionId])
 
   const ended = session?.state === 'closed' || session?.state === 'error'
+  const isSSH = session?.kind === 'ssh'
 
   return (
     <div className="terminal-pane">
@@ -44,9 +47,20 @@ export function TerminalPane({ sessionId }: TerminalPaneProps) {
       {ended && (
         <div className="terminal-pane__overlay">
           <div className="terminal-pane__overlay-message">
-            {session?.state === 'error'
-              ? `세션 오류${session.error ? `: ${session.error}` : ''}`
-              : `세션 종료${session?.exitCode !== undefined ? ` (exit ${session.exitCode})` : ''}`}
+            {isSSH ? (
+              <>
+                <div>연결 끊김{session?.error ? `: ${session.error}` : ''}</div>
+                {onReconnect && (
+                  <button className="terminal-pane__reconnect" onClick={onReconnect}>
+                    재연결
+                  </button>
+                )}
+              </>
+            ) : session?.state === 'error' ? (
+              `세션 오류${session.error ? `: ${session.error}` : ''}`
+            ) : (
+              `세션 종료${session?.exitCode !== undefined ? ` (exit ${session.exitCode})` : ''}`
+            )}
           </div>
         </div>
       )}

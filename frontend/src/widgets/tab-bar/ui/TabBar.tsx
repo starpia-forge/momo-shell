@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react'
-import { useTabStore } from '../model/store'
+import { useTabStore, type Tab } from '../model/store'
 import { useSessionStore } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
 import { closeTab } from '../lib/closeTab'
@@ -34,10 +34,10 @@ export function TabBar() {
     setDragIndex(null)
   }
 
-  function handleMiddleClick(e: ReactMouseEvent, tabId: string) {
+  function handleMiddleClick(e: ReactMouseEvent, tab: Tab) {
     if (e.button === 1) {
       e.preventDefault()
-      closeTab(tabId)
+      closeTab(tab)
     }
   }
 
@@ -45,7 +45,7 @@ export function TabBar() {
     <div className="tab-bar">
       <div className="tab-bar__tabs">
         {tabs.map((tab, index) => {
-          const state = sessions[tab.id]?.state ?? 'idle'
+          const state = sessions[tab.sessionId]?.state ?? 'idle'
           return (
             <div
               key={tab.id}
@@ -55,7 +55,7 @@ export function TabBar() {
               onDragOver={(e: DragEvent) => e.preventDefault()}
               onDrop={() => handleDrop(index)}
               onClick={() => setActive(tab.id)}
-              onMouseDown={(e) => handleMiddleClick(e, tab.id)}
+              onMouseDown={(e) => handleMiddleClick(e, tab)}
             >
               <span className={`tab-bar__dot tab-bar__dot--${state}`} />
               <div className="tab-bar__text">
@@ -66,7 +66,7 @@ export function TabBar() {
                 className="tab-bar__close"
                 onClick={(e) => {
                   e.stopPropagation()
-                  closeTab(tab.id)
+                  closeTab(tab)
                 }}
                 aria-label={`${tab.title} 닫기`}
               >

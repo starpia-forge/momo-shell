@@ -6,10 +6,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const (
-	keepaliveInterval    = 30 * time.Second
-	keepaliveMaxFailures = 3
-)
+// keepaliveInterval is a var (not const) so tests can shrink it rather than
+// waiting out real 30s intervals.
+var keepaliveInterval = 30 * time.Second
+
+const keepaliveMaxFailures = 3
 
 // startKeepalive pings the server periodically via the keepalive@openssh.com
 // global request. After keepaliveMaxFailures consecutive failures it calls

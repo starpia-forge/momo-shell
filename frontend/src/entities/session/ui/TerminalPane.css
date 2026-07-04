@@ -23,10 +23,29 @@
 }
 
 .terminal-pane__overlay-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   padding: 8px 16px;
   border-radius: 4px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
   font-size: 13px;
+  pointer-events: auto;
+}
+
+.terminal-pane__reconnect {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.terminal-pane__reconnect:hover {
+  opacity: 0.9;
 }

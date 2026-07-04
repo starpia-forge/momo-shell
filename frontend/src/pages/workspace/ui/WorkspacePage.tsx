@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { TerminalPane } from '../../../entities/session'
+import { TerminalPane, openSSHSession, disposeSession } from '../../../entities/session'
 import type { Host } from '../../../entities/host'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import { HostSidebar } from '../../../widgets/host-sidebar'
 import { StatusBar } from '../../../widgets/status-bar'
-import { TabBar, createLocalTab, useTabStore } from '../../../widgets/tab-bar'
+import { TabBar, createLocalTab, useTabStore, type Tab } from '../../../widgets/tab-bar'
 import './WorkspacePage.css'
 
 export function WorkspacePage() {
@@ -34,6 +34,15 @@ export function WorkspacePage() {
     })
   }
 
+  // Same bridging reason: TerminalPane (an entity) fires onReconnect, and
+  // repointing the tab at the new session is tab-bar's store to own.
+  async function handleReconnect(tab: Tab) {
+    if (!tab.hostId) return
+    disposeSession(tab.sessionId)
+    const newSessionId = await openSSHSession(tab.hostId, 80, 24)
+    useTabStore.getState().replaceSession(tab.id, newSessionId)
+  }
+
   return (
     <div className="workspace">
       <TabBar />
@@ -41,7 +50,19 @@ export function WorkspacePage() {
         <div className="workspace__sidebar">
           <HostSidebar onConnect={handleHostConnect} />
         </div>
-        <div className="workspace__pane">{activeTab && <TerminalPane sessionId={activeTab.sessionId} />}</div>
+        <div className="workspace__pane">
+          {activeTab && (
+            // key=sessionId: a reconnect repoints this same tab at a new
+            // session id without remounting the *tab*, but the pane must
+            // still get a fresh mount (fresh container, fresh attach) rather
+            // than updating in place.
+            <TerminalPane
+              key={activeTab.sessionId}
+              sessionId={activeTab.sessionId}
+              onReconnect={activeTab.kind === 'ssh' ? () => void handleReconnect(activeTab) : undefined}
+            />
+          )}
+        </div>
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
       <HostKeyPrompt />
