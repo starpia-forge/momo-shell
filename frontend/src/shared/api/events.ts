@@ -8,6 +8,7 @@ export const topics = {
   historyAppended: () => `history:appended`,
   transferTask: () => `transfer:task`,
   transferProgress: (taskId: string) => `transfer:progress:${taskId}`,
+  osFileDrop: () => `os:filedrop`,
 }
 
 export interface SessionStatePayload {
@@ -53,6 +54,13 @@ export interface TransferProgressPayload {
   rate: number
   state: string
   file: string
+}
+
+/** Wails' native OS file drop -- x/y are webview-relative client coordinates. */
+export interface FileDropPayload {
+  x: number
+  y: number
+  paths: string[]
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

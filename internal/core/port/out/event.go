@@ -50,3 +50,11 @@ func TopicTransferProgress(taskID string) string {
 func TopicTransferZmodem(sessionID string) string {
 	return "transfer:zmodem:" + sessionID
 }
+
+// TopicOSFileDrop notifies the frontend of an OS-level file drop onto the
+// webview (Wails' native drag-and-drop, which resolves absolute paths that
+// browser File objects don't expose). Not scoped to a session -- the
+// frontend resolves which pane/panel was under the drop from (x, y).
+func TopicOSFileDrop() string {
+	return "os:filedrop"
+}

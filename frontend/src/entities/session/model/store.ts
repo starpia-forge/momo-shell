@@ -13,12 +13,15 @@ export interface SessionMeta {
   state: SessionState
   exitCode?: number
   error?: string
+  /** Last working directory seen via an OSC 7 escape sequence, if the shell emits one. */
+  cwd?: string
 }
 
 interface SessionStore {
   sessions: Record<string, SessionMeta>
   upsert: (meta: SessionMeta) => void
   setState: (id: string, state: SessionState, extra?: { exitCode?: number; error?: string }) => void
+  setCwd: (id: string, cwd: string) => void
   remove: (id: string) => void
 }
 
@@ -30,6 +33,12 @@ export const useSessionStore = create<SessionStore>((set) => ({
       const existing = s.sessions[id]
       if (!existing) return s
       return { sessions: { ...s.sessions, [id]: { ...existing, state, ...extra } } }
+    }),
+  setCwd: (id, cwd) =>
+    set((s) => {
+      const existing = s.sessions[id]
+      if (!existing) return s
+      return { sessions: { ...s.sessions, [id]: { ...existing, cwd } } }
     }),
   remove: (id) =>
     set((s) => {

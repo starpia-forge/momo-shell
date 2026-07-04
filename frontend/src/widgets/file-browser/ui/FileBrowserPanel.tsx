@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useState, type DragEvent, type MouseEvent } from 'react'
 import {
   browseForDownloadDirectory,
   browseForUploadFiles,
@@ -12,9 +12,12 @@ import {
   subscribe,
   topics,
   uploadFiles,
+  type FileDropPayload,
   type RemoteEntry,
   type TransferTaskPayload,
 } from '../../../shared/api'
+import { markDropTargetHovered, resolveDropTarget } from '../../../shared/lib/fileDropTarget'
+import { isFileDrag } from '../../../shared/lib/paneDnd'
 import { ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
 import { formatModTime, formatSize, joinRemotePath, parentRemotePath } from '../lib/format'
 import { EMPTY_BROWSE_STATE, sessionBrowseState, useFileBrowserStore } from '../model/store'
@@ -41,6 +44,7 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
   const [mkdirOpen, setMkdirOpen] = useState(false)
   const [renameTarget, setRenameTarget] = useState<RemoteEntry | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [fileDragOver, setFileDragOver] = useState(false)
 
   async function refresh(path: string) {
     if (!sessionId) return
@@ -80,6 +84,21 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
       if (current) void refresh(current)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
+
+  // Owns its own OS file-drop handling rather than routing through
+  // features/file-upload (a lower FSD layer that can't import this widget):
+  // an OS drop resolves to this panel via the shared hover/point resolver,
+  // then uploads straight into whatever directory is currently browsed.
+  useEffect(() => {
+    if (!sessionId) return
+    return subscribe<FileDropPayload>(topics.osFileDrop(), (payload) => {
+      const target = resolveDropTarget(payload.x, payload.y)
+      if (!target || !target.isFileBrowser || target.sessionId !== sessionId) return
+      const current = sessionBrowseState(sessionId).path
+      if (!current) return
+      void uploadFiles(sessionId, payload.paths, current).catch((err) => setToast(String(err)))
+    })
   }, [sessionId])
 
   if (!sessionId) {
@@ -152,6 +171,17 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
     setMenu({ x: e.clientX, y: e.clientY, entry })
   }
 
+  function handlePanelDragOver(e: DragEvent) {
+    if (!sessionId || !isFileDrag(e.dataTransfer)) return
+    e.preventDefault()
+    setFileDragOver(true)
+    markDropTargetHovered(sessionId, true)
+  }
+
+  function handlePanelDragLeave(e: DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFileDragOver(false)
+  }
+
   const menuItems: ContextMenuItem[] = menu
     ? [
         ...(menu.entry.isDir ? [] : [{ label: '다운로드', onClick: () => handleDownload(menu.entry) }]),
@@ -162,7 +192,17 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
     : []
 
   return (
-    <div className="file-browser">
+    <div
+      className={`file-browser ${fileDragOver ? 'file-browser--drag-over' : ''}`}
+      data-session-id={sessionId}
+      data-filebrowser="true"
+      onDragOver={handlePanelDragOver}
+      onDragLeave={handlePanelDragLeave}
+      onDrop={(e) => {
+        e.preventDefault()
+        setFileDragOver(false)
+      }}
+    >
       <div className="file-browser__toolbar">
         <button
           className="file-browser__tool"

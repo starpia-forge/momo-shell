@@ -35,3 +35,8 @@ export function decodePaneDrag(dataTransfer: DataTransfer): PaneDragPayload | nu
 export function isPaneDrag(dataTransfer: DataTransfer): boolean {
   return dataTransfer.types.includes(PANE_MIME) && !dataTransfer.types.includes('Files')
 }
+
+/** An OS file drag (as opposed to an internal pane drag) -- Phase 4's hook. */
+export function isFileDrag(dataTransfer: DataTransfer): boolean {
+  return dataTransfer.types.includes('Files')
+}

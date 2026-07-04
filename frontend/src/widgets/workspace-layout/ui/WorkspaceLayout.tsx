@@ -4,7 +4,8 @@ import { disposeSession, openSSHSession, TerminalPane, useSessionStore } from '.
 import { useHostStore } from '../../../entities/host'
 import { AltDragOverlay, computeDropZone, dragSourceProps, DropZoneOverlay } from '../../../features/pane-dnd'
 import { SearchOverlay, useTerminalSearchStore } from '../../../features/terminal-search'
-import { decodePaneDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
+import { decodePaneDrag, isFileDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
+import { markDropTargetHovered } from '../../../shared/lib/fileDropTarget'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import { closeLeafOrEscalate } from '../lib/closeLeaf'
 import { splitFocused } from '../lib/splitFocused'
@@ -88,6 +89,7 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   const searchOpen = useTerminalSearchStore((s) => s.openForLeafId === leaf.id)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [dropZone, setDropZone] = useState<DropZone | null>(null)
+  const [fileDragOver, setFileDragOver] = useState(false)
   const isSSH = session?.kind === 'ssh'
   const host = isSSH && session?.hostId ? hosts[session.hostId] : undefined
   const title = isSSH ? (host?.name ?? '연결 중...') : '로컬 쉘'
@@ -99,6 +101,12 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   }
 
   function handleDragOver(e: DragEvent) {
+    if (isFileDrag(e.dataTransfer)) {
+      e.preventDefault()
+      setFileDragOver(true)
+      markDropTargetHovered(leaf.sessionId)
+      return
+    }
     if (!isPaneDrag(e.dataTransfer)) return
     e.preventDefault()
     const rect = e.currentTarget.getBoundingClientRect()
@@ -108,11 +116,15 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   }
 
   function handleDragLeave(e: DragEvent) {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropZone(null)
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setDropZone(null)
+      setFileDragOver(false)
+    }
   }
 
   function handleDrop(e: DragEvent) {
     e.preventDefault()
+    setFileDragOver(false)
     const zone = dropZone
     setDropZone(null)
     if (!zone) return
@@ -160,7 +172,8 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
 
   return (
     <div
-      className={`pane-view ${isFocused ? 'pane-view--focused' : ''}`}
+      className={`pane-view ${isFocused ? 'pane-view--focused' : ''} ${fileDragOver ? 'pane-view--file-drag-over' : ''}`}
+      data-session-id={leaf.sessionId}
       onClick={focusThis}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

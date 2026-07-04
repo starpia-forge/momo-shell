@@ -1,9 +1,18 @@
 .file-browser {
+  /* Marks this element as a valid target for Wails' native OS file drop
+     (see options.DragAndDrop.CSSDropProperty/CSSDropValue in main.go). */
+  --wails-drop-target: drop;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   font-size: 13px;
+}
+
+.file-browser--drag-over {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+  background: rgba(79, 140, 255, 0.08);
 }
 
 .file-browser--empty {

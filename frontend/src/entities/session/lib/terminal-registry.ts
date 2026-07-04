@@ -25,6 +25,7 @@ import {
 import { b64ToBytes } from '../../../shared/lib/base64'
 import { useSessionStore } from '../model/store'
 import { useHostKeyPromptStore } from '../model/hostKeyPrompts'
+import { parseOsc7Path } from './osc7'
 
 // The xterm.js instance is owned here, outside React, in a detached host
 // div. TerminalPane only ever attaches/detaches that div -- it never
@@ -136,6 +137,16 @@ function createTerminalEntry(id: string): void {
       useHostKeyPromptStore.getState().setPrompt(id, payload)
     })
   )
+
+  // OSC 7 ("file://host/path") reports the shell's cwd -- used to default
+  // pane file-drop uploads to "wherever the prompt currently is" instead of
+  // always the SFTP home directory.
+  const oscDisposable = term.parser.registerOscHandler(7, (data) => {
+    const path = parseOsc7Path(data)
+    if (path) useSessionStore.getState().setCwd(id, path)
+    return true
+  })
+  unsubs.push(() => oscDisposable.dispose())
 
   registry.set(id, { term, fit, search, host, unsubs, attached: null, closed: false })
 }

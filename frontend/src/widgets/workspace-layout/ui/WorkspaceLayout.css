@@ -24,6 +24,9 @@
 }
 
 .pane-view {
+  /* Marks this element as a valid target for Wails' native OS file drop
+     (see options.DragAndDrop.CSSDropProperty/CSSDropValue in main.go). */
+  --wails-drop-target: drop;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -36,6 +39,11 @@
 
 .pane-view--focused {
   outline-color: var(--color-accent);
+}
+
+.pane-view--file-drag-over {
+  outline-color: var(--color-accent);
+  background: rgba(79, 140, 255, 0.08);
 }
 
 .pane-view__header {

@@ -70,6 +70,7 @@ func main() {
 	historyService := wailsfacade.NewHistoryService(historySvc)
 	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
 	transferService := wailsfacade.NewTransferService(transferSvc, transferDialogs)
+	fileDropRelay := wailsfacade.NewFileDropRelay(publisher)
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-shell",
@@ -81,11 +82,15 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop: true,
+		},
 		OnStartup: func(ctx context.Context) {
 			publisher.SetContext(ctx)
 			keyFileBrowser.SetContext(ctx)
 			clipboardWriter.SetContext(ctx)
 			transferDialogs.SetContext(ctx)
+			fileDropRelay.Register(ctx)
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()

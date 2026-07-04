@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
+import { DestinationBar } from '../../../features/file-upload'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { FileBrowserPanel } from '../../../widgets/file-browser'
@@ -144,6 +145,7 @@ export function WorkspacePage() {
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
       <HostKeyPrompt />
+      <DestinationBar />
     </div>
   )
 }
