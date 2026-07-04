@@ -21,12 +21,27 @@ type sshStream struct {
 
 	stopKeepalive func()
 	closeOnce     sync.Once
+
+	fsFactory func(*ssh.Client) (out.RemoteFileSystem, error)
 }
 
-var _ out.TerminalStream = (*sshStream)(nil)
+var (
+	_ out.TerminalStream    = (*sshStream)(nil)
+	_ out.FileSystemCapable = (*sshStream)(nil)
+)
 
-func newStream(client *ssh.Client, session *ssh.Session, stdin io.WriteCloser, stdout io.Reader, stopKeepalive func()) *sshStream {
-	return &sshStream{client: client, session: session, stdin: stdin, stdout: stdout, stopKeepalive: stopKeepalive}
+func newStream(client *ssh.Client, session *ssh.Session, stdin io.WriteCloser, stdout io.Reader, stopKeepalive func(), fsFactory func(*ssh.Client) (out.RemoteFileSystem, error)) *sshStream {
+	return &sshStream{client: client, session: session, stdin: stdin, stdout: stdout, stopKeepalive: stopKeepalive, fsFactory: fsFactory}
+}
+
+// OpenFileSystem opens a fresh SFTP subsystem channel on this stream's
+// *ssh.Client. Returns an error if this Opener wasn't configured with
+// WithFileSystemFactory (e.g. the caller only needed terminal access).
+func (s *sshStream) OpenFileSystem() (out.RemoteFileSystem, error) {
+	if s.fsFactory == nil {
+		return nil, errors.New("sshconn: sftp unavailable")
+	}
+	return s.fsFactory(s.client)
 }
 
 func (s *sshStream) Read(p []byte) (int, error) {

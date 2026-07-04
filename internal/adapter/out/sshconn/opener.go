@@ -20,15 +20,32 @@ import (
 const dialTimeout = 10 * time.Second
 
 // Opener implements both out.SSHTerminalOpener and out.SSHProber.
-type Opener struct{}
+type Opener struct {
+	fsFactory func(*ssh.Client) (out.RemoteFileSystem, error)
+}
 
 var (
 	_ out.SSHTerminalOpener = (*Opener)(nil)
 	_ out.SSHProber         = (*Opener)(nil)
 )
 
-func New() *Opener {
-	return &Opener{}
+// Option configures an Opener at construction.
+type Option func(*Opener)
+
+// WithFileSystemFactory equips streams this Opener produces with SFTP
+// capability (out.FileSystemCapable): factory opens an SFTP subsystem on
+// the stream's *ssh.Client without this package importing the sftp adapter,
+// keeping adapters from referencing each other.
+func WithFileSystemFactory(factory func(*ssh.Client) (out.RemoteFileSystem, error)) Option {
+	return func(o *Opener) { o.fsFactory = factory }
+}
+
+func New(opts ...Option) *Opener {
+	o := &Opener{}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
 }
 
 // hostKeyError distinguishes a HostKeyVerifier rejection from an ordinary
@@ -115,5 +132,5 @@ func (o *Opener) Open(host domain.Host, secret string, verifier out.HostKeyVerif
 	}
 
 	stop := startKeepalive(client, func() { client.Close() })
-	return newStream(client, session, stdin, stdout, stop), nil
+	return newStream(client, session, stdin, stdout, stop, o.fsFactory), nil
 }

@@ -57,6 +57,7 @@ func (s *Service) pump(id string, live *liveSession) {
 	defer s.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
+			live.closeFileSystem()
 			_ = live.getStream().Close()
 			s.remove(id)
 			if s.tap != nil {
@@ -100,6 +101,7 @@ loop:
 	flush()
 
 	exitCode, _ := live.getStream().Wait()
+	live.closeFileSystem()
 	_ = live.getStream().Close()
 	s.remove(id)
 	if s.tap != nil {

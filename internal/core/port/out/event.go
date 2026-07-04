@@ -31,3 +31,22 @@ func TopicSessionHostKey(id string) string {
 func TopicHistoryAppended() string {
 	return "history:appended"
 }
+
+// TopicTransferTask notifies the frontend of a transfer task's creation or
+// any state change. Not scoped to a task ID -- the transfer center subscribes
+// once and keeps its own task list in sync.
+func TopicTransferTask() string {
+	return "transfer:task"
+}
+
+// TopicTransferProgress carries incremental byte-count/rate updates for one
+// task, published at most a few times per second while it runs.
+func TopicTransferProgress(taskID string) string {
+	return "transfer:progress:" + taskID
+}
+
+// TopicTransferZmodem notifies the frontend of ZMODEM detection/phase
+// changes on a session (rz/sz over the shell channel, as opposed to SFTP).
+func TopicTransferZmodem(sessionID string) string {
+	return "transfer:zmodem:" + sessionID
+}

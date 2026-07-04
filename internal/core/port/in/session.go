@@ -1,6 +1,9 @@
 package in
 
-import "momo-shell/internal/core/domain"
+import (
+	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
+)
 
 // LocalOpts configures a new local shell session. Shell == "" means auto-detect.
 type LocalOpts struct {
@@ -33,4 +36,9 @@ type SessionUseCase interface {
 	// RespondHostKey answers a pending session:hostkey:{id} prompt raised
 	// while connecting. decision is one of "trust", "once", or "cancel".
 	RespondHostKey(sessionID string, decision string) error
+	// FileSystem lazily opens (and caches, per session) the SFTP subsystem
+	// on the session's connection. Returns an error for local sessions or
+	// SSH servers with SFTP disabled -- callers use that to fall back to
+	// the rz/sz path.
+	FileSystem(sessionID string) (out.RemoteFileSystem, error)
 }

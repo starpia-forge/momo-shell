@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	pkgsftp "github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
 	"momo-shell/internal/core/domain"
@@ -26,6 +27,9 @@ type testSSHServer struct {
 	addr       string
 	hostSigner ssh.Signer
 	exitStatus uint32
+	// sftpRoot, when non-empty, makes the server answer a "sftp" subsystem
+	// request with a real pkg/sftp.Server rooted at this directory.
+	sftpRoot string
 }
 
 func newTestSSHServer(t *testing.T, config *ssh.ServerConfig) *testSSHServer {
@@ -107,10 +111,35 @@ func (s *testSSHServer) handleSession(channel ssh.Channel, requests <-chan *ssh.
 		if req.WantReply {
 			req.Reply(true, nil)
 		}
-		if req.Type == "shell" {
+		switch req.Type {
+		case "shell":
 			go s.echoLoop(channel)
+		case "subsystem":
+			if subsystemName(req.Payload) == "sftp" && s.sftpRoot != "" {
+				go s.serveSFTP(channel)
+			}
 		}
 	}
+}
+
+func subsystemName(payload []byte) string {
+	var req struct{ Name string }
+	if err := ssh.Unmarshal(payload, &req); err != nil {
+		return ""
+	}
+	return req.Name
+}
+
+// serveSFTP answers a "sftp" subsystem request with a real pkg/sftp.Server
+// rooted at s.sftpRoot, so client-side tests exercise the real SFTP wire
+// protocol without a system sshd.
+func (s *testSSHServer) serveSFTP(channel ssh.Channel) {
+	server, err := pkgsftp.NewServer(channel, pkgsftp.WithServerWorkingDirectory(s.sftpRoot))
+	if err != nil {
+		return
+	}
+	server.Serve()
+	server.Close()
 }
 
 // echoLoop echoes whatever the client writes back at it. A single 0x04

@@ -12,12 +12,14 @@ import (
 	wailsfacade "momo-shell/internal/adapter/in/wails"
 	"momo-shell/internal/adapter/out/keychain"
 	"momo-shell/internal/adapter/out/pty"
+	"momo-shell/internal/adapter/out/sftp"
 	"momo-shell/internal/adapter/out/sqlite"
 	"momo-shell/internal/adapter/out/sshconn"
 	"momo-shell/internal/adapter/out/wailsevent"
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
 	"momo-shell/internal/core/service/session"
+	"momo-shell/internal/core/service/transfer"
 )
 
 //go:embed all:frontend/dist
@@ -44,7 +46,7 @@ func main() {
 	hostRepo := sqlite.NewHostRepo(db)
 	knownHostsRepo := sqlite.NewKnownHostsRepo(db)
 	historyRepo := sqlite.NewHistoryRepo(db)
-	sshOpener := sshconn.New()
+	sshOpener := sshconn.New(sshconn.WithFileSystemFactory(sftp.NewFromClient))
 	localOpener := pty.NewOpener()
 
 	hostSvc := host.New(hostRepo, secretStore, knownHostsRepo, sshOpener)
@@ -58,6 +60,7 @@ func main() {
 		Publisher:   publisher,
 		Tap:         historySvc,
 	})
+	transferSvc := transfer.New(transfer.Deps{Shell: sessionSvc, Pub: publisher})
 
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	clipboardWriter := wailsfacade.NewClipboardWriter()
@@ -65,6 +68,7 @@ func main() {
 	hostService := wailsfacade.NewHostService(hostSvc, keyFileBrowser)
 	historyService := wailsfacade.NewHistoryService(historySvc)
 	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
+	transferService := wailsfacade.NewTransferService(transferSvc)
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-shell",
@@ -91,6 +95,7 @@ func main() {
 			hostService,
 			historyService,
 			clipboardService,
+			transferService,
 		},
 	})
 
