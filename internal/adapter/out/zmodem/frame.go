@@ -32,6 +32,7 @@ func (h header) position() uint32 { return decodeLE32(h.data) }
 // the initial handshake (ZRQINIT/ZRINIT/ZFIN/ZACK) so it survives paths
 // that might not be 8-bit clean. CRC is always 16-bit in this format.
 func writeHexHeader(w io.Writer, h header) error {
+	debugf("send hex header type=%d", h.typ)
 	buf := []byte{zpad, zpad, zdle, zhex}
 	payload := append([]byte{h.typ}, h.data[:]...)
 	crc := crc16(payload)
@@ -69,6 +70,7 @@ func unhexDigit(c byte) (byte, bool) {
 // writeBin32Header sends h in binary form with a 32-bit CRC -- the format
 // used for everything after the initial handshake.
 func writeBin32Header(w io.Writer, h header) error {
+	debugf("send bin32 header type=%d", h.typ)
 	buf := []byte{zpad, zpad, zdle, zbin32}
 	payload := append([]byte{h.typ}, h.data[:]...)
 	crc := crc32Of(payload)
@@ -212,14 +214,19 @@ func (f *frameReader) readHeader() (header, error) {
 		return header{}, err
 	}
 
+	var h header
 	switch format {
 	case zhex:
-		return f.readHexHeaderBody()
+		h, err = f.readHexHeaderBody()
 	case zbin, zbin32:
-		return f.readBinHeaderBody(format == zbin32)
+		h, err = f.readBinHeaderBody(format == zbin32)
 	default:
 		return header{}, fmt.Errorf("zmodem: unknown header format %q", format)
 	}
+	if err == nil {
+		debugf("recv header format=%q type=%d", format, h.typ)
+	}
+	return h, err
 }
 
 func (f *frameReader) readHexHeaderBody() (header, error) {

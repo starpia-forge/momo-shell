@@ -46,6 +46,21 @@ const (
 	drainPollInterval = 100 * time.Millisecond
 )
 
+// transferStallTimeout/transferStallPollInterval bound an active transfer
+// with a last-resort watchdog: if no progress at all is made for
+// transferStallTimeout, the transfer is forced to give up and the terminal
+// is restored, regardless of what the ZMODEM engine goroutine is doing.
+// This is set well above the engine's own read-timeout/retry budget
+// (worst case ~100s: maxIORetries * ioReadTimeout) so it never preempts the
+// engine's own bounded recovery attempts -- it exists purely to guarantee
+// the terminal is never stuck indefinitely by a failure mode the engine's
+// own bounds don't cover (observed in practice: FT-12's permanent freeze).
+// var, not const, so tests can shrink them instead of waiting 120s for real.
+var (
+	transferStallTimeout      = 120 * time.Second
+	transferStallPollInterval = 5 * time.Second
+)
+
 // zmodemState is one SSH session's ZMODEM detection state, guarded by its
 // own mutex so OnOutput (pump goroutine) and StartZmodemSend/CancelZmodem
 // (Wails-call goroutines) never race.
@@ -66,6 +81,10 @@ type zmodemState struct {
 	// read by that drain's watcher goroutine to decide when it's been quiet
 	// long enough to end.
 	lastActivity time.Time
+	// lastProgress is touched at transfer start and on every progress
+	// callback while active, and read by the stall watchdog to decide when
+	// a transfer has made no forward progress for too long.
+	lastProgress time.Time
 	// drainGen is bumped every time a new drain (or a new active transfer)
 	// starts, so a stale watcher goroutine from a previous drain can tell
 	// it's no longer the current one and exit instead of clobbering state.
@@ -135,30 +154,45 @@ func (s *Service) OnOutput(sessionID string, chunk []byte) []byte {
 	}
 	if st.phase == zmodemDraining {
 		st.lastActivity = time.Now()
+		// Scan even while draining: a new transfer starting on the heels of
+		// the last one's trailing bytes must not be missed just because it
+		// arrived inside the drain's few-hundred-millisecond grace window
+		// (previously, draining unconditionally discarded output without
+		// scanning it at all). The bytes themselves are still discarded
+		// either way -- draining's whole purpose -- only the detection
+		// itself must not be skipped.
+		_, direction, rest := st.detector.scan(chunk)
+		if direction != "" {
+			st.drainGen++ // supersede the now-superseded drain's watcher goroutine
+			s.handleDetectionLocked(sessionID, st, direction, rest)
+		}
 		return nil
 	}
 
 	pass, direction, rest := st.detector.scan(chunk)
-	if direction == "" {
-		return pass
+	if direction != "" {
+		s.handleDetectionLocked(sessionID, st, direction, rest)
 	}
+	return pass
+}
 
+// handleDetectionLocked reacts to a freshly-detected signature: begins the
+// download transfer immediately, or arms zmodemAwaitSend for an upload
+// (rz keeps re-announcing ZRINIT every few seconds while it waits, so the
+// freshest one is kept for StartZmodemSend rather than idling for the next
+// retry). Caller must hold st.mu.
+func (s *Service) handleDetectionLocked(sessionID string, st *zmodemState, direction string, rest []byte) {
 	switch direction {
 	case "download":
 		s.beginTransferLocked(sessionID, st, "download", nil, rest)
 	case "upload":
 		wasAlreadyWaiting := st.phase == zmodemAwaitSend
 		st.phase = zmodemAwaitSend
-		// Keep the freshest ZRINIT -- rz re-announces periodically (often
-		// every several seconds) while it waits, and feeding this straight
-		// into StartZmodemSend's conduit means our sender doesn't have to
-		// idle for the next retry to arrive.
 		st.pendingZRINIT = append([]byte{}, rest...)
 		if !wasAlreadyWaiting {
 			s.publishZmodem(sessionID, "upload", "detected", "")
 		}
 	}
-	return pass
 }
 
 // StartZmodemSend answers a pending rz-upload detection with the files the
@@ -232,8 +266,10 @@ func (s *Service) beginTransferLocked(sessionID string, st *zmodemState, directi
 	st.conduit = cd
 	st.cancel = cancel
 	st.taskID = uuid.NewString()
+	st.lastProgress = time.Now()
 	st.drainGen++
 	taskID := st.taskID
+	debugf("session %s: phase -> active (%s, task %s)", sessionID, direction, taskID)
 
 	_ = s.shell.SetInputBlocked(sessionID, true)
 	s.publishZmodem(sessionID, direction, "active", taskID)
@@ -243,10 +279,53 @@ func (s *Service) beginTransferLocked(sessionID string, st *zmodemState, directi
 	}
 
 	go s.runZmodem(ctx, sessionID, st, cd, direction, localPaths, taskID)
+	go s.watchTransferStall(sessionID, st, direction, taskID)
+}
+
+// watchTransferStall is the last-resort backstop for a transfer that never
+// returns from the ZMODEM engine (see transferStallTimeout): once triggered,
+// it nudges the remote to give up, cancels the engine's context, and closes
+// the conduit, then forces the session straight into the drain phase so the
+// terminal is restored even if the engine goroutine itself never unwinds.
+// If runZmodem's own goroutine does eventually return (the common case --
+// canceling ctx makes waitForHeaderBudget's loop exit on its next
+// iteration), beginDrainLocked simply runs again, which is harmless.
+func (s *Service) watchTransferStall(sessionID string, st *zmodemState, direction, taskID string) {
+	ticker := time.NewTicker(transferStallPollInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		st.mu.Lock()
+		if st.taskID != taskID || st.phase != zmodemActive {
+			st.mu.Unlock()
+			return // this transfer already ended, one way or another
+		}
+		if time.Since(st.lastProgress) < transferStallTimeout {
+			st.mu.Unlock()
+			continue
+		}
+		cancel := st.cancel
+		debugf("session %s: stall watchdog firing for task %s (no progress for %s)", sessionID, taskID, transferStallTimeout)
+		if s.zmodem != nil {
+			_ = s.shell.WriteRaw(sessionID, s.zmodem.CancelBytes())
+		}
+		if cancel != nil {
+			cancel()
+		}
+		if st.conduit != nil {
+			st.conduit.Close()
+		}
+		s.beginDrainLocked(sessionID, st)
+		st.mu.Unlock()
+		s.publishZmodem(sessionID, direction, "failed", taskID)
+		return
+	}
 }
 
 func (s *Service) runZmodem(ctx context.Context, sessionID string, st *zmodemState, cd *conduit, direction string, localPaths []string, taskID string) {
 	progress := func(p out.TransferProgress) {
+		st.mu.Lock()
+		st.lastProgress = time.Now()
+		st.mu.Unlock()
 		s.publishProgressRaw(taskID, p)
 	}
 
@@ -296,6 +375,7 @@ func (s *Service) beginDrainLocked(sessionID string, st *zmodemState) {
 	st.drainGen++
 	gen := st.drainGen
 	deadline := time.Now().Add(drainMaxDuration)
+	debugf("session %s: phase -> draining (gen %d)", sessionID, gen)
 
 	go func() {
 		ticker := time.NewTicker(drainPollInterval)
@@ -311,6 +391,7 @@ func (s *Service) beginDrainLocked(sessionID string, st *zmodemState) {
 			if quiet || expired {
 				st.phase = zmodemIdle
 				st.mu.Unlock()
+				debugf("session %s: phase -> idle (drain gen %d ended, quiet=%v expired=%v)", sessionID, gen, quiet, expired)
 				_ = s.shell.SetInputBlocked(sessionID, false)
 				return
 			}

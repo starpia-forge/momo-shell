@@ -108,16 +108,69 @@ func TestSignatureDetector_NoFalsePositiveOnPlainOutput(t *testing.T) {
 	}
 }
 
-func TestSignatureDetector_HoldsBackMaxFiveBytes(t *testing.T) {
+func TestSignatureDetector_OnlyHoldsBytesThatCouldStartASignature(t *testing.T) {
 	var d signatureDetector
+	// "abc" cannot be the start of either signature (both start with "**"),
+	// so nothing should be withheld even though the chunk is shorter than
+	// maxSignatureLen -- unlike the old flat "always hold the last 5 bytes"
+	// behavior, which delayed rendering of ordinary short output for no
+	// reason.
 	pass, direction, rest := d.scan([]byte("abc"))
 	if direction != "" || rest != nil {
 		t.Fatalf("unexpected match on short chunk")
 	}
-	if pass != nil {
-		t.Fatalf("expected everything held back for a chunk shorter than the signature, got pass=%q", pass)
+	if !bytes.Equal(pass, []byte("abc")) {
+		t.Fatalf("pass = %q, want everything released immediately", pass)
 	}
-	if !bytes.Equal(d.tail, []byte("abc")) {
-		t.Fatalf("tail = %q, want %q", d.tail, "abc")
+	if len(d.tail) != 0 {
+		t.Fatalf("tail = %q, want empty (nothing here could start a signature)", d.tail)
+	}
+}
+
+func TestSignatureDetector_HoldsBackGenuineSignaturePrefix(t *testing.T) {
+	var d signatureDetector
+	// "**" is a genuine prefix of both signatures -- it must be withheld in
+	// case the next chunk completes one.
+	pass, direction, rest := d.scan([]byte("ok $ **"))
+	if direction != "" || rest != nil {
+		t.Fatalf("unexpected match on partial signature")
+	}
+	if !bytes.Equal(pass, []byte("ok $ ")) {
+		t.Fatalf("pass = %q, want %q", pass, "ok $ ")
+	}
+	if !bytes.Equal(d.tail, []byte("**")) {
+		t.Fatalf("tail = %q, want %q", d.tail, "**")
+	}
+}
+
+func TestSignatureDetector_OneByteAtATime(t *testing.T) {
+	var d signatureDetector
+	before := []byte("$ sz medium.bin\r\n")
+	full := append(append([]byte{}, before...), downloadSignature...)
+	full = append(full, []byte("30303030300d8a11")...)
+
+	var reassembledPass []byte
+	var gotDirection string
+	var gotRest []byte
+	for i, b := range full {
+		pass, direction, rest := d.scan([]byte{b})
+		reassembledPass = append(reassembledPass, pass...)
+		if direction != "" {
+			gotDirection = direction
+			gotRest = rest
+			if i < len(before)+len(downloadSignature)-1 {
+				t.Fatalf("signature detected too early at byte %d", i)
+			}
+			break
+		}
+	}
+	if gotDirection != "download" {
+		t.Fatalf("direction = %q, want download (byte-at-a-time delivery must still detect the signature)", gotDirection)
+	}
+	if !bytes.Equal(reassembledPass, before) {
+		t.Fatalf("reassembled pass = %q, want %q", reassembledPass, before)
+	}
+	if !bytes.HasPrefix(gotRest, downloadSignature) {
+		t.Fatalf("rest should start with the signature, got %q", gotRest)
 	}
 }

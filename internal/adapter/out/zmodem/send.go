@@ -11,6 +11,27 @@ import (
 	"momo-shell/internal/core/port/out"
 )
 
+// maxWrongTypeFrames bounds how many valid-but-unwanted-type headers
+// waitForHeader will discard before giving up. Without this, a peer that
+// keeps emitting parseable frames of the wrong type (in practice: our own
+// poke bytes reflected back by a shell once the real ZMODEM peer process
+// has already exited) spins waitForHeader forever, since a wrong-type
+// header doesn't count against the silence-based retry budget below.
+const maxWrongTypeFrames = 20
+
+// endgameMaxRetries/endgameMaxPokes bound the post-data handshake (the
+// ZEOF->ZRINIT/ZFIN and ZFIN->ZFIN waits in Send/sendFile): by that point
+// every byte of file data has already been transferred, so a silent peer
+// here almost always means the remote rz/sz process has already exited
+// rather than a recoverable mid-transfer stall. Failing fast -- and poking
+// at most once, rather than once per retry -- avoids spraying repeated
+// protocol bytes into a shell that no longer has a ZMODEM peer to consume
+// them (which a real shell echoes back as bogus commands).
+const (
+	endgameMaxRetries = 3
+	endgameMaxPokes   = 1
+)
+
 // waitForHeader blocks for one header of any of the given types, silently
 // discarding a header of a different type (e.g. a duplicate ZRINIT that
 // crossed in transit with our own request) -- treating every response as
@@ -19,7 +40,16 @@ import (
 // invoked to nudge the peer -- typically by resending the last frame it
 // might have missed -- and the read is retried, up to maxIORetries times.
 func waitForHeader(ctx context.Context, fr *frameReader, poke func() error, want ...byte) (header, error) {
+	return waitForHeaderBudget(ctx, fr, poke, maxIORetries, maxIORetries, want...)
+}
+
+// waitForHeaderBudget is waitForHeader with an explicit retry/poke budget --
+// used by the endgame waits to fail fast instead of spending the full
+// maxIORetries allowance on a peer that has almost certainly already exited.
+func waitForHeaderBudget(ctx context.Context, fr *frameReader, poke func() error, maxRetries, maxPokes int, want ...byte) (header, error) {
 	retries := 0
+	pokes := 0
+	wrongType := 0
 	for {
 		if err := ctx.Err(); err != nil {
 			return header{}, err
@@ -31,19 +61,26 @@ func waitForHeader(ctx context.Context, fr *frameReader, poke func() error, want
 					return h, nil
 				}
 			}
-			continue // wrong type -- doesn't count against the retry budget
+			wrongType++
+			debugf("waitForHeader: discarding wrong-type header type=%d (want %v, count=%d)", h.typ, want, wrongType)
+			if wrongType > maxWrongTypeFrames {
+				return header{}, fmt.Errorf("zmodem: received %d unwanted-type frames while waiting for header type in %v", wrongType, want)
+			}
+			continue // wrong type -- doesn't count against the silence-based retry budget
 		}
 		if !errors.Is(err, errReadTimeout) {
 			return header{}, err
 		}
 		retries++
-		if retries > maxIORetries {
-			return header{}, fmt.Errorf("zmodem: timed out waiting for header type in %v after %d retries", want, maxIORetries)
+		debugf("waitForHeader: read timeout waiting for %v (retry %d/%d)", want, retries, maxRetries)
+		if retries > maxRetries {
+			return header{}, fmt.Errorf("zmodem: timed out waiting for header type in %v after %d retries", want, maxRetries)
 		}
-		if poke != nil {
+		if poke != nil && pokes < maxPokes {
 			if err := poke(); err != nil {
 				return header{}, err
 			}
+			pokes++
 		}
 	}
 }
@@ -57,18 +94,28 @@ func (e *Engine) Send(ctx context.Context, rw io.ReadWriter, localPaths []string
 		return err
 	}
 
+	receiverAlreadyFinished := false
 	for _, path := range localPaths {
-		if err := sendFile(ctx, rw, fr, path, progress); err != nil {
+		done, err := sendFile(ctx, rw, fr, path, progress)
+		if err != nil {
 			return err
 		}
+		receiverAlreadyFinished = done
 	}
 
 	if err := writeHexHeader(rw, header{typ: zfin}); err != nil {
 		return err
 	}
-	sendZFIN := func() error { return writeHexHeader(rw, header{typ: zfin}) }
-	if _, err := waitForHeader(ctx, fr, sendZFIN, zfin); err != nil {
-		return err
+	// If sendFile's post-ZEOF wait already saw the receiver's ZFIN, the
+	// remote has unilaterally decided the exchange is over (in practice:
+	// its rz/sz process has already exited) -- waiting for a second ZFIN
+	// that will never arrive would just burn the endgame retry budget on a
+	// peer that's gone. Skip straight to "OO".
+	if !receiverAlreadyFinished {
+		sendZFIN := func() error { return writeHexHeader(rw, header{typ: zfin}) }
+		if _, err := waitForHeaderBudget(ctx, fr, sendZFIN, endgameMaxRetries, endgameMaxPokes, zfin); err != nil {
+			return err
+		}
 	}
 	_, err := rw.Write([]byte("OO"))
 	return err
@@ -98,16 +145,20 @@ func negotiateSend(ctx context.Context, rw io.ReadWriter, fr *frameReader) error
 	return err
 }
 
-func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path string, progress func(out.TransferProgress)) error {
+// sendFile sends one file and returns receiverFinished=true if the
+// post-ZEOF wait saw the receiver's ZFIN (rather than a fresh ZRINIT for
+// the next file) -- signaling the receiver has already ended the exchange
+// on its own, most often because its rz/sz process has already exited.
+func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path string, progress func(out.TransferProgress)) (receiverFinished bool, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer f.Close()
 
 	info, err := f.Stat()
 	if err != nil {
-		return err
+		return false, err
 	}
 	name := filepath.Base(path)
 
@@ -123,20 +174,20 @@ func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path strin
 		return writeSubpacket(rw, []byte(fileInfo), zcrcw)
 	}
 	if err := sendZFILE(); err != nil {
-		return err
+		return false, err
 	}
 
 	h, err := waitForHeader(ctx, fr, sendZFILE, zrpos, zskip)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if h.typ == zskip {
-		return nil
+		return false, nil
 	}
 	offset := int64(h.position())
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
-			return err
+			return false, err
 		}
 	}
 
@@ -167,18 +218,18 @@ func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path strin
 
 	n, rerr := f.Read(curBuf)
 	if rerr != nil && rerr != io.EOF {
-		return rerr
+		return false, rerr
 	}
 	for {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return false, ctx.Err()
 		}
 
 		nextN, nextErr := 0, rerr
 		if rerr != io.EOF {
 			nextN, nextErr = f.Read(nextBuf)
 			if nextErr != nil && nextErr != io.EOF {
-				return nextErr
+				return false, nextErr
 			}
 		}
 		isLast := nextN == 0 && nextErr == io.EOF
@@ -195,7 +246,7 @@ func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path strin
 			return writeSubpacket(rw, curBuf[:n], term)
 		}
 		if err := sendChunk(); err != nil {
-			return err
+			return false, err
 		}
 		sent += int64(n)
 		if progress != nil {
@@ -209,7 +260,7 @@ func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path strin
 			// retransmission rather than volunteering a NAK itself.
 			resp, err := waitForHeader(ctx, fr, sendChunk, zack, zrpos)
 			if err != nil {
-				return err
+				return false, err
 			}
 			if resp.typ == zrpos {
 				// Receiver wants us to resume from a different offset
@@ -217,12 +268,12 @@ func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path strin
 				// resend from there instead of aborting the transfer.
 				pos := int64(resp.position())
 				if _, err := f.Seek(pos, io.SeekStart); err != nil {
-					return err
+					return false, err
 				}
 				sent = pos
 				n, rerr = f.Read(curBuf)
 				if rerr != nil && rerr != io.EOF {
-					return rerr
+					return false, rerr
 				}
 				continue
 			}
@@ -240,9 +291,17 @@ func sendFile(ctx context.Context, rw io.ReadWriter, fr *frameReader, path strin
 		return writeBin32Header(rw, header{typ: zeof, data: le32(uint32(sent))})
 	}
 	if err := sendZEOF(); err != nil {
-		return err
+		return false, err
 	}
-	// Receiver replies with a fresh ZRINIT once ready for the next file.
-	_, err = waitForHeader(ctx, fr, sendZEOF, zrinit)
-	return err
+	// Receiver replies with a fresh ZRINIT once ready for the next file --
+	// or, if it has already decided to end the exchange on its own (most
+	// often because its rz/sz process has already exited), a ZFIN instead.
+	// This wait uses the reduced endgame budget: all file data is already
+	// fully sent by this point, so a silent peer here means it's gone, not
+	// mid-transfer.
+	h, err = waitForHeaderBudget(ctx, fr, sendZEOF, endgameMaxRetries, endgameMaxPokes, zrinit, zfin)
+	if err != nil {
+		return false, err
+	}
+	return h.typ == zfin, nil
 }

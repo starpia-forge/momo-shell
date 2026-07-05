@@ -326,6 +326,116 @@ func TestMiddleware_DetachCancelsActiveTransfer(t *testing.T) {
 	}
 }
 
+// withShrunkStallTimeout shrinks transferStallTimeout/transferStallPollInterval
+// for the duration of a test so watchdog tests don't wait the full 120s.
+func withShrunkStallTimeout(t *testing.T, timeout, poll time.Duration) {
+	t.Helper()
+	origTimeout, origPoll := transferStallTimeout, transferStallPollInterval
+	transferStallTimeout, transferStallPollInterval = timeout, poll
+	t.Cleanup(func() { transferStallTimeout, transferStallPollInterval = origTimeout, origPoll })
+}
+
+// TestMiddleware_StallWatchdogForcesRecoveryWhenEngineNeverReturns is the
+// direct regression test for FT-12's permanent terminal freeze: an engine
+// that never returns from Receive (ignoring ctx entirely, simulating a
+// truly stuck goroutine -- e.g. blocked on a write with no deadline) must
+// still have the session's input unblocked once the stall watchdog's
+// timeout elapses, instead of leaving the terminal stuck forever.
+func TestMiddleware_StallWatchdogForcesRecoveryWhenEngineNeverReturns(t *testing.T) {
+	withShrunkStallTimeout(t, 30*time.Millisecond, 5*time.Millisecond)
+
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	engine := &fakeZmodemEngine{
+		receiveFunc: func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+			select {} // never returns, and never even looks at ctx
+		},
+	}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return engine.recvCallCount() > 0 })
+	waitForZ(t, time.Second, func() bool { return shell.isInputBlocked("s1") })
+
+	waitForZ(t, 2*time.Second, func() bool { return !shell.isInputBlocked("s1") })
+	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "failed" })
+
+	found := false
+	for _, w := range shell.rawWrittenTo("s1") {
+		if bytes.Equal(w, engine.CancelBytes()) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected the stall watchdog to send the cancel sequence, got %v", shell.rawWrittenTo("s1"))
+	}
+}
+
+// TestMiddleware_StallWatchdogIgnoresACompletedTransfer proves the watchdog
+// doesn't fire (and doesn't clobber a subsequent transfer's state) once a
+// transfer has already finished normally before the stall timeout elapses.
+func TestMiddleware_StallWatchdogIgnoresACompletedTransfer(t *testing.T) {
+	withShrunkStallTimeout(t, 50*time.Millisecond, 5*time.Millisecond)
+
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	engine := &fakeZmodemEngine{
+		receiveFunc: func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+			return nil, nil // completes immediately
+		},
+	}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "done" })
+	waitForZ(t, time.Second, func() bool { return !shell.isInputBlocked("s1") }) // drain ends fast (real drainQuietPeriod)
+
+	// Give the (superseded) watchdog time to have fired if it were going to.
+	time.Sleep(150 * time.Millisecond)
+
+	events := zmodemEventsFor(pub, "s1")
+	for _, e := range events {
+		if e.Phase == "failed" {
+			t.Fatalf("watchdog fired on an already-completed transfer: %+v", events)
+		}
+	}
+}
+
+// TestMiddleware_DrainScansForANewSignature proves a new transfer starting
+// right on the heels of the last one's trailing bytes is still detected
+// while draining, rather than being silently discarded (the previous
+// behavior: draining unconditionally discarded output without scanning it).
+func TestMiddleware_DrainScansForANewSignature(t *testing.T) {
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	engine := &fakeZmodemEngine{
+		receiveFunc: func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+			return nil, nil // completes immediately, straight into drain
+		},
+	}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "done" })
+	waitForZ(t, time.Second, func() bool { return shell.isInputBlocked("s1") }) // now draining
+
+	// A fresh upload signature arrives inside the drain's grace window.
+	got := svc.OnOutput("s1", uploadSignature)
+	if len(got) != 0 {
+		t.Fatalf("expected the signature bytes themselves to still be suppressed, got %q", got)
+	}
+
+	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "detected" })
+	events := zmodemEventsFor(pub, "s1")
+	last := events[len(events)-1]
+	if last.Direction != "upload" || last.Phase != "detected" {
+		t.Fatalf("expected upload/detected to follow the drained download, got %+v", last)
+	}
+}
+
 func TestMiddleware_NoZmodemEngineDisablesDetection(t *testing.T) {
 	shell := newFakeShellAccess()
 	svc := New(Deps{Shell: shell}) // no Zmodem engine

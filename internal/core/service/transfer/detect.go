@@ -35,18 +35,42 @@ func (d *signatureDetector) scan(chunk []byte) (pass []byte, direction string, r
 	d.tail = nil
 
 	if idx := bytes.Index(combined, uploadSignature); idx >= 0 {
+		debugf("signature hit: upload at offset %d in %s", idx, debugHexDump(combined, 64))
 		return combined[:idx], "upload", combined[idx:]
 	}
 	if idx := bytes.Index(combined, downloadSignature); idx >= 0 {
+		debugf("signature hit: download at offset %d in %s", idx, debugHexDump(combined, 64))
 		return combined[:idx], "download", combined[idx:]
 	}
 
-	holdLen := maxSignatureLen - 1
-	if len(combined) <= holdLen {
-		d.tail = combined
-		return nil, "", nil
-	}
+	holdLen := signaturePrefixOverlap(combined)
 	pass = combined[:len(combined)-holdLen]
-	d.tail = append([]byte{}, combined[len(combined)-holdLen:]...)
+	if holdLen > 0 {
+		d.tail = append([]byte{}, combined[len(combined)-holdLen:]...)
+		debugf("signature scan: holding %d possible-prefix byte(s): %s", holdLen, debugHexDump(d.tail, 8))
+	}
 	return pass, "", nil
+}
+
+// signaturePrefixOverlap returns how many trailing bytes of combined form a
+// genuine prefix of either signature -- i.e. how many bytes must be
+// withheld because the next scan call could still complete a signature
+// starting there. Ordinary output (which essentially never starts with "**"
+// followed by the ZMODEM escape byte) overlaps by 0 and is released
+// immediately; only a real signature-in-progress is ever held back, rather
+// than a flat trailing window regardless of content -- the previous
+// always-hold-5-bytes behavior delayed rendering of any output ending near
+// a chunk boundary, signature or not.
+func signaturePrefixOverlap(combined []byte) int {
+	maxHold := maxSignatureLen - 1
+	if len(combined) < maxHold {
+		maxHold = len(combined)
+	}
+	for l := maxHold; l > 0; l-- {
+		suffix := combined[len(combined)-l:]
+		if bytes.HasPrefix(uploadSignature, suffix) || bytes.HasPrefix(downloadSignature, suffix) {
+			return l
+		}
+	}
+	return 0
 }
