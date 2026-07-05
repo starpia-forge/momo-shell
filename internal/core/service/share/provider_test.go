@@ -21,27 +21,25 @@ func withShrunkApprovalTimeout(t *testing.T, d time.Duration) {
 }
 
 func TestHandlePair_WrongPinFiveTimesLocksOut(t *testing.T) {
-	svc, _, _, _, _, _ := newTestService()
-	status, err := svc.EnableSharing(nil)
-	if err != nil {
+	ts := newTestService()
+	if _, err := ts.svc.EnableSharing(nil); err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
-	_ = status
 
 	for i := 0; i < maxPinFailures; i++ {
-		if _, err := svc.HandlePair("000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrPinMismatch) {
+		if _, err := ts.svc.HandlePair("000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrPinMismatch) {
 			t.Fatalf("attempt %d: err = %v, want ErrPinMismatch", i, err)
 		}
 	}
 
-	if _, err := svc.HandlePair("000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrLockedOut) {
+	if _, err := ts.svc.HandlePair("000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrLockedOut) {
 		t.Fatalf("after %d failures: err = %v, want ErrLockedOut", maxPinFailures, err)
 	}
 }
 
 func TestHandlePair_ApproveIssuesToken(t *testing.T) {
-	svc, _, clients, _, _, pub := newTestService()
-	status, err := svc.EnableSharing([]string{"h1"})
+	ts := newTestService()
+	status, err := ts.svc.EnableSharing([]string{"h1"})
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
@@ -52,11 +50,11 @@ func TestHandlePair_ApproveIssuesToken(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		token, pairErr = svc.HandlePair(status.PIN, "kim-laptop", "10.0.0.5:1234")
+		token, pairErr = ts.svc.HandlePair(status.PIN, "kim-laptop", "10.0.0.5:1234")
 	}()
 
-	requestID := waitForPairRequest(t, pub)
-	if err := svc.RespondPairing(requestID, true); err != nil {
+	requestID := waitForPairRequest(t, ts.pub)
+	if err := ts.svc.RespondPairing(requestID, true); err != nil {
 		t.Fatalf("RespondPairing() error = %v", err)
 	}
 	wg.Wait()
@@ -67,14 +65,14 @@ func TestHandlePair_ApproveIssuesToken(t *testing.T) {
 	if token == "" {
 		t.Fatal("expected non-empty token")
 	}
-	if clients.count() != 1 {
-		t.Fatalf("clients.count() = %d, want 1", clients.count())
+	if ts.clients.count() != 1 {
+		t.Fatalf("clients.count() = %d, want 1", ts.clients.count())
 	}
 }
 
 func TestHandlePair_DenyReturnsErrPairDenied(t *testing.T) {
-	svc, _, _, _, _, pub := newTestService()
-	status, err := svc.EnableSharing(nil)
+	ts := newTestService()
+	status, err := ts.svc.EnableSharing(nil)
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
@@ -84,11 +82,11 @@ func TestHandlePair_DenyReturnsErrPairDenied(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, pairErr = svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
+		_, pairErr = ts.svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
 	}()
 
-	requestID := waitForPairRequest(t, pub)
-	if err := svc.RespondPairing(requestID, false); err != nil {
+	requestID := waitForPairRequest(t, ts.pub)
+	if err := ts.svc.RespondPairing(requestID, false); err != nil {
 		t.Fatalf("RespondPairing() error = %v", err)
 	}
 	wg.Wait()
@@ -100,31 +98,31 @@ func TestHandlePair_DenyReturnsErrPairDenied(t *testing.T) {
 
 func TestHandlePair_TimeoutReturnsErrPairTimeout(t *testing.T) {
 	withShrunkApprovalTimeout(t, 20*time.Millisecond)
-	svc, _, _, _, _, _ := newTestService()
-	status, err := svc.EnableSharing(nil)
+	ts := newTestService()
+	status, err := ts.svc.EnableSharing(nil)
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
 
-	_, pairErr := svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
+	_, pairErr := ts.svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
 	if !errors.Is(pairErr, in.ErrPairTimeout) {
 		t.Fatalf("HandlePair() error = %v, want ErrPairTimeout", pairErr)
 	}
 }
 
 func TestHandlePair_WhileDisabledReturnsUnauthorized(t *testing.T) {
-	svc, _, _, _, _, _ := newTestService()
-	if _, err := svc.HandlePair("123456", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrShareUnauthorized) {
+	ts := newTestService()
+	if _, err := ts.svc.HandlePair("123456", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrShareUnauthorized) {
 		t.Fatalf("err = %v, want ErrShareUnauthorized", err)
 	}
 }
 
 func TestHostsForToken_ValidTokenReturnsSharedHosts(t *testing.T) {
-	svc, hostRepo, clients, _, _, pub := newTestService()
-	hostRepo.hosts["h1"] = domain.Host{ID: "h1", Name: "web-prod-01", Address: "10.0.1.15", Port: 22, Username: "deploy", Labels: []string{"prod"}}
-	hostRepo.hosts["h2"] = domain.Host{ID: "h2", Name: "db-staging", Address: "10.0.1.20", Port: 22, Username: "deploy"}
+	ts := newTestService()
+	ts.hostRepo.hosts["h1"] = domain.Host{ID: "h1", Name: "web-prod-01", Address: "10.0.1.15", Port: 22, Username: "deploy", Labels: []string{"prod"}}
+	ts.hostRepo.hosts["h2"] = domain.Host{ID: "h2", Name: "db-staging", Address: "10.0.1.20", Port: 22, Username: "deploy"}
 
-	status, err := svc.EnableSharing([]string{"h1", "h2"})
+	status, err := ts.svc.EnableSharing([]string{"h1", "h2"})
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
@@ -134,40 +132,40 @@ func TestHostsForToken_ValidTokenReturnsSharedHosts(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		token, _ = svc.HandlePair(status.PIN, "kim-laptop", "10.0.0.5:1234")
+		token, _ = ts.svc.HandlePair(status.PIN, "kim-laptop", "10.0.0.5:1234")
 	}()
-	requestID := waitForPairRequest(t, pub)
-	_ = svc.RespondPairing(requestID, true)
+	requestID := waitForPairRequest(t, ts.pub)
+	_ = ts.svc.RespondPairing(requestID, true)
 	wg.Wait()
 
-	hosts, err := svc.HostsForToken(token)
+	hosts, err := ts.svc.HostsForToken(token)
 	if err != nil {
 		t.Fatalf("HostsForToken() error = %v", err)
 	}
 	if len(hosts) != 2 {
 		t.Fatalf("HostsForToken() = %+v, want 2 hosts", hosts)
 	}
-	if clients.count() != 1 {
-		t.Fatalf("clients.count() = %d, want 1", clients.count())
+	if ts.clients.count() != 1 {
+		t.Fatalf("clients.count() = %d, want 1", ts.clients.count())
 	}
 }
 
 func TestHostsForToken_InvalidTokenReturnsUnauthorized(t *testing.T) {
-	svc, _, _, _, _, _ := newTestService()
-	if _, err := svc.EnableSharing(nil); err != nil {
+	ts := newTestService()
+	if _, err := ts.svc.EnableSharing(nil); err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
-	if _, err := svc.HostsForToken("not-a-real-token"); !errors.Is(err, in.ErrShareUnauthorized) {
+	if _, err := ts.svc.HostsForToken("not-a-real-token"); !errors.Is(err, in.ErrShareUnauthorized) {
 		t.Fatalf("err = %v, want ErrShareUnauthorized", err)
 	}
 }
 
 func TestHostsForToken_SkipsHostsDeletedSinceSelection(t *testing.T) {
-	svc, hostRepo, _, _, _, pub := newTestService()
-	hostRepo.hosts["h1"] = domain.Host{ID: "h1", Name: "still-here", Address: "10.0.1.15", Port: 22, Username: "deploy"}
+	ts := newTestService()
+	ts.hostRepo.hosts["h1"] = domain.Host{ID: "h1", Name: "still-here", Address: "10.0.1.15", Port: 22, Username: "deploy"}
 	// h2 intentionally never added to hostRepo -- simulates deletion after selection.
 
-	status, err := svc.EnableSharing([]string{"h1", "h2"})
+	status, err := ts.svc.EnableSharing([]string{"h1", "h2"})
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
@@ -177,13 +175,13 @@ func TestHostsForToken_SkipsHostsDeletedSinceSelection(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		token, _ = svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
+		token, _ = ts.svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
 	}()
-	requestID := waitForPairRequest(t, pub)
-	_ = svc.RespondPairing(requestID, true)
+	requestID := waitForPairRequest(t, ts.pub)
+	_ = ts.svc.RespondPairing(requestID, true)
 	wg.Wait()
 
-	hosts, err := svc.HostsForToken(token)
+	hosts, err := ts.svc.HostsForToken(token)
 	if err != nil {
 		t.Fatalf("HostsForToken() error = %v", err)
 	}
@@ -225,12 +223,12 @@ func TestSharedHost_JSONHasExactlyFiveKeysAndNoCredentialMaterial(t *testing.T) 
 }
 
 func TestInfo_ReflectsSharedHostCount(t *testing.T) {
-	svc, _, _, _, _, _ := newTestService()
-	if _, err := svc.EnableSharing([]string{"h1", "h2", "h3"}); err != nil {
+	ts := newTestService()
+	if _, err := ts.svc.EnableSharing([]string{"h1", "h2", "h3"}); err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
 
-	info := svc.Info()
+	info := ts.svc.Info()
 	if info.HostCount != 3 {
 		t.Fatalf("Info().HostCount = %d, want 3", info.HostCount)
 	}

@@ -188,3 +188,117 @@ func (r *ShareSettingsRepo) set(key, value string) error {
 	}
 	return nil
 }
+
+// ErrPeerNotFound is returned by Get for an unknown peer ID.
+var ErrPeerNotFound = errors.New("sqlite: peer not found")
+
+// PeerRepo implements out.PeerRepository on top of the share_peers table.
+type PeerRepo struct {
+	db *sql.DB
+}
+
+var _ out.PeerRepository = (*PeerRepo)(nil)
+
+func NewPeerRepo(db *sql.DB) *PeerRepo {
+	return &PeerRepo{db: db}
+}
+
+const peerColumns = `id, name, address, port, cert_fingerprint, paired_at, last_sync_at, hosts_json`
+
+func (r *PeerRepo) List() ([]domain.Peer, error) {
+	rows, err := r.db.Query(`SELECT ` + peerColumns + ` FROM share_peers ORDER BY name`)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: list peers: %w", err)
+	}
+	defer rows.Close()
+
+	var peers []domain.Peer
+	for rows.Next() {
+		p, err := scanPeer(rows)
+		if err != nil {
+			return nil, fmt.Errorf("sqlite: scan peer: %w", err)
+		}
+		peers = append(peers, p)
+	}
+	return peers, rows.Err()
+}
+
+func (r *PeerRepo) Get(id string) (domain.Peer, error) {
+	row := r.db.QueryRow(`SELECT `+peerColumns+` FROM share_peers WHERE id = ?`, id)
+	p, err := scanPeer(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Peer{}, ErrPeerNotFound
+	}
+	if err != nil {
+		return domain.Peer{}, fmt.Errorf("sqlite: get peer: %w", err)
+	}
+	return p, nil
+}
+
+func (r *PeerRepo) Save(p domain.Peer) error {
+	hostsJSON, err := json.Marshal(p.Hosts)
+	if err != nil {
+		return fmt.Errorf("sqlite: marshal peer hosts: %w", err)
+	}
+
+	var lastSyncAt any
+	if p.LastSyncAt != nil {
+		lastSyncAt = p.LastSyncAt.Unix()
+	}
+	pairedAt := p.PairedAt
+	if pairedAt.IsZero() {
+		pairedAt = time.Now()
+	}
+
+	_, err = r.db.Exec(`
+		INSERT INTO share_peers (id, name, address, port, cert_fingerprint, paired_at, last_sync_at, hosts_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name,
+			address = excluded.address,
+			port = excluded.port,
+			cert_fingerprint = excluded.cert_fingerprint,
+			last_sync_at = excluded.last_sync_at,
+			hosts_json = excluded.hosts_json
+	`, p.ID, p.Name, p.Address, p.Port, p.CertFingerprint, pairedAt.Unix(), lastSyncAt, string(hostsJSON))
+	if err != nil {
+		return fmt.Errorf("sqlite: save peer: %w", err)
+	}
+	return nil
+}
+
+func (r *PeerRepo) Delete(id string) error {
+	res, err := r.db.Exec(`DELETE FROM share_peers WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("sqlite: delete peer: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("sqlite: delete peer rows affected: %w", err)
+	}
+	if n == 0 {
+		return ErrPeerNotFound
+	}
+	return nil
+}
+
+func scanPeer(row rowScanner) (domain.Peer, error) {
+	var (
+		p          domain.Peer
+		pairedAt   int64
+		lastSyncAt sql.NullInt64
+		hostsJSON  string
+	)
+	if err := row.Scan(&p.ID, &p.Name, &p.Address, &p.Port, &p.CertFingerprint, &pairedAt, &lastSyncAt, &hostsJSON); err != nil {
+		return domain.Peer{}, err
+	}
+	p.PairedAt = time.Unix(pairedAt, 0).UTC()
+	if lastSyncAt.Valid {
+		t := time.Unix(lastSyncAt.Int64, 0).UTC()
+		p.LastSyncAt = &t
+	}
+	if err := json.Unmarshal([]byte(hostsJSON), &p.Hosts); err != nil {
+		return domain.Peer{}, fmt.Errorf("unmarshal peer hosts: %w", err)
+	}
+	return p, nil
+}

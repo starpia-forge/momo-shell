@@ -23,3 +23,19 @@ type ShareClient struct {
 	PairedAt   time.Time
 	LastSeenAt *time.Time
 }
+
+// Peer is a remote momo-shell instance this instance has paired with in
+// the consumer role. CertFingerprint is the TOFU-pinned fingerprint of the
+// peer's TLS certificate. Hosts/LastSyncAt cache the most recent
+// successful /hosts fetch so the list stays visible while the peer is
+// offline.
+type Peer struct {
+	ID              string
+	Name            string
+	Address         string
+	Port            int
+	CertFingerprint string
+	PairedAt        time.Time
+	LastSyncAt      *time.Time
+	Hosts           []SharedHost
+}

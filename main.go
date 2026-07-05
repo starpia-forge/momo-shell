@@ -13,8 +13,10 @@ import (
 	"momo-shell/internal/adapter/in/sharehttp"
 	wailsfacade "momo-shell/internal/adapter/in/wails"
 	"momo-shell/internal/adapter/out/keychain"
+	"momo-shell/internal/adapter/out/mdns"
 	"momo-shell/internal/adapter/out/pty"
 	"momo-shell/internal/adapter/out/sftp"
+	"momo-shell/internal/adapter/out/shareclient"
 	"momo-shell/internal/adapter/out/sqlite"
 	"momo-shell/internal/adapter/out/sshconn"
 	"momo-shell/internal/adapter/out/wailsevent"
@@ -52,6 +54,7 @@ func main() {
 	historyRepo := sqlite.NewHistoryRepo(db)
 	shareClientRepo := sqlite.NewShareClientRepo(db)
 	shareSettingsRepo := sqlite.NewShareSettingsRepo(db)
+	peerRepo := sqlite.NewPeerRepo(db)
 	sshOpener := sshconn.New(sshconn.WithFileSystemFactory(sftp.NewFromClient))
 	localOpener := pty.NewOpener()
 
@@ -73,7 +76,17 @@ func main() {
 	transferSvc := transfer.New(transfer.Deps{Shell: sessionSvc, Pub: publisher, Zmodem: zmodem.New()})
 	sessionSvc.SetMiddleware(transferSvc)
 
-	shareSvc := share.New(share.Deps{HostRepo: hostRepo, Clients: shareClientRepo, Settings: shareSettingsRepo, Pub: publisher})
+	shareSvc := share.New(share.Deps{
+		HostRepo:   hostRepo,
+		Clients:    shareClientRepo,
+		Settings:   shareSettingsRepo,
+		Pub:        publisher,
+		Peers:      peerRepo,
+		Secrets:    secretStore,
+		Announcer:  mdns.NewAnnouncer(),
+		Browser:    mdns.NewBrowser(),
+		PeerClient: shareclient.New(),
+	})
 	shareCert, err := sharehttp.LoadOrCreateCert(filepath.Dir(dbPath))
 	if err != nil {
 		log.Fatalf("load or create share certificate: %v", err)
@@ -114,11 +127,15 @@ func main() {
 			clipboardWriter.SetContext(ctx)
 			transferDialogs.SetContext(ctx)
 			fileDropRelay.Register(ctx)
+			if err := shareSvc.Start(); err != nil {
+				log.Printf("share: start discovery: %v", err)
+			}
 		},
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()
 			historySvc.Close()
 			_ = shareSvc.DisableSharing()
+			shareSvc.Close()
 			db.Close()
 		},
 		Bind: []interface{}{

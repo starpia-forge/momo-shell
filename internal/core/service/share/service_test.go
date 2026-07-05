@@ -7,22 +7,10 @@ import (
 	"momo-shell/internal/core/domain"
 )
 
-func newTestService() (*Service, *fakeHostRepo, *fakeClients, *fakeSettings, *fakeServer, *recordingPublisher) {
-	hostRepo := newFakeHostRepo()
-	clients := newFakeClients()
-	settings := newFakeSettings()
-	server := &fakeServer{startPort: 47800}
-	pub := &recordingPublisher{}
-
-	svc := New(Deps{HostRepo: hostRepo, Clients: clients, Settings: settings, Pub: pub})
-	svc.SetServer(server)
-	return svc, hostRepo, clients, settings, server, pub
-}
-
 func TestEnableSharing_StartsServerAndGeneratesPIN(t *testing.T) {
-	svc, _, _, _, server, _ := newTestService()
+	ts := newTestService()
 
-	status, err := svc.EnableSharing([]string{"h1", "h2"})
+	status, err := ts.svc.EnableSharing([]string{"h1", "h2"})
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
@@ -38,20 +26,26 @@ func TestEnableSharing_StartsServerAndGeneratesPIN(t *testing.T) {
 	if len(status.SharedHostIDs) != 2 {
 		t.Fatalf("SharedHostIDs = %v, want 2 entries", status.SharedHostIDs)
 	}
-	if server.startCount() != 1 {
-		t.Fatalf("server.Start() called %d times, want 1", server.startCount())
+	if ts.server.startCount() != 1 {
+		t.Fatalf("server.Start() called %d times, want 1", ts.server.startCount())
+	}
+	if ts.announcer.announced != 1 {
+		t.Fatalf("announcer.Announce() called %d times, want 1", ts.announcer.announced)
+	}
+	if ts.announcer.lastPort != 47800 {
+		t.Fatalf("announcer.Announce() port = %d, want 47800", ts.announcer.lastPort)
 	}
 }
 
 func TestEnableSharing_CalledAgainRegeneratesPINWithoutRestartingServer(t *testing.T) {
-	svc, _, _, _, server, _ := newTestService()
+	ts := newTestService()
 
-	first, err := svc.EnableSharing([]string{"h1"})
+	first, err := ts.svc.EnableSharing([]string{"h1"})
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
 
-	second, err := svc.EnableSharing([]string{"h2", "h3"})
+	second, err := ts.svc.EnableSharing([]string{"h2", "h3"})
 	if err != nil {
 		t.Fatalf("EnableSharing() (again) error = %v", err)
 	}
@@ -62,22 +56,25 @@ func TestEnableSharing_CalledAgainRegeneratesPINWithoutRestartingServer(t *testi
 	if len(second.SharedHostIDs) != 2 {
 		t.Fatalf("SharedHostIDs = %v, want replaced with 2 entries", second.SharedHostIDs)
 	}
-	if server.startCount() != 1 {
-		t.Fatalf("server.Start() called %d times, want 1 (no restart)", server.startCount())
+	if ts.server.startCount() != 1 {
+		t.Fatalf("server.Start() called %d times, want 1 (no restart)", ts.server.startCount())
+	}
+	if ts.announcer.announced != 1 {
+		t.Fatalf("announcer.Announce() called %d times, want 1 (no re-announce)", ts.announcer.announced)
 	}
 }
 
 func TestDisableSharing_StopsServerAndClearsPIN(t *testing.T) {
-	svc, _, _, _, server, _ := newTestService()
+	ts := newTestService()
 
-	if _, err := svc.EnableSharing([]string{"h1"}); err != nil {
+	if _, err := ts.svc.EnableSharing([]string{"h1"}); err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
-	if err := svc.DisableSharing(); err != nil {
+	if err := ts.svc.DisableSharing(); err != nil {
 		t.Fatalf("DisableSharing() error = %v", err)
 	}
 
-	status, err := svc.Status()
+	status, err := ts.svc.Status()
 	if err != nil {
 		t.Fatalf("Status() error = %v", err)
 	}
@@ -87,35 +84,38 @@ func TestDisableSharing_StopsServerAndClearsPIN(t *testing.T) {
 	if status.PIN != "" {
 		t.Fatalf("expected PIN cleared, got %q", status.PIN)
 	}
-	if server.stopCount() != 1 {
-		t.Fatalf("server.Stop() called %d times, want 1", server.stopCount())
+	if ts.server.stopCount() != 1 {
+		t.Fatalf("server.Stop() called %d times, want 1", ts.server.stopCount())
+	}
+	if ts.announcer.stopCount() != 1 {
+		t.Fatalf("announcer.Stop() called %d times, want 1", ts.announcer.stopCount())
 	}
 }
 
 func TestDisableSharing_NoopWhenNotEnabled(t *testing.T) {
-	svc, _, _, _, server, _ := newTestService()
+	ts := newTestService()
 
-	if err := svc.DisableSharing(); err != nil {
+	if err := ts.svc.DisableSharing(); err != nil {
 		t.Fatalf("DisableSharing() error = %v", err)
 	}
-	if server.stopCount() != 0 {
-		t.Fatalf("server.Stop() called %d times, want 0", server.stopCount())
+	if ts.server.stopCount() != 0 {
+		t.Fatalf("server.Stop() called %d times, want 0", ts.server.stopCount())
 	}
 }
 
 func TestSetSharedHosts_UpdatesSelectionWithoutTouchingPIN(t *testing.T) {
-	svc, _, _, _, _, _ := newTestService()
+	ts := newTestService()
 
-	status, err := svc.EnableSharing([]string{"h1"})
+	status, err := ts.svc.EnableSharing([]string{"h1"})
 	if err != nil {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
 
-	if err := svc.SetSharedHosts([]string{"h2", "h3"}); err != nil {
+	if err := ts.svc.SetSharedHosts([]string{"h2", "h3"}); err != nil {
 		t.Fatalf("SetSharedHosts() error = %v", err)
 	}
 
-	after, err := svc.Status()
+	after, err := ts.svc.Status()
 	if err != nil {
 		t.Fatalf("Status() error = %v", err)
 	}
@@ -128,13 +128,13 @@ func TestSetSharedHosts_UpdatesSelectionWithoutTouchingPIN(t *testing.T) {
 }
 
 func TestListAndRevokeClients(t *testing.T) {
-	svc, _, clients, _, _, _ := newTestService()
+	ts := newTestService()
 
-	if err := clients.Save(domain.ShareClient{ID: "c1", Name: "kim-laptop", PairedAt: time.Now()}, "hash1"); err != nil {
+	if err := ts.clients.Save(domain.ShareClient{ID: "c1", Name: "kim-laptop", PairedAt: time.Now()}, "hash1"); err != nil {
 		t.Fatalf("clients.Save() error = %v", err)
 	}
 
-	list, err := svc.ListClients()
+	list, err := ts.svc.ListClients()
 	if err != nil {
 		t.Fatalf("ListClients() error = %v", err)
 	}
@@ -142,10 +142,10 @@ func TestListAndRevokeClients(t *testing.T) {
 		t.Fatalf("ListClients() = %+v, want [c1]", list)
 	}
 
-	if err := svc.RevokeClient("c1"); err != nil {
+	if err := ts.svc.RevokeClient("c1"); err != nil {
 		t.Fatalf("RevokeClient() error = %v", err)
 	}
-	if clients.count() != 0 {
-		t.Fatalf("expected client removed, count = %d", clients.count())
+	if ts.clients.count() != 0 {
+		t.Fatalf("expected client removed, count = %d", ts.clients.count())
 	}
 }

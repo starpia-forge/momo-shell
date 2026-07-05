@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
 )
 
 var errNotFound = errors.New("share: not found")
@@ -177,6 +178,182 @@ func (f *fakeServer) stopCount() int {
 	return f.stopped
 }
 
+// fakeSecretStore is an in-memory out.SecretStore for tests.
+type fakeSecretStore struct {
+	mu      sync.Mutex
+	secrets map[string][]byte
+}
+
+func newFakeSecretStore() *fakeSecretStore {
+	return &fakeSecretStore{secrets: make(map[string][]byte)}
+}
+
+func (s *fakeSecretStore) Set(ref string, secret []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.secrets[ref] = secret
+	return nil
+}
+
+func (s *fakeSecretStore) Get(ref string) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.secrets[ref]
+	if !ok {
+		return nil, errNotFound
+	}
+	return v, nil
+}
+
+func (s *fakeSecretStore) Delete(ref string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.secrets, ref)
+	return nil
+}
+
+func (s *fakeSecretStore) has(ref string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.secrets[ref]
+	return ok
+}
+
+// fakePeers is an in-memory out.PeerRepository for tests.
+type fakePeers struct {
+	mu    sync.Mutex
+	peers map[string]domain.Peer
+}
+
+func newFakePeers() *fakePeers {
+	return &fakePeers{peers: make(map[string]domain.Peer)}
+}
+
+func (p *fakePeers) List() ([]domain.Peer, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make([]domain.Peer, 0, len(p.peers))
+	for _, peer := range p.peers {
+		out = append(out, peer)
+	}
+	return out, nil
+}
+
+func (p *fakePeers) Get(id string) (domain.Peer, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	peer, ok := p.peers[id]
+	if !ok {
+		return domain.Peer{}, errNotFound
+	}
+	return peer, nil
+}
+
+func (p *fakePeers) Save(peer domain.Peer) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.peers[peer.ID] = peer
+	return nil
+}
+
+func (p *fakePeers) Delete(id string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.peers, id)
+	return nil
+}
+
+func (p *fakePeers) count() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.peers)
+}
+
+// fakeAnnouncer is an in-memory out.PeerAnnouncer for tests -- no real mDNS.
+type fakeAnnouncer struct {
+	mu           sync.Mutex
+	announceErr  error
+	announced    int
+	stopped      int
+	lastInstance string
+	lastName     string
+	lastPort     int
+}
+
+func (a *fakeAnnouncer) Announce(instanceID, name string, port int) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.announced++
+	a.lastInstance, a.lastName, a.lastPort = instanceID, name, port
+	return a.announceErr
+}
+
+func (a *fakeAnnouncer) Stop() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.stopped++
+}
+
+func (a *fakeAnnouncer) stopCount() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.stopped
+}
+
+// fakeBrowser is an in-memory out.PeerBrowser for tests -- no real mDNS.
+// Tests drive discovery by calling push() directly.
+type fakeBrowser struct {
+	mu       sync.Mutex
+	onUpdate func([]out.DiscoveredPeer)
+	stopped  int
+}
+
+func (b *fakeBrowser) Start(onUpdate func([]out.DiscoveredPeer)) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.onUpdate = onUpdate
+	return nil
+}
+
+func (b *fakeBrowser) Stop() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.stopped++
+}
+
+func (b *fakeBrowser) push(peers []out.DiscoveredPeer) {
+	b.mu.Lock()
+	onUpdate := b.onUpdate
+	b.mu.Unlock()
+	if onUpdate != nil {
+		onUpdate(peers)
+	}
+}
+
+// fakePeerClient is an in-memory out.PeerClient for tests -- no real network.
+type fakePeerClient struct {
+	mu         sync.Mutex
+	infoFunc   func(address string, port int, certFP string) (out.PeerInfo, string, error)
+	pairFunc   func(address string, port int, certFP, pin, clientName string) (string, string, error)
+	hostsFunc  func(address string, port int, certFP, token string) ([]domain.SharedHost, error)
+	hostsCalls int
+}
+
+func (c *fakePeerClient) Info(address string, port int, certFP string) (out.PeerInfo, string, error) {
+	return c.infoFunc(address, port, certFP)
+}
+
+func (c *fakePeerClient) Pair(address string, port int, certFP, pin, clientName string) (string, string, error) {
+	return c.pairFunc(address, port, certFP, pin, clientName)
+}
+
+func (c *fakePeerClient) FetchHosts(address string, port int, certFP, token string) ([]domain.SharedHost, error) {
+	c.mu.Lock()
+	c.hostsCalls++
+	c.mu.Unlock()
+	return c.hostsFunc(address, port, certFP, token)
+}
+
 // recordingPublisher records every Publish call for assertions.
 type recordingPublisher struct {
 	mu     sync.Mutex
@@ -200,4 +377,53 @@ func (p *recordingPublisher) all() []recordedEvent {
 	out := make([]recordedEvent, len(p.events))
 	copy(out, p.events)
 	return out
+}
+
+// testService bundles a Service under test with every fake collaborator,
+// so tests can reach whichever ones they need without a long positional
+// return tuple.
+type testService struct {
+	svc        *Service
+	hostRepo   *fakeHostRepo
+	clients    *fakeClients
+	settings   *fakeSettings
+	server     *fakeServer
+	pub        *recordingPublisher
+	secrets    *fakeSecretStore
+	peers      *fakePeers
+	announcer  *fakeAnnouncer
+	browser    *fakeBrowser
+	peerClient *fakePeerClient
+}
+
+func newTestService() *testService {
+	ts := &testService{
+		hostRepo:  newFakeHostRepo(),
+		clients:   newFakeClients(),
+		settings:  newFakeSettings(),
+		server:    &fakeServer{startPort: 47800},
+		pub:       &recordingPublisher{},
+		secrets:   newFakeSecretStore(),
+		peers:     newFakePeers(),
+		announcer: &fakeAnnouncer{},
+		browser:   &fakeBrowser{},
+		peerClient: &fakePeerClient{
+			infoFunc:  func(string, int, string) (out.PeerInfo, string, error) { return out.PeerInfo{}, "", errNotFound },
+			pairFunc:  func(string, int, string, string, string) (string, string, error) { return "", "", errNotFound },
+			hostsFunc: func(string, int, string, string) ([]domain.SharedHost, error) { return nil, errNotFound },
+		},
+	}
+	ts.svc = New(Deps{
+		HostRepo:   ts.hostRepo,
+		Clients:    ts.clients,
+		Settings:   ts.settings,
+		Pub:        ts.pub,
+		Peers:      ts.peers,
+		Secrets:    ts.secrets,
+		Announcer:  ts.announcer,
+		Browser:    ts.browser,
+		PeerClient: ts.peerClient,
+	})
+	ts.svc.SetServer(ts.server)
+	return ts
 }

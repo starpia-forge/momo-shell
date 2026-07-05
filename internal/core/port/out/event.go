@@ -64,3 +64,10 @@ func TopicOSFileDrop() string {
 func TopicSharePairRequest() string {
 	return "share:pair-request"
 }
+
+// TopicSharePeersUpdated notifies the frontend that the consumer-side peer
+// list (discovered and/or paired) changed and should be re-fetched via
+// ListPeers.
+func TopicSharePeersUpdated() string {
+	return "share:peers-updated"
+}

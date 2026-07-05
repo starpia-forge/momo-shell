@@ -34,21 +34,31 @@ type pairRequestPayload struct {
 
 // Deps are the out-ports/collaborators Service needs.
 type Deps struct {
-	HostRepo out.HostRepository
-	Clients  out.ShareClientRepository
-	Settings out.ShareSettings
-	Pub      out.EventPublisher
+	HostRepo   out.HostRepository
+	Clients    out.ShareClientRepository
+	Settings   out.ShareSettings
+	Pub        out.EventPublisher
+	Peers      out.PeerRepository
+	Secrets    out.SecretStore
+	Announcer  out.PeerAnnouncer
+	Browser    out.PeerBrowser
+	PeerClient out.PeerClient
 }
 
 // Service implements in.ShareUseCase and in.ShareServerCallbacks. The LAN
 // HTTPS server (out.ShareServer) is wired in after construction via
 // SetServer -- see SetServer for why.
 type Service struct {
-	hostRepo out.HostRepository
-	clients  out.ShareClientRepository
-	settings out.ShareSettings
-	pub      out.EventPublisher
-	server   out.ShareServer
+	hostRepo   out.HostRepository
+	clients    out.ShareClientRepository
+	settings   out.ShareSettings
+	pub        out.EventPublisher
+	server     out.ShareServer
+	peers      out.PeerRepository
+	secrets    out.SecretStore
+	announcer  out.PeerAnnouncer
+	browser    out.PeerBrowser
+	peerClient out.PeerClient
 
 	mu          sync.Mutex
 	enabled     bool
@@ -57,6 +67,11 @@ type Service struct {
 	pinFailures int
 	lockedUntil time.Time
 	pending     map[string]chan bool
+
+	cmu        sync.Mutex
+	discovered map[string]out.DiscoveredPeer
+	syncCancel context.CancelFunc
+	syncWG     sync.WaitGroup
 }
 
 var _ in.ShareUseCase = (*Service)(nil)
@@ -64,11 +79,17 @@ var _ in.ShareServerCallbacks = (*Service)(nil)
 
 func New(deps Deps) *Service {
 	return &Service{
-		hostRepo: deps.HostRepo,
-		clients:  deps.Clients,
-		settings: deps.Settings,
-		pub:      deps.Pub,
-		pending:  make(map[string]chan bool),
+		hostRepo:   deps.HostRepo,
+		clients:    deps.Clients,
+		settings:   deps.Settings,
+		pub:        deps.Pub,
+		peers:      deps.Peers,
+		secrets:    deps.Secrets,
+		announcer:  deps.Announcer,
+		browser:    deps.Browser,
+		peerClient: deps.PeerClient,
+		pending:    make(map[string]chan bool),
+		discovered: make(map[string]out.DiscoveredPeer),
 	}
 }
 
@@ -102,6 +123,18 @@ func (s *Service) EnableSharing(hostIDs []string) (in.ShareStatus, error) {
 		if err != nil {
 			return in.ShareStatus{}, err
 		}
+
+		instanceID, err := s.settings.InstanceID()
+		if err != nil {
+			_ = s.server.Stop(context.Background())
+			return in.ShareStatus{}, err
+		}
+		name, _ := os.Hostname()
+		if err := s.announcer.Announce(instanceID, name, port); err != nil {
+			_ = s.server.Stop(context.Background())
+			return in.ShareStatus{}, err
+		}
+
 		s.mu.Lock()
 		s.enabled = true
 		s.port = port
@@ -121,6 +154,7 @@ func (s *Service) DisableSharing() error {
 	s.pin = ""
 	s.mu.Unlock()
 
+	s.announcer.Stop()
 	return s.server.Stop(context.Background())
 }
 

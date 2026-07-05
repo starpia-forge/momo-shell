@@ -7,6 +7,7 @@ require (
 	github.com/UserExistsError/conpty v0.1.4
 	github.com/creack/pty v1.1.24
 	github.com/google/uuid v1.6.0
+	github.com/libp2p/zeroconf/v2 v2.2.0
 	github.com/pkg/sftp v1.13.10
 	github.com/wailsapp/wails/v2 v2.12.0
 	github.com/zalando/go-keyring v0.2.8
@@ -33,6 +34,7 @@ require (
 	github.com/leaanthony/u v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/miekg/dns v1.1.43 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect

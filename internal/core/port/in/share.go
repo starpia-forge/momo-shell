@@ -2,19 +2,20 @@ package in
 
 import (
 	"errors"
+	"time"
 
 	"momo-shell/internal/core/domain"
 )
 
 // ShareUseCase is the driving port for LAN host sharing, bound to the
-// local Wails UI. M1 covers the provider role (share this instance's
-// hosts with peers); the consumer role (discover and pair with peers
-// sharing hosts back) is added in M2.
+// local Wails UI: both the provider role (share this instance's hosts
+// with peers, M1) and the consumer role (discover and pair with peers
+// sharing hosts back, M2).
 type ShareUseCase interface {
-	// EnableSharing turns on the LAN HTTPS server and mDNS advertisement
-	// (once wired in M2), generates a fresh pairing PIN, and marks hostIDs
-	// as shared. Calling it again while already enabled regenerates the
-	// PIN and replaces the shared host set without restarting the server.
+	// EnableSharing turns on the LAN HTTPS server and mDNS advertisement,
+	// generates a fresh pairing PIN, and marks hostIDs as shared. Calling
+	// it again while already enabled regenerates the PIN and replaces the
+	// shared host set without restarting the server.
 	EnableSharing(hostIDs []string) (ShareStatus, error)
 	DisableSharing() error
 	Status() (ShareStatus, error)
@@ -24,6 +25,36 @@ type ShareUseCase interface {
 	// RespondPairing answers a pending share:pair-request raised by an
 	// incoming /pair call.
 	RespondPairing(requestID string, approve bool) error
+
+	// ListPeers returns every peer this instance knows about -- paired
+	// peers (from storage) merged with currently-discovered-but-unpaired
+	// peers (from mDNS), each annotated with online status and its cached
+	// shared-host list.
+	ListPeers() ([]PeerView, error)
+	// PairWithPeer pairs with a peer discovered via mDNS, identified by
+	// its mDNS instance ID (PeerView.ID for an unpaired entry).
+	PairWithPeer(peerID string, pin string) error
+	// AddPeerByAddress pairs with a peer reachable at address:port,
+	// bypassing mDNS discovery -- the fallback for networks that block
+	// multicast.
+	AddPeerByAddress(address string, port int, pin string) error
+	RemovePeer(peerID string) error
+	// FetchSharedHosts force-refreshes and returns the cached host list
+	// for an already-paired peer.
+	FetchSharedHosts(peerID string) ([]domain.SharedHost, error)
+}
+
+// PeerView is the consumer-side snapshot of one peer shown in the host
+// sidebar's shared-hosts section.
+type PeerView struct {
+	ID         string
+	Name       string
+	Address    string
+	Port       int
+	Paired     bool
+	Online     bool
+	LastSyncAt *time.Time
+	Hosts      []domain.SharedHost
 }
 
 // ShareStatus is the provider-side snapshot shown in the share settings panel.

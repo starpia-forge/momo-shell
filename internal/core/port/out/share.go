@@ -2,6 +2,7 @@ package out
 
 import (
 	"context"
+	"errors"
 
 	"momo-shell/internal/core/domain"
 )
@@ -37,4 +38,61 @@ type ShareSettings interface {
 	InstanceID() (string, error)
 	SharedHostIDs() ([]string, error)
 	SetSharedHostIDs(ids []string) error
+}
+
+// PeerRepository persists peers this instance has paired with in the
+// consumer role, including their cached shared-host list.
+type PeerRepository interface {
+	List() ([]domain.Peer, error)
+	Get(id string) (domain.Peer, error)
+	Save(p domain.Peer) error
+	Delete(id string) error
+}
+
+// PeerAnnouncer advertises this instance over mDNS while sharing is
+// enabled, so other instances' PeerBrowser can discover it.
+type PeerAnnouncer interface {
+	Announce(instanceID, name string, port int) error
+	Stop()
+}
+
+// DiscoveredPeer is one mDNS browse result -- a candidate peer visible on
+// the LAN, not yet necessarily paired.
+type DiscoveredPeer struct {
+	InstanceID string
+	Name       string
+	Address    string
+	Port       int
+}
+
+// PeerBrowser watches the LAN for other momo-shell instances advertising
+// _momo-share._tcp. onUpdate is called with the full current set on every
+// change (additions/removals/TTL expiry), not incrementally.
+type PeerBrowser interface {
+	Start(onUpdate func([]DiscoveredPeer)) error
+	Stop()
+}
+
+// PeerInfo mirrors a peer's GET /info response.
+type PeerInfo struct {
+	Ver       int
+	ID        string
+	Name      string
+	HostCount int
+}
+
+// ErrPeerUnauthorized is returned by PeerClient.FetchHosts when the peer
+// has revoked this instance's token -- the caller should drop the pairing
+// rather than merely mark the peer offline.
+var ErrPeerUnauthorized = errors.New("share: peer rejected our token")
+
+// PeerClient is the driven port for calling another instance's LAN share
+// API. certFP == "" means TOFU: accept whatever certificate the peer
+// presents and return its fingerprint for the caller to persist; a
+// non-empty certFP pins the connection to that exact certificate.
+type PeerClient interface {
+	Info(address string, port int, certFP string) (info PeerInfo, observedFP string, err error)
+	Pair(address string, port int, certFP, pin, clientName string) (token, observedFP string, err error)
+	// FetchHosts returns ErrPeerUnauthorized on a 401 response.
+	FetchHosts(address string, port int, certFP, token string) ([]domain.SharedHost, error)
 }
