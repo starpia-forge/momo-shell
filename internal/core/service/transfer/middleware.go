@@ -146,12 +146,18 @@ func (s *Service) OnOutput(sessionID string, chunk []byte) []byte {
 	}
 
 	st.mu.Lock()
-	defer st.mu.Unlock()
-
 	if st.phase == zmodemActive {
-		st.conduit.push(chunk)
+		cd := st.conduit
+		st.mu.Unlock()
+		// push must not be called while holding st.mu: it blocks until the
+		// engine's Read drains the channel (or conduit.Close), and the only
+		// way to force that (CancelZmodem, the stall watchdog) itself needs
+		// st.mu -- holding the lock here would deadlock all three against
+		// each other the moment the channel backs up.
+		cd.push(chunk)
 		return nil
 	}
+	defer st.mu.Unlock()
 	if st.phase == zmodemDraining {
 		st.lastActivity = time.Now()
 		// Scan even while draining: a new transfer starting on the heels of

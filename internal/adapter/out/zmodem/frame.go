@@ -70,7 +70,7 @@ func unhexDigit(c byte) (byte, bool) {
 // writeBin32Header sends h in binary form with a 32-bit CRC -- the format
 // used for everything after the initial handshake.
 func writeBin32Header(w io.Writer, h header) error {
-	debugf("send bin32 header type=%d", h.typ)
+	debugf("send bin32 header type=%d pos=%d", h.typ, h.position())
 	buf := []byte{zpad, zpad, zdle, zbin32}
 	payload := append([]byte{h.typ}, h.data[:]...)
 	crc := crc32Of(payload)
@@ -89,7 +89,8 @@ func writeBin32Header(w io.Writer, h header) error {
 // unescapes generically.
 func appendEscaped(buf []byte, b byte) []byte {
 	switch b {
-	case zdle, xon, 0x13 /* XOFF */, 0x0d /* CR */ :
+	case zdle, xon, 0x13 /* XOFF */, 0x0d, /* CR */
+		zdle | 0x80, xon | 0x80, 0x13 | 0x80 /* XOFF */, 0x0d | 0x80 /* CR */ :
 		return append(buf, zdle, b^0x40)
 	default:
 		return append(buf, b)
@@ -224,7 +225,7 @@ func (f *frameReader) readHeader() (header, error) {
 		return header{}, fmt.Errorf("zmodem: unknown header format %q", format)
 	}
 	if err == nil {
-		debugf("recv header format=%q type=%d", format, h.typ)
+		debugf("recv header format=%q type=%d pos=%d", format, h.typ, h.position())
 	}
 	return h, err
 }

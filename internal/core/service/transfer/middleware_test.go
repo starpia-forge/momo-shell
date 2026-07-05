@@ -436,6 +436,56 @@ func TestMiddleware_DrainScansForANewSignature(t *testing.T) {
 	}
 }
 
+// TestMiddleware_CancelDoesNotDeadlockBehindABlockedPush is the regression
+// test for a real deadlock found via live E2E testing (a 5MB download stalled
+// at 1% and never recovered): OnOutput used to call conduit.push while
+// holding st.mu. push blocks once the conduit's channel (32 slots) is full
+// until the engine drains it via Read (or conduit.Close is called) -- but
+// Close is only reachable through CancelZmodem or the stall watchdog, both of
+// which themselves need st.mu. An engine that is merely slow to Read (not
+// stuck, just busy) could wedge both of those recovery paths behind a lock a
+// blocked push() call inside OnOutput never released.
+func TestMiddleware_CancelDoesNotDeadlockBehindABlockedPush(t *testing.T) {
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	blockReceive := make(chan struct{})
+	engine := &fakeZmodemEngine{
+		receiveFunc: func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+			<-blockReceive // never reads from rw until the test says so
+			return nil, nil
+		},
+	}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	defer close(blockReceive)
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return engine.recvCallCount() > 0 })
+
+	// The detection itself already pushed the signature bytes as the conduit's
+	// first queued chunk, so fill the remaining capacity (channel cap is 32).
+	for i := 0; i < 31; i++ {
+		svc.OnOutput("s1", []byte("x"))
+	}
+
+	// One more chunk blocks inside push -- run it in the background so a
+	// regression doesn't hang the test itself.
+	go svc.OnOutput("s1", []byte("y"))
+	time.Sleep(50 * time.Millisecond) // let it reach push and block on the full channel
+
+	done := make(chan error, 1)
+	go func() { done <- svc.CancelZmodem("s1") }()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("CancelZmodem: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("CancelZmodem deadlocked behind a blocked push() holding st.mu")
+	}
+}
+
 func TestMiddleware_NoZmodemEngineDisablesDetection(t *testing.T) {
 	shell := newFakeShellAccess()
 	svc := New(Deps{Shell: shell}) // no Zmodem engine

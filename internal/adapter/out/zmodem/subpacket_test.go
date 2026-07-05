@@ -40,6 +40,28 @@ func TestSubpacket_EmptyPayload(t *testing.T) {
 	}
 }
 
+// TestAppendEscaped_EscapesHighBitControlVariants is the regression test for
+// a real interop bug found via live E2E testing against real lrzsz rz: a
+// multi-chunk upload of random binary data was rejected by rz on every
+// single subpacket (rz kept replying ZRPOS(0), demanding a restart from the
+// very beginning, forever) even though our own loopback/round-trip tests
+// never caught it -- because our own reader unescapes generically and never
+// required these bytes to be escaped in the first place, so a bug here is
+// invisible to a self-to-self round trip. Real rz, however, does require
+// ZDLE, XON, XOFF, CR and their high-bit-set counterparts (0x98, 0x91, 0x93,
+// 0x8d) to always be escaped -- appendEscaped previously only escaped the
+// low-bit forms, so any of these four high-bit bytes in the payload (near
+//-certain within a few KB of random binary) desynced real rz's parser.
+func TestAppendEscaped_EscapesHighBitControlVariants(t *testing.T) {
+	mustEscape := []byte{zdle, xon, 0x13, 0x0d, zdle | 0x80, xon | 0x80, 0x13 | 0x80, 0x0d | 0x80}
+	for _, b := range mustEscape {
+		got := appendEscaped(nil, b)
+		if len(got) != 2 || got[0] != zdle || got[1] != b^0x40 {
+			t.Fatalf("appendEscaped(0x%02x): got %v, want [zdle, 0x%02x]", b, got, b^0x40)
+		}
+	}
+}
+
 func TestSubpacket_CorruptedCRCFails(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeSubpacket(&buf, []byte("data"), zcrcw); err != nil {
