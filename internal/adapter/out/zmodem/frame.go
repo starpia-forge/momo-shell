@@ -1,7 +1,6 @@
 package zmodem
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -95,20 +94,67 @@ func appendEscaped(buf []byte, b byte) []byte {
 	}
 }
 
-// frameReader wraps a buffered byte source with the ZMODEM sync/escape
+// frameReader wraps a timeout-aware byte source with the ZMODEM sync/escape
 // state machine: finding the next header regardless of what garbage
 // (echoed shell output, stray XON bytes) precedes it, and unescaping
 // header/subpacket bytes contextually.
 type frameReader struct {
-	r *bufio.Reader
+	tr  *timeoutReader
+	buf []byte // leftover bytes from the most recently pumped chunk
 }
 
 func newFrameReader(r io.Reader) *frameReader {
-	return &frameReader{r: bufio.NewReaderSize(r, 4096)}
+	return &frameReader{tr: newTimeoutReader(r)}
 }
 
+// readRawByte pulls the next raw byte, refilling from the pump (bounded by
+// ioReadTimeout) whenever the local buffer is empty. Returns errReadTimeout
+// if nothing arrives in time -- callers decide whether that's recoverable.
+func (f *frameReader) readRawByte() (byte, error) {
+	for len(f.buf) == 0 {
+		chunk, err := f.tr.next(ioReadTimeout)
+		if err != nil {
+			return 0, err
+		}
+		f.buf = chunk
+	}
+	b := f.buf[0]
+	f.buf = f.buf[1:]
+	return b, nil
+}
+
+// readByte reads the next raw byte, transparently discarding stray
+// XON/XOFF flow-control bytes (0x11/0x13) appearing outside of any escape
+// sequence -- an intervening PTY/terminal layer can inject these, and a
+// compliant ZMODEM receiver must never treat them as protocol content.
 func (f *frameReader) readByte() (byte, error) {
-	return f.r.ReadByte()
+	for {
+		b, err := f.readRawByte()
+		if err != nil {
+			return 0, err
+		}
+		if b == xon || b == 0x13 {
+			continue
+		}
+		return b, nil
+	}
+}
+
+// peek1 returns the next already-buffered byte without consuming it, or
+// ok=false if the local buffer is currently empty. It never triggers a new
+// read: peeking for one more byte than the peer actually sent would block
+// waiting on a reply that's itself blocked on us reading first.
+func (f *frameReader) peek1() (byte, bool) {
+	if len(f.buf) == 0 {
+		return 0, false
+	}
+	return f.buf[0], true
+}
+
+func (f *frameReader) consumeByte() {
+	if len(f.buf) > 0 {
+		f.buf = f.buf[1:]
+	}
 }
 
 // syncToHeader scans forward until it sees ZDLE followed by a recognized
@@ -216,14 +262,11 @@ func (f *frameReader) readHexHeaderBody() (header, error) {
 // ordinary noise before the next header.
 func (f *frameReader) consumeLineEnding() {
 	for i := 0; i < 3; i++ {
-		if f.r.Buffered() == 0 {
+		b, ok := f.peek1()
+		if !ok || (b != '\r' && b != '\n' && b != 0x8a && b != xon) {
 			return
 		}
-		b, err := f.r.Peek(1)
-		if err != nil || (b[0] != '\r' && b[0] != '\n' && b[0] != 0x8a && b[0] != xon) {
-			return
-		}
-		_, _ = f.readByte()
+		f.consumeByte()
 	}
 }
 

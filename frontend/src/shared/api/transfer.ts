@@ -58,6 +58,17 @@ export async function statRemote(sessionId: string, path: string): Promise<Remot
   return (await StatRemote(sessionId, path)) as unknown as RemoteEntry | null
 }
 
+/** Returns which of localPaths' basenames already exist in remoteDir --
+ * callers prompt for an overwrite/rename/skip policy before uploadFiles
+ * (the backend applies one policy per call, chosen up front by the caller;
+ * it never prompts itself). */
+export async function detectUploadConflicts(sessionId: string, localPaths: string[], remoteDir: string): Promise<string[]> {
+  const entries = await listRemoteDir(sessionId, remoteDir)
+  const existing = new Set(entries.map((e) => e.name))
+  const basenames = localPaths.map((p) => p.split(/[\\/]/).pop() ?? p)
+  return basenames.filter((name) => existing.has(name))
+}
+
 export async function uploadFiles(
   sessionId: string,
   localPaths: string[],

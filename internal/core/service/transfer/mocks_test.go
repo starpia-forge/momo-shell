@@ -234,6 +234,10 @@ func (f *fakeZmodemEngine) recvCallCount() int {
 	return f.recvCalls
 }
 
+func (f *fakeZmodemEngine) CancelBytes() []byte {
+	return []byte{0x18, 0x18, 0x18, 0x18, 0x18, 8, 8, 8, 8, 8}
+}
+
 func (s *fakeShellAccess) set(sessionID string, fs out.RemoteFileSystem) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -1,6 +1,7 @@
 export * from './Button/Button'
 export * from './TextInput/TextInput'
 export * from './Dialog/Dialog'
+export * from './ConflictDialog/ConflictDialog'
 export * from './ContextMenu/ContextMenu'
 export * from './Spinner/Spinner'
 export * from './Toast/Toast'

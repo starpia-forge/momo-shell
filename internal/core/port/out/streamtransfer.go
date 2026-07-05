@@ -23,4 +23,10 @@ type StreamTransfer interface {
 	// Receive drives our receiver against a remote sz, saving into destDir.
 	// Blocks until ZFIN, a protocol error, or ctx cancellation.
 	Receive(ctx context.Context, rw io.ReadWriter, destDir string, progress func(TransferProgress)) (saved []string, err error)
+	// CancelBytes returns the wire sequence that aborts an in-flight
+	// exchange (ZMODEM's CAN-CAN-CAN...): the caller writes this directly
+	// to the transport when the user cancels or the engine errors, so the
+	// remote rz/sz gives up immediately instead of sitting on its own
+	// internal timeout.
+	CancelBytes() []byte
 }

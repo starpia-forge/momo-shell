@@ -78,3 +78,29 @@ func TestReadHeader_CancelSequenceReturnsErrCanceled(t *testing.T) {
 		t.Fatalf("expected errCanceled, got %v", err)
 	}
 }
+
+func TestReadHeader_SkipsInterleavedRawXonXoff(t *testing.T) {
+	// A PTY or other intervening layer can inject raw (non-escaped)
+	// XON/XOFF bytes anywhere in the stream; a compliant reader must
+	// silently discard them rather than treating them as header content.
+	var clean bytes.Buffer
+	want := header{typ: zdata, data: le32(42)}
+	if err := writeBin32Header(&clean, want); err != nil {
+		t.Fatalf("writeBin32Header: %v", err)
+	}
+
+	var noisy bytes.Buffer
+	for _, b := range clean.Bytes() {
+		noisy.WriteByte(xon)
+		noisy.WriteByte(b)
+		noisy.WriteByte(0x13) // raw XOFF
+	}
+
+	got, err := newFrameReader(&noisy).readHeader()
+	if err != nil {
+		t.Fatalf("readHeader: %v", err)
+	}
+	if got != want {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}

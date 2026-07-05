@@ -2,10 +2,14 @@ package transfer
 
 import (
 	"bytes"
+	"context"
+	"errors"
+	"io"
 	"testing"
 	"time"
 
 	"momo-shell/internal/core/domain"
+	"momo-shell/internal/core/port/out"
 )
 
 func waitForZ(t *testing.T, timeout time.Duration, cond func() bool) {
@@ -189,6 +193,99 @@ func TestMiddleware_CancelZmodemStopsActiveTransfer(t *testing.T) {
 
 	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "canceled" })
 	waitForZ(t, time.Second, func() bool { return !shell.isInputBlocked("s1") })
+}
+
+func TestMiddleware_CancelZmodemSendsCancelBytesToRemote(t *testing.T) {
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	engine := &fakeZmodemEngine{}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return engine.recvCallCount() > 0 })
+
+	if err := svc.CancelZmodem("s1"); err != nil {
+		t.Fatalf("CancelZmodem failed: %v", err)
+	}
+
+	found := false
+	for _, w := range shell.rawWrittenTo("s1") {
+		if bytes.Equal(w, engine.CancelBytes()) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected CancelZmodem to write the engine's cancel sequence to the remote, got %v", shell.rawWrittenTo("s1"))
+	}
+}
+
+func TestMiddleware_FailedTransferSendsCancelBytesAndDrainsBeforeUnblocking(t *testing.T) {
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	engine := &fakeZmodemEngine{
+		receiveFunc: func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+			return nil, errors.New("boom")
+		},
+	}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "failed" })
+
+	found := false
+	for _, w := range shell.rawWrittenTo("s1") {
+		if bytes.Equal(w, engine.CancelBytes()) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a protocol failure to send the cancel sequence, got %v", shell.rawWrittenTo("s1"))
+	}
+
+	// Right after failing, trailing bytes from the remote must still be
+	// swallowed (draining), not rendered to the terminal.
+	if got := svc.OnOutput("s1", []byte("leftover zmodem noise")); len(got) != 0 {
+		t.Fatalf("expected drain to suppress trailing output right after failure, got %q", got)
+	}
+	if !shell.isInputBlocked("s1") {
+		t.Fatalf("expected input to stay blocked during the drain grace period")
+	}
+
+	waitForZ(t, 2*time.Second, func() bool { return !shell.isInputBlocked("s1") })
+
+	// Once drained, output detection resumes normally (modulo the
+	// detector's own trailing hold-back -- see TestMiddleware_
+	// PlainOutputPassesThroughUnchanged).
+	want := "$ normal prompt\r\n"
+	got := string(svc.OnOutput("s1", []byte(want)))
+	if !bytes.HasPrefix([]byte(want), []byte(got)) || len(want)-len(got) > maxSignatureLen-1 {
+		t.Fatalf("expected normal (near-full) passthrough after drain ends, got %q want prefix of %q", got, want)
+	}
+}
+
+func TestMiddleware_CancelDuringDrainEndsItImmediately(t *testing.T) {
+	shell := newFakeShellAccess()
+	pub := &recordingPublisher{}
+	engine := &fakeZmodemEngine{
+		receiveFunc: func(ctx context.Context, rw io.ReadWriter, destDir string, progress func(out.TransferProgress)) ([]string, error) {
+			return nil, nil // completes successfully and immediately, straight into drain
+		},
+	}
+	svc := New(Deps{Shell: shell, Pub: pub, Zmodem: engine})
+	svc.Attach("s1", domain.KindSSH)
+
+	svc.OnOutput("s1", downloadSignature)
+	waitForZ(t, time.Second, func() bool { return lastZmodemPhase(pub, "s1") == "done" })
+	waitForZ(t, time.Second, func() bool { return shell.isInputBlocked("s1") }) // now draining
+
+	if err := svc.CancelZmodem("s1"); err != nil {
+		t.Fatalf("CancelZmodem failed: %v", err)
+	}
+	if shell.isInputBlocked("s1") {
+		t.Fatalf("expected canceling during drain to unblock input immediately")
+	}
 }
 
 func TestMiddleware_CancelPendingUploadPrompt(t *testing.T) {

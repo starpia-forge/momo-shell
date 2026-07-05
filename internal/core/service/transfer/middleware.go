@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -26,6 +27,23 @@ const (
 	zmodemIdle      zmodemPhase = "idle"
 	zmodemAwaitSend zmodemPhase = "awaiting-send" // detected remote rz waiting; need StartZmodemSend
 	zmodemActive    zmodemPhase = "active"
+	// zmodemDraining follows every active transfer's end (success, failure,
+	// or cancel): the remote rz/sz can keep streaming trailing protocol
+	// bytes for a moment after we've stopped reading them as a transfer, and
+	// rendering those to the terminal (which OnOutput would otherwise do
+	// once phase is back to idle) means they get echoed and interpreted as
+	// shell input -- see drainQuietPeriod/drainMaxDuration.
+	zmodemDraining zmodemPhase = "draining"
+)
+
+// drainQuietPeriod/drainMaxDuration bound the draining phase: it ends as
+// soon as drainQuietPeriod has passed with no further diverted output, but
+// never later than drainMaxDuration after it began (a remote that's still
+// actively spewing bad data shouldn't hold the shell hostage indefinitely).
+const (
+	drainQuietPeriod  = 500 * time.Millisecond
+	drainMaxDuration  = 3 * time.Second
+	drainPollInterval = 100 * time.Millisecond
 )
 
 // zmodemState is one SSH session's ZMODEM detection state, guarded by its
@@ -44,6 +62,14 @@ type zmodemState struct {
 	// conduit lets our sender's negotiation see it immediately instead of
 	// idling for however long the next retry takes.
 	pendingZRINIT []byte
+	// lastActivity is touched by every OnOutput call while draining, and
+	// read by that drain's watcher goroutine to decide when it's been quiet
+	// long enough to end.
+	lastActivity time.Time
+	// drainGen is bumped every time a new drain (or a new active transfer)
+	// starts, so a stale watcher goroutine from a previous drain can tell
+	// it's no longer the current one and exit instead of clobbering state.
+	drainGen int
 }
 
 // ErrNoZmodemSession is returned by StartZmodemSend/CancelZmodem for a
@@ -82,6 +108,9 @@ func (s *Service) Detach(sessionID string) {
 	if st.cancel != nil {
 		st.cancel()
 	}
+	if st.conduit != nil {
+		st.conduit.Close()
+	}
 	st.mu.Unlock()
 }
 
@@ -102,6 +131,10 @@ func (s *Service) OnOutput(sessionID string, chunk []byte) []byte {
 
 	if st.phase == zmodemActive {
 		st.conduit.push(chunk)
+		return nil
+	}
+	if st.phase == zmodemDraining {
+		st.lastActivity = time.Now()
 		return nil
 	}
 
@@ -161,12 +194,30 @@ func (s *Service) CancelZmodem(sessionID string) error {
 
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if st.phase == zmodemActive {
+		// Tell the remote rz/sz to give up immediately instead of sitting
+		// on its own internal timeout, and unblock the engine's blocking
+		// read right away (it won't otherwise notice ctx was canceled
+		// until its next I/O deadline).
+		if s.zmodem != nil {
+			_ = s.shell.WriteRaw(sessionID, s.zmodem.CancelBytes())
+		}
+		if st.conduit != nil {
+			st.conduit.Close()
+		}
+	}
 	if st.cancel != nil {
 		st.cancel()
 	}
 	if st.phase == zmodemAwaitSend {
 		st.phase = zmodemIdle
 		s.publishZmodem(sessionID, "upload", "canceled", "")
+	} else if st.phase == zmodemDraining {
+		// Cancel during the drain grace period should feel instant rather
+		// than waiting out drainQuietPeriod/drainMaxDuration.
+		st.phase = zmodemIdle
+		st.drainGen++
+		_ = s.shell.SetInputBlocked(sessionID, false)
 	}
 	return nil
 }
@@ -181,6 +232,7 @@ func (s *Service) beginTransferLocked(sessionID string, st *zmodemState, directi
 	st.conduit = cd
 	st.cancel = cancel
 	st.taskID = uuid.NewString()
+	st.drainGen++
 	taskID := st.taskID
 
 	_ = s.shell.SetInputBlocked(sessionID, true)
@@ -205,24 +257,66 @@ func (s *Service) runZmodem(ctx context.Context, sessionID string, st *zmodemSta
 		err = s.zmodem.Send(ctx, cd, localPaths, progress)
 	}
 
-	cd.Close()
-	_ = s.shell.SetInputBlocked(sessionID, false)
-
-	st.mu.Lock()
-	st.phase = zmodemIdle
-	st.conduit = nil
-	st.cancel = nil
-	st.mu.Unlock()
-
 	phase := "done"
 	if err != nil {
 		if ctx.Err() != nil {
 			phase = "canceled"
 		} else {
 			phase = "failed"
+			// A protocol failure (not a user cancel, which already sent
+			// this from CancelZmodem) may leave the remote mid-stream;
+			// tell it to give up rather than let it keep streaming into
+			// the drain below on its own timeout.
+			if s.zmodem != nil {
+				_ = s.shell.WriteRaw(sessionID, s.zmodem.CancelBytes())
+			}
 		}
 	}
+
+	cd.Close()
+
+	st.mu.Lock()
+	st.conduit = nil
+	st.cancel = nil
+	s.beginDrainLocked(sessionID, st)
+	st.mu.Unlock()
+
 	s.publishZmodem(sessionID, direction, phase, taskID)
+}
+
+// beginDrainLocked transitions a just-finished transfer into a short grace
+// period where diverted output is still discarded rather than rendered,
+// absorbing whatever trailing protocol bytes the remote rz/sz is still
+// mid-flight sending (which would otherwise leak to the terminal and get
+// interpreted as shell input the instant input unblocks). Caller must hold
+// st.mu; see zmodemDraining.
+func (s *Service) beginDrainLocked(sessionID string, st *zmodemState) {
+	st.phase = zmodemDraining
+	st.lastActivity = time.Now()
+	st.drainGen++
+	gen := st.drainGen
+	deadline := time.Now().Add(drainMaxDuration)
+
+	go func() {
+		ticker := time.NewTicker(drainPollInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			st.mu.Lock()
+			if st.phase != zmodemDraining || st.drainGen != gen {
+				st.mu.Unlock()
+				return // superseded by a cancel, a new transfer, or Detach
+			}
+			quiet := time.Since(st.lastActivity) >= drainQuietPeriod
+			expired := time.Now().After(deadline)
+			if quiet || expired {
+				st.phase = zmodemIdle
+				st.mu.Unlock()
+				_ = s.shell.SetInputBlocked(sessionID, false)
+				return
+			}
+			st.mu.Unlock()
+		}
+	}()
 }
 
 // defaultDownloadDir resolves "~/Downloads" for when Deps.DownloadDir is

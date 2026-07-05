@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { uploadFiles } from '../../../shared/api'
+import { detectUploadConflicts, uploadFiles, type ConflictPolicy } from '../../../shared/api'
+import { ConflictDialog } from '../../../shared/ui'
 import { useFileUploadStore } from '../model/store'
 import './DestinationBar.css'
 
 const AUTO_PROCEED_MS = 3000
-
-function commit(sessionId: string, paths: string[], cwd: string) {
-  useFileUploadStore.getState().setPending(null)
-  void uploadFiles(sessionId, paths, cwd)
-}
 
 function cancel() {
   useFileUploadStore.getState().setPending(null)
@@ -20,8 +16,29 @@ export function DestinationBar() {
   const pending = useFileUploadStore((s) => s.pending)
   const [cwd, setCwd] = useState('')
   const [remainingMs, setRemainingMs] = useState(AUTO_PROCEED_MS)
+  const [conflict, setConflict] = useState<{ sessionId: string; paths: string[]; dir: string; names: string[] } | null>(null)
   const cwdRef = useRef(cwd)
   cwdRef.current = cwd
+
+  async function commit(sessionId: string, paths: string[], destCwd: string) {
+    useFileUploadStore.getState().setPending(null)
+    try {
+      const names = await detectUploadConflicts(sessionId, paths, destCwd)
+      if (names.length > 0) {
+        setConflict({ sessionId, paths, dir: destCwd, names })
+        return
+      }
+      await uploadFiles(sessionId, paths, destCwd)
+    } catch {
+      // Upload/detection errors surface via the transfer center's own task
+      // state; nothing else to show from here.
+    }
+  }
+
+  function handleConflictChoice(policy: ConflictPolicy) {
+    if (!conflict) return
+    void uploadFiles(conflict.sessionId, conflict.paths, conflict.dir, policy)
+  }
 
   useEffect(() => {
     if (!pending) return
@@ -34,7 +51,7 @@ export function DestinationBar() {
       const left = AUTO_PROCEED_MS - (Date.now() - start)
       if (left <= 0) {
         window.clearInterval(interval)
-        commit(pending.sessionId, pending.paths, cwdRef.current)
+        void commit(pending.sessionId, pending.paths, cwdRef.current)
       } else {
         setRemainingMs(left)
       }
@@ -42,30 +59,39 @@ export function DestinationBar() {
     return () => window.clearInterval(interval)
     // Only the drop that opened this bar should (re)start the countdown --
     // editing cwd must not reset it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending])
 
-  if (!pending) return null
-
   return (
-    <div className="destination-bar">
-      <span className="destination-bar__label">{pending.paths.length}개 파일을</span>
-      <input
-        className="destination-bar__path"
-        value={cwd}
-        autoFocus
-        onChange={(e) => setCwd(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commit(pending.sessionId, pending.paths, cwd)
-          if (e.key === 'Escape') cancel()
-        }}
+    <>
+      {pending && (
+        <div className="destination-bar">
+          <span className="destination-bar__label">{pending.paths.length}개 파일을</span>
+          <input
+            className="destination-bar__path"
+            value={cwd}
+            autoFocus
+            onChange={(e) => setCwd(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void commit(pending.sessionId, pending.paths, cwd)
+              if (e.key === 'Escape') cancel()
+            }}
+          />
+          <span className="destination-bar__label">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
+          <button className="destination-bar__action" onClick={() => void commit(pending.sessionId, pending.paths, cwd)}>
+            지금 업로드
+          </button>
+          <button className="destination-bar__action destination-bar__action--cancel" onClick={cancel}>
+            취소
+          </button>
+        </div>
+      )}
+      <ConflictDialog
+        open={conflict !== null}
+        conflicts={conflict?.names ?? []}
+        onChoice={handleConflictChoice}
+        onClose={() => setConflict(null)}
       />
-      <span className="destination-bar__label">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
-      <button className="destination-bar__action" onClick={() => commit(pending.sessionId, pending.paths, cwd)}>
-        지금 업로드
-      </button>
-      <button className="destination-bar__action destination-bar__action--cancel" onClick={cancel}>
-        취소
-      </button>
-    </div>
+    </>
   )
 }

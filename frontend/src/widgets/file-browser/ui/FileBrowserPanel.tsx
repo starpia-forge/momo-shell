@@ -3,6 +3,7 @@ import {
   browseForDownloadDirectory,
   browseForUploadFiles,
   chmodRemote,
+  detectUploadConflicts,
   downloadFiles,
   homeDir,
   listRemoteDir,
@@ -12,13 +13,14 @@ import {
   subscribe,
   topics,
   uploadFiles,
+  type ConflictPolicy,
   type FileDropPayload,
   type RemoteEntry,
   type TransferTaskPayload,
 } from '../../../shared/api'
 import { markDropTargetHovered, resolveDropTarget } from '../../../shared/lib/fileDropTarget'
 import { isFileDrag } from '../../../shared/lib/paneDnd'
-import { ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
+import { ConflictDialog, ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
 import { formatModTime, formatSize, joinRemotePath, parentRemotePath } from '../lib/format'
 import { EMPTY_BROWSE_STATE, sessionBrowseState, useFileBrowserStore } from '../model/store'
 import { NamePromptDialog } from './NamePromptDialog'
@@ -45,6 +47,7 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
   const [renameTarget, setRenameTarget] = useState<RemoteEntry | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [fileDragOver, setFileDragOver] = useState(false)
+  const [conflict, setConflict] = useState<{ paths: string[]; dir: string; names: string[] } | null>(null)
 
   async function refresh(path: string) {
     if (!sessionId) return
@@ -97,7 +100,7 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
       if (!target || !target.isFileBrowser || target.sessionId !== sessionId) return
       const current = sessionBrowseState(sessionId).path
       if (!current) return
-      void uploadFiles(sessionId, payload.paths, current).catch((err) => setToast(String(err)))
+      void uploadWithConflictCheck(sessionId, payload.paths, current)
     })
   }, [sessionId])
 
@@ -110,10 +113,31 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
 
   const currentPath = state.path ?? '/'
 
+  // Detects name collisions before uploading and, if any exist, prompts for
+  // an overwrite/rename/skip policy instead of silently overwriting (the
+  // backend honors whatever single policy the caller picks up front).
+  async function uploadWithConflictCheck(targetSessionId: string, paths: string[], dir: string) {
+    try {
+      const names = await detectUploadConflicts(targetSessionId, paths, dir)
+      if (names.length > 0) {
+        setConflict({ paths, dir, names })
+        return
+      }
+      await uploadFiles(targetSessionId, paths, dir)
+    } catch (err) {
+      setToast(String(err))
+    }
+  }
+
+  function handleConflictChoice(policy: ConflictPolicy) {
+    if (!sessionId || !conflict) return
+    void uploadFiles(sessionId, conflict.paths, conflict.dir, policy).catch((err) => setToast(String(err)))
+  }
+
   function handleUpload() {
     void browseForUploadFiles().then((paths) => {
       if (paths.length === 0 || !sessionId) return
-      void uploadFiles(sessionId, paths, currentPath).catch((err) => setToast(String(err)))
+      void uploadWithConflictCheck(sessionId, paths, currentPath)
     })
   }
 
@@ -271,6 +295,12 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
         initialValue={renameTarget?.name}
         onConfirm={handleRenameConfirm}
         onClose={() => setRenameTarget(null)}
+      />
+      <ConflictDialog
+        open={conflict !== null}
+        conflicts={conflict?.names ?? []}
+        onChoice={handleConflictChoice}
+        onClose={() => setConflict(null)}
       />
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
