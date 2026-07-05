@@ -223,6 +223,59 @@ func TestSyncLoop_KeepsCacheOnTransientFailure(t *testing.T) {
 	}
 }
 
+func TestImportSharedHost_SavesLocalHostWithSharedSource(t *testing.T) {
+	ts := newTestService()
+	if err := ts.peers.Save(domain.Peer{
+		ID: "peer-1", Address: "10.0.1.9", Port: 47800, PairedAt: time.Now(),
+		Hosts: []domain.SharedHost{{Name: "web-prod-01", Address: "10.0.1.15", Port: 22, Username: "deploy", Labels: []string{"prod"}}},
+	}); err != nil {
+		t.Fatalf("peers.Save() error = %v", err)
+	}
+
+	host, err := ts.svc.ImportSharedHost("peer-1", 0)
+	if err != nil {
+		t.Fatalf("ImportSharedHost() error = %v", err)
+	}
+	if host.ID == "" {
+		t.Fatal("expected a generated ID")
+	}
+	if host.Name != "web-prod-01" || host.Address != "10.0.1.15" || host.Port != 22 || host.Username != "deploy" {
+		t.Fatalf("host = %+v", host)
+	}
+	if host.Source != "shared:peer-1" {
+		t.Fatalf("host.Source = %q, want shared:peer-1", host.Source)
+	}
+
+	stored, err := ts.hostRepo.Get(host.ID)
+	if err != nil {
+		t.Fatalf("hostRepo.Get() error = %v", err)
+	}
+	if stored.Source != "shared:peer-1" {
+		t.Fatalf("stored host.Source = %q, want shared:peer-1", stored.Source)
+	}
+}
+
+func TestImportSharedHost_IndexOutOfRangeReturnsError(t *testing.T) {
+	ts := newTestService()
+	if err := ts.peers.Save(domain.Peer{ID: "peer-1", PairedAt: time.Now(), Hosts: []domain.SharedHost{{Name: "only-host"}}}); err != nil {
+		t.Fatalf("peers.Save() error = %v", err)
+	}
+
+	if _, err := ts.svc.ImportSharedHost("peer-1", 5); err == nil {
+		t.Fatal("expected error for out-of-range index")
+	}
+	if _, err := ts.svc.ImportSharedHost("peer-1", -1); err == nil {
+		t.Fatal("expected error for negative index")
+	}
+}
+
+func TestImportSharedHost_UnknownPeerReturnsError(t *testing.T) {
+	ts := newTestService()
+	if _, err := ts.svc.ImportSharedHost("ghost", 0); err == nil {
+		t.Fatal("expected error for unknown peer")
+	}
+}
+
 func TestSyncLoop_DropsPeerOnUnauthorized(t *testing.T) {
 	withShrunkSyncInterval(t, 10*time.Millisecond)
 	ts := newTestService()

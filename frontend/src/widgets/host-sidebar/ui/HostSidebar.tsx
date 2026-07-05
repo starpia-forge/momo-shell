@@ -9,12 +9,15 @@ import './HostSidebar.css'
 
 interface HostSidebarProps {
   onConnect: (host: Host, sessionId: string) => void
+  /** A shared host connected without saving it as a local Host first
+   * (features/shared-host-connect's "내 호스트로 저장" left unchecked). */
+  onConnectShared: (name: string, address: string, sessionId: string) => void
 }
 
 type SortMode = 'recent' | 'name'
 type DotStatus = 'running' | 'connecting' | 'error' | 'idle'
 
-export function HostSidebar({ onConnect }: HostSidebarProps) {
+export function HostSidebar({ onConnect, onConnectShared }: HostSidebarProps) {
   const hosts = useHostStore((s) => s.hosts)
   const load = useHostStore((s) => s.load)
   const sessions = useSessionStore((s) => s.sessions)
@@ -110,7 +113,7 @@ export function HostSidebar({ onConnect }: HostSidebarProps) {
         + 호스트 추가
       </button>
 
-      <SharedHostsSection />
+      <SharedHostsSection onConnect={onConnect} onConnectShared={onConnectShared} />
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextMenuItems(menu.host)} onClose={() => setMenu(null)} />}
 

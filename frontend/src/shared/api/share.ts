@@ -11,7 +11,9 @@ import {
   AddPeerByAddress,
   RemovePeer,
   FetchSharedHosts,
+  ImportSharedHost,
 } from '../../../wailsjs/go/wails/ShareService'
+import { asHost, type Host } from './host'
 
 export interface ShareStatus {
   enabled: boolean
@@ -108,4 +110,8 @@ export async function removePeer(peerId: string): Promise<void> {
 export async function fetchSharedHosts(peerId: string): Promise<SharedHost[]> {
   const hosts = await FetchSharedHosts(peerId)
   return (hosts ?? []).map((h) => ({ ...h, labels: h.labels ?? [] }))
+}
+
+export async function importSharedHost(peerId: string, index: number): Promise<Host> {
+  return asHost(await ImportSharedHost(peerId, index))
 }

@@ -21,6 +21,23 @@ type SSHOpts struct {
 	Rows   int
 }
 
+// SSHDirectOpts configures a new SSH session against connection details
+// that don't correspond to a saved Host row -- e.g. connecting to a peer's
+// shared host (docs/plan/06-phase5-host-sharing.md §3.2), where the user
+// supplies credentials at connect time rather than ahead of time via
+// SetHostSecret. Secret is used only for this one dial and never persisted.
+type SSHDirectOpts struct {
+	Name     string
+	Address  string
+	Port     int
+	Username string
+	AuthType domain.AuthType
+	KeyPath  string
+	Secret   string
+	Cols     int
+	Rows     int
+}
+
 // SessionUseCase is the driving port for session lifecycle operations.
 type SessionUseCase interface {
 	CreateLocal(opts LocalOpts) (domain.SessionInfo, error)
@@ -28,6 +45,10 @@ type SessionUseCase interface {
 	// the actual dial/handshake/auth happens in the background and is
 	// reported via session:state events.
 	CreateSSH(opts SSHOpts) (domain.SessionInfo, error)
+	// CreateSSHDirect is CreateSSH's counterpart for a host with no saved
+	// Host row (see SSHDirectOpts) -- same Connecting-state/event-driven
+	// contract, just skipping the host repo and secret store lookups.
+	CreateSSHDirect(opts SSHDirectOpts) (domain.SessionInfo, error)
 	Write(id string, data []byte) error
 	Resize(id string, cols, rows int) error
 	Close(id string) error

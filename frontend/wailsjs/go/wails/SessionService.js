@@ -10,6 +10,10 @@ export function CreateLocalSession(arg1) {
   return window['go']['wails']['SessionService']['CreateLocalSession'](arg1);
 }
 
+export function CreateSSHDirectSession(arg1) {
+  return window['go']['wails']['SessionService']['CreateSSHDirectSession'](arg1);
+}
+
 export function CreateSSHSession(arg1) {
   return window['go']['wails']['SessionService']['CreateSSHSession'](arg1);
 }

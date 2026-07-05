@@ -1,6 +1,7 @@
 export {
   openLocalSession,
   openSSHSession,
+  openSSHDirectSession,
   attach,
   detach,
   disposeSession,

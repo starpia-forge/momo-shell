@@ -135,6 +135,14 @@ func (s *ShareService) FetchSharedHosts(peerID string) ([]SharedHostDTO, error) 
 	return dtos, nil
 }
 
+func (s *ShareService) ImportSharedHost(peerID string, index int) (HostDTO, error) {
+	host, err := s.uc.ImportSharedHost(peerID, index)
+	if err != nil {
+		return HostDTO{}, err
+	}
+	return hostToDTO(host), nil
+}
+
 func statusToDTO(status in.ShareStatus) ShareStatusDTO {
 	return ShareStatusDTO{
 		Enabled:       status.Enabled,

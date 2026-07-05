@@ -1,17 +1,24 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { usePeerStore, registerPeerUpdates, loadPeers, type PeerView } from '../../../entities/peer'
-import { removePeer, fetchSharedHosts } from '../../../shared/api/share'
+import { removePeer, fetchSharedHosts, importSharedHost, type SharedHost } from '../../../shared/api/share'
 import { PinEntryDialog } from '../../../features/peer-pairing'
+import { CredentialDialog } from '../../../features/shared-host-connect'
+import { useHostStore, type Host } from '../../../entities/host'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import './SharedHostsSection.css'
 
-// Read-only view of paired/discovered peers for M4 -- double-click connect
-// and "가져오기" land in M5 once CreateSSHDirect/ImportSharedHost exist.
-export function SharedHostsSection() {
+interface SharedHostsSectionProps {
+  onConnect: (host: Host, sessionId: string) => void
+  onConnectShared: (name: string, address: string, sessionId: string) => void
+}
+
+export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSectionProps) {
   const peers = usePeerStore((s) => s.peers)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [pairing, setPairing] = useState<{ id: string; name: string } | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; peer: PeerView } | null>(null)
+  const [hostMenu, setHostMenu] = useState<{ x: number; y: number; peerId: string; index: number; host: SharedHost } | null>(null)
+  const [connecting, setConnecting] = useState<SharedHost | null>(null)
 
   useEffect(() => registerPeerUpdates(), [])
 
@@ -21,16 +28,38 @@ export function SharedHostsSection() {
     setExpanded((s) => ({ ...s, [id]: !s[id] }))
   }
 
-  function openMenu(e: MouseEvent, peer: PeerView) {
+  function openPeerMenu(e: MouseEvent, peer: PeerView) {
     e.preventDefault()
     setMenu({ x: e.clientX, y: e.clientY, peer })
   }
 
-  function menuItems(peer: PeerView): ContextMenuItem[] {
+  function peerMenuItems(peer: PeerView): ContextMenuItem[] {
     return [
       { label: '새로고침', onClick: () => void fetchSharedHosts(peer.id).then(loadPeers) },
       { label: '삭제', danger: true, onClick: () => void removePeer(peer.id).then(loadPeers) },
     ]
+  }
+
+  function openHostMenu(e: MouseEvent, peerId: string, index: number, host: SharedHost) {
+    e.preventDefault()
+    e.stopPropagation()
+    setHostMenu({ x: e.clientX, y: e.clientY, peerId, index, host })
+  }
+
+  function hostMenuItems(peerId: string, index: number, host: SharedHost): ContextMenuItem[] {
+    return [
+      { label: '연결', onClick: () => setConnecting(host) },
+      { label: '내 호스트로 가져오기', onClick: () => void importSharedHost(peerId, index).then(() => useHostStore.getState().load()) },
+    ]
+  }
+
+  function handleConnected(result: { sessionId: string; host?: Host }) {
+    setConnecting(null)
+    if (result.host) {
+      onConnect(result.host, result.sessionId)
+    } else if (connecting) {
+      onConnectShared(connecting.name, connecting.address, result.sessionId)
+    }
   }
 
   return (
@@ -46,7 +75,7 @@ export function SharedHostsSection() {
                 .filter(Boolean)
                 .join(' ')}
               onClick={() => peer.paired && toggle(peer.id)}
-              onContextMenu={(e) => peer.paired && openMenu(e, peer)}
+              onContextMenu={(e) => peer.paired && openPeerMenu(e, peer)}
             >
               <span className="shared-hosts__peer-icon">📡</span>
               <span className="shared-hosts__peer-name">
@@ -71,8 +100,13 @@ export function SharedHostsSection() {
             {peer.paired && expanded[peer.id] && (
               <ul className="shared-hosts__host-list">
                 {peer.hosts.length === 0 && <li className="shared-hosts__empty">공유된 호스트가 없습니다</li>}
-                {peer.hosts.map((h) => (
-                  <li key={`${h.address}:${h.port}`} className="shared-hosts__host-item">
+                {peer.hosts.map((h, index) => (
+                  <li
+                    key={`${h.address}:${h.port}`}
+                    className="shared-hosts__host-item"
+                    onDoubleClick={() => setConnecting(h)}
+                    onContextMenu={(e) => openHostMenu(e, peer.id, index, h)}
+                  >
                     <span className="shared-hosts__host-badge">⇢</span>
                     <span className="shared-hosts__host-name">{h.name}</span>
                     <span className="shared-hosts__host-address">{h.address}</span>
@@ -84,8 +118,17 @@ export function SharedHostsSection() {
         ))}
       </div>
 
-      {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems(menu.peer)} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={peerMenuItems(menu.peer)} onClose={() => setMenu(null)} />}
+      {hostMenu && (
+        <ContextMenu
+          x={hostMenu.x}
+          y={hostMenu.y}
+          items={hostMenuItems(hostMenu.peerId, hostMenu.index, hostMenu.host)}
+          onClose={() => setHostMenu(null)}
+        />
+      )}
       {pairing && <PinEntryDialog peerId={pairing.id} peerName={pairing.name} onClose={() => setPairing(null)} />}
+      {connecting && <CredentialDialog sharedHost={connecting} onClose={() => setConnecting(null)} onConnected={handleConnected} />}
     </div>
   )
 }

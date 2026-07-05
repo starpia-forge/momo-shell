@@ -63,6 +63,45 @@ func (s *Service) CreateSSH(opts in.SSHOpts) (domain.SessionInfo, error) {
 	return sess.Info(), nil
 }
 
+// CreateSSHDirect is CreateSSH's counterpart for a host with no saved Host
+// row (see in.SSHDirectOpts) -- e.g. a peer's shared host, connected with
+// credentials supplied at connect time. It builds an in-memory Host and
+// reuses connectSSH unchanged; the empty Host.ID means TouchConnected is a
+// harmless no-op (ignored, same as CreateSSH) and command-history capture
+// attributes the session as local (tap.Attach's documented "" convention)
+// rather than to a saved host, since there is none.
+func (s *Service) CreateSSHDirect(opts in.SSHDirectOpts) (domain.SessionInfo, error) {
+	host := domain.Host{
+		Name:     opts.Name,
+		Address:  opts.Address,
+		Port:     opts.Port,
+		Username: opts.Username,
+		AuthType: opts.AuthType,
+		KeyPath:  opts.KeyPath,
+		Source:   "shared",
+	}
+
+	id := uuid.NewString()
+	sess := domain.NewSSHSession(id, host.ID, opts.Cols, opts.Rows)
+
+	live := &liveSession{
+		session:     sess,
+		readCh:      make(chan []byte, 64),
+		hostKeyResp: make(chan string, 1),
+		cancelCh:    make(chan struct{}),
+	}
+
+	s.mu.Lock()
+	s.sessions[id] = live
+	s.mu.Unlock()
+
+	s.pub.Publish(out.TopicSessionState(id), StatePayload{State: string(domain.StateConnecting)})
+
+	go s.connectSSH(id, host, opts.Secret, live)
+
+	return sess.Info(), nil
+}
+
 func (s *Service) connectSSH(id string, host domain.Host, secret string, live *liveSession) {
 	verifier := s.sshHostKeyVerifier(id, host, live)
 	stream, err := s.sshOpener.Open(host, secret, verifier, live.session.Cols, live.session.Rows)

@@ -42,6 +42,11 @@ type ShareUseCase interface {
 	// FetchSharedHosts force-refreshes and returns the cached host list
 	// for an already-paired peer.
 	FetchSharedHosts(peerID string) ([]domain.SharedHost, error)
+	// ImportSharedHost saves peer.Hosts[index] as a new local Host
+	// (Source: "shared:{peerID}"), so it appears in "내 호스트" like any
+	// other saved host. The credential is not carried over -- the caller
+	// (frontend) is responsible for a subsequent SetHostSecret if desired.
+	ImportSharedHost(peerID string, index int) (domain.Host, error)
 }
 
 // PeerView is the consumer-side snapshot of one peer shown in the host

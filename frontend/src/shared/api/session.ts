@@ -1,12 +1,14 @@
 import {
   CreateLocalSession,
   CreateSSHSession,
+  CreateSSHDirectSession,
   RespondHostKey,
   WriteSession,
   ResizeSession,
   CloseSession,
 } from '../../../wailsjs/go/wails/SessionService'
 import { bytesToB64 } from '../lib/base64'
+import type { AuthType } from './host'
 
 export interface SessionInfo {
   id: string
@@ -42,6 +44,35 @@ export interface CreateSSHSessionOpts {
 export async function createSSHSession(opts: CreateSSHSessionOpts): Promise<SessionInfo> {
   return CreateSSHSession({
     hostId: opts.hostId,
+    cols: opts.cols,
+    rows: opts.rows,
+  })
+}
+
+export interface CreateSSHDirectSessionOpts {
+  name: string
+  address: string
+  port: number
+  username: string
+  authType: AuthType
+  keyPath?: string
+  secret: string
+  cols: number
+  rows: number
+}
+
+// createSSHDirectSession connects to a host with no saved Host row (e.g. a
+// peer's shared host) -- credentials are supplied here and used only for
+// this dial, never persisted.
+export async function createSSHDirectSession(opts: CreateSSHDirectSessionOpts): Promise<SessionInfo> {
+  return CreateSSHDirectSession({
+    name: opts.name,
+    address: opts.address,
+    port: opts.port,
+    username: opts.username,
+    authType: opts.authType,
+    keyPath: opts.keyPath ?? '',
+    secret: opts.secret,
     cols: opts.cols,
     rows: opts.rows,
   })

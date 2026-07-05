@@ -45,8 +45,10 @@ export interface TestResult {
 
 // asHost/asTestResult narrow the wails-generated DTOs' plain `string` fields
 // (Go's string-typed JSON tags don't carry Go's enum-like const values into
-// the generated TS) to this module's literal union types.
-function asHost(dto: Awaited<ReturnType<typeof GetHost>>): Host {
+// the generated TS) to this module's literal union types. Exported so
+// other wrappers returning a HostDTO-shaped value (e.g. share.ts's
+// importSharedHost) can reuse the same narrowing.
+export function asHost(dto: Awaited<ReturnType<typeof GetHost>>): Host {
   return { ...dto, authType: dto.authType as AuthType }
 }
 

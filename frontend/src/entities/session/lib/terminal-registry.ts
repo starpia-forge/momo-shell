@@ -10,10 +10,12 @@ import '@xterm/xterm/css/xterm.css'
 import {
   createLocalSession,
   createSSHSession,
+  createSSHDirectSession,
   writeSession,
   resizeSession,
   closeSession,
   type CreateLocalSessionOpts,
+  type CreateSSHDirectSessionOpts,
 } from '../../../shared/api/session'
 import {
   subscribe,
@@ -169,6 +171,26 @@ export async function openLocalSession(opts: CreateLocalSessionOpts): Promise<st
 
 export async function openSSHSession(hostId: string, cols: number, rows: number): Promise<string> {
   const info = await createSSHSession({ hostId, cols, rows })
+  createTerminalEntry(info.id)
+
+  useSessionStore.getState().upsert({
+    id: info.id,
+    kind: 'ssh',
+    hostId: info.hostId,
+    shell: '',
+    cols: info.cols,
+    rows: info.rows,
+    state: 'connecting',
+  })
+
+  return info.id
+}
+
+// openSSHDirectSession is openSSHSession's counterpart for a host with no
+// saved Host row (e.g. a peer's shared host) -- info.hostId comes back ""
+// since there is no saved host to reference.
+export async function openSSHDirectSession(opts: CreateSSHDirectSessionOpts): Promise<string> {
+  const info = await createSSHDirectSession(opts)
   createTerminalEntry(info.id)
 
   useSessionStore.getState().upsert({

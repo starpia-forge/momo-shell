@@ -3,8 +3,11 @@ package share
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/in"
@@ -161,6 +164,36 @@ func (s *Service) FetchSharedHosts(peerID string) ([]domain.SharedHost, error) {
 		return nil, err
 	}
 	return hosts, nil
+}
+
+// ImportSharedHost implements in.ShareUseCase, saving one of a paired
+// peer's cached shared hosts as a new local Host so it appears in "내
+// 호스트" like any other saved host. It never carries over a credential --
+// there is none to carry, since SharedHost structurally excludes it.
+func (s *Service) ImportSharedHost(peerID string, index int) (domain.Host, error) {
+	peer, err := s.peers.Get(peerID)
+	if err != nil {
+		return domain.Host{}, err
+	}
+	if index < 0 || index >= len(peer.Hosts) {
+		return domain.Host{}, fmt.Errorf("share: host index %d out of range for peer %s", index, peerID)
+	}
+	shared := peer.Hosts[index]
+
+	now := time.Now()
+	host := domain.Host{
+		ID:        uuid.NewString(),
+		Name:      shared.Name,
+		Address:   shared.Address,
+		Port:      shared.Port,
+		Labels:    shared.Labels,
+		Username:  shared.Username,
+		AuthType:  domain.AuthPassword,
+		Source:    "shared:" + peerID,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	return s.hostRepo.Save(host)
 }
 
 func (s *Service) fetchAndCache(peer domain.Peer) ([]domain.SharedHost, error) {

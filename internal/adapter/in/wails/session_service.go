@@ -22,6 +22,21 @@ type SSHSessionOpts struct {
 	Rows   int    `json:"rows"`
 }
 
+// SSHDirectSessionOpts is the JSON-facing request DTO for
+// CreateSSHDirectSession -- connecting to a host with no saved Host row
+// (e.g. a peer's shared host), with credentials supplied at connect time.
+type SSHDirectSessionOpts struct {
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	AuthType string `json:"authType"`
+	KeyPath  string `json:"keyPath"`
+	Secret   string `json:"secret"`
+	Cols     int    `json:"cols"`
+	Rows     int    `json:"rows"`
+}
+
 // SessionInfoDTO is the JSON-facing response DTO for session queries.
 type SessionInfoDTO struct {
 	ID     string `json:"id"`
@@ -60,6 +75,24 @@ func (s *SessionService) CreateSSHSession(opts SSHSessionOpts) (SessionInfoDTO, 
 		HostID: opts.HostID,
 		Cols:   opts.Cols,
 		Rows:   opts.Rows,
+	})
+	if err != nil {
+		return SessionInfoDTO{}, err
+	}
+	return toDTO(info), nil
+}
+
+func (s *SessionService) CreateSSHDirectSession(opts SSHDirectSessionOpts) (SessionInfoDTO, error) {
+	info, err := s.uc.CreateSSHDirect(in.SSHDirectOpts{
+		Name:     opts.Name,
+		Address:  opts.Address,
+		Port:     opts.Port,
+		Username: opts.Username,
+		AuthType: domain.AuthType(opts.AuthType),
+		KeyPath:  opts.KeyPath,
+		Secret:   opts.Secret,
+		Cols:     opts.Cols,
+		Rows:     opts.Rows,
 	})
 	if err != nil {
 		return SessionInfoDTO{}, err

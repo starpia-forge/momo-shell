@@ -10,6 +10,8 @@ export function EnableSharing(arg1:Array<string>):Promise<wails.ShareStatusDTO>;
 
 export function FetchSharedHosts(arg1:string):Promise<Array<wails.SharedHostDTO>>;
 
+export function ImportSharedHost(arg1:string,arg2:number):Promise<wails.HostDTO>;
+
 export function ListClients():Promise<Array<wails.ShareClientDTO>>;
 
 export function ListPeers():Promise<Array<wails.PeerViewDTO>>;

@@ -77,6 +77,19 @@ export function WorkspacePage() {
     })
   }
 
+  // A shared host connected via CreateSSHDirect has no saved Host row (no
+  // hostId), so the tab title/subtitle come from the shared host's own
+  // name/address instead.
+  function handleSharedConnect(name: string, address: string, sessionId: string) {
+    useTabStore.getState().addTab({
+      id: sessionId,
+      kind: 'ssh',
+      sessionId,
+      title: name,
+      subtitle: address,
+    })
+  }
+
   // Same bridging reason: closing a tab means disposing every leaf session
   // in its workspace-layout tree, then removing the tab-bar entry -- neither
   // widget may import the other.
@@ -131,7 +144,7 @@ export function WorkspacePage() {
       <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} />
       <div className="workspace__body">
         <div className="workspace__sidebar">
-          <HostSidebar onConnect={handleHostConnect} />
+          <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
         </div>
         <div className="workspace__pane">
           {activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />}

@@ -18,6 +18,10 @@ export function FetchSharedHosts(arg1) {
   return window['go']['wails']['ShareService']['FetchSharedHosts'](arg1);
 }
 
+export function ImportSharedHost(arg1, arg2) {
+  return window['go']['wails']['ShareService']['ImportSharedHost'](arg1, arg2);
+}
+
 export function ListClients() {
   return window['go']['wails']['ShareService']['ListClients']();
 }

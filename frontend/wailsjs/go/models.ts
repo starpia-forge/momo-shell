@@ -202,6 +202,34 @@ export namespace wails {
 	        this.isDir = source["isDir"];
 	    }
 	}
+	export class SSHDirectSessionOpts {
+	    name: string;
+	    address: string;
+	    port: number;
+	    username: string;
+	    authType: string;
+	    keyPath: string;
+	    secret: string;
+	    cols: number;
+	    rows: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHDirectSessionOpts(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.address = source["address"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.authType = source["authType"];
+	        this.keyPath = source["keyPath"];
+	        this.secret = source["secret"];
+	        this.cols = source["cols"];
+	        this.rows = source["rows"];
+	    }
+	}
 	export class SSHSessionOpts {
 	    hostId: string;
 	    cols: number;
