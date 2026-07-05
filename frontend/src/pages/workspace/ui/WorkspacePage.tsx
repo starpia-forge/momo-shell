@@ -10,6 +10,7 @@ import { HostSidebar } from '../../../widgets/host-sidebar'
 import { RightDock } from '../../../widgets/right-dock'
 import { StatusBar } from '../../../widgets/status-bar'
 import { TabBar, createLocalTab, useTabStore, type Tab } from '../../../widgets/tab-bar'
+import { TransferCenter } from '../../../widgets/transfer-center'
 import { WorkspaceLayout, findLeaf, leaves, useWorkspaceLayoutStore } from '../../../widgets/workspace-layout'
 import './WorkspacePage.css'
 
@@ -144,6 +145,7 @@ export function WorkspacePage() {
         />
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
+      <TransferCenter />
       <HostKeyPrompt />
       <DestinationBar />
     </div>

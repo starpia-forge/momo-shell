@@ -1,0 +1,113 @@
+.transfer-center {
+  position: fixed;
+  right: 12px;
+  bottom: 0;
+  height: 24px;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+}
+
+.transfer-center__badge {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.transfer-center__badge:hover {
+  color: var(--color-text);
+}
+
+.transfer-center__panel {
+  position: absolute;
+  right: 0;
+  bottom: 28px;
+  width: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.transfer-center__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.transfer-center__row:last-child {
+  border-bottom: none;
+}
+
+.transfer-center__row-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.transfer-center__file {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.transfer-center__state {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.transfer-center__row-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transfer-center__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.transfer-center__bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.transfer-center__bytes {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.transfer-center__cancel {
+  flex: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.transfer-center__error {
+  color: var(--color-danger);
+  font-size: 11px;
+}
