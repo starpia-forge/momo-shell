@@ -71,3 +71,11 @@ func TopicSharePairRequest() string {
 func TopicSharePeersUpdated() string {
 	return "share:peers-updated"
 }
+
+// TopicSharePairRequestResolved notifies the frontend that a previously
+// raised share:pair-request is no longer pending (answered, timed out, or
+// the requester disconnected), so the approval dialog can dismiss itself
+// even without ever calling RespondPairing for it.
+func TopicSharePairRequestResolved() string {
+	return "share:pair-request-resolved"
+}

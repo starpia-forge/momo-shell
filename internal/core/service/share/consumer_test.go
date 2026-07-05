@@ -53,6 +53,36 @@ func TestListPeers_MergesDiscoveredAndPaired(t *testing.T) {
 	}
 }
 
+// TestListPeers_ExcludesSelfDiscoveredPeer guards against the E2E-observed
+// self-discovery quirk: an instance's own mDNS advertisement is
+// indistinguishable on the wire from any other peer's, so onDiscoveryUpdate
+// must filter it out by instance ID rather than surfacing it as a
+// discoverable "peer" of itself.
+func TestListPeers_ExcludesSelfDiscoveredPeer(t *testing.T) {
+	ts := newTestService()
+	if err := ts.svc.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	defer ts.svc.Close()
+
+	selfID, err := ts.settings.InstanceID()
+	if err != nil {
+		t.Fatalf("InstanceID() error = %v", err)
+	}
+	ts.browser.push([]out.DiscoveredPeer{
+		{InstanceID: selfID, Name: "self", Address: "10.0.1.5", Port: 47800},
+		{InstanceID: "unpaired-1", Name: "kim-laptop", Address: "10.0.1.9", Port: 47800},
+	})
+
+	views, err := ts.svc.ListPeers()
+	if err != nil {
+		t.Fatalf("ListPeers() error = %v", err)
+	}
+	if len(views) != 1 || views[0].ID != "unpaired-1" {
+		t.Fatalf("ListPeers() = %+v, want only unpaired-1 (self excluded)", views)
+	}
+}
+
 func TestListPeers_PairedPeerOfflineWhenNotDiscovered(t *testing.T) {
 	ts := newTestService()
 	if err := ts.peers.Save(domain.Peer{ID: "paired-1", Name: "Starpia-PC", Address: "10.0.1.5", Port: 47800, PairedAt: time.Now()}); err != nil {

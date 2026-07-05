@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/in"
@@ -17,14 +18,14 @@ import (
 // layer under test without a real share.Service.
 type fakeCallbacks struct {
 	info      in.ShareInfo
-	pairFunc  func(pin, clientName, remoteAddr string) (string, error)
+	pairFunc  func(ctx context.Context, pin, clientName, remoteAddr string) (string, error)
 	hostsFunc func(token string) ([]domain.SharedHost, error)
 }
 
 func (f *fakeCallbacks) Info() in.ShareInfo { return f.info }
 
-func (f *fakeCallbacks) HandlePair(pin, clientName, remoteAddr string) (string, error) {
-	return f.pairFunc(pin, clientName, remoteAddr)
+func (f *fakeCallbacks) HandlePair(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
+	return f.pairFunc(ctx, pin, clientName, remoteAddr)
 }
 
 func (f *fakeCallbacks) HostsForToken(token string) ([]domain.SharedHost, error) {
@@ -74,7 +75,7 @@ func TestHandleInfo_ReturnsShareInfo(t *testing.T) {
 
 func TestHandlePair_Success(t *testing.T) {
 	callbacks := &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) {
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 			if pin != "123456" || clientName != "kim-laptop" {
 				t.Fatalf("unexpected pair args: pin=%q clientName=%q", pin, clientName)
 			}
@@ -104,7 +105,7 @@ func TestHandlePair_Success(t *testing.T) {
 
 func TestHandlePair_WrongPinReturns403(t *testing.T) {
 	callbacks := &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) {
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 			return "", in.ErrPinMismatch
 		},
 	}
@@ -124,7 +125,7 @@ func TestHandlePair_WrongPinReturns403(t *testing.T) {
 
 func TestHandlePair_DeniedReturns403(t *testing.T) {
 	callbacks := &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) {
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 			return "", in.ErrPairDenied
 		},
 	}
@@ -144,7 +145,7 @@ func TestHandlePair_DeniedReturns403(t *testing.T) {
 
 func TestHandlePair_LockedOutReturns429WithRetryAfter(t *testing.T) {
 	callbacks := &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) {
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 			return "", in.ErrLockedOut
 		},
 	}
@@ -162,6 +163,44 @@ func TestHandlePair_LockedOutReturns429WithRetryAfter(t *testing.T) {
 	}
 	if resp.Header.Get("Retry-After") != "60" {
 		t.Fatalf("Retry-After = %q, want 60", resp.Header.Get("Retry-After"))
+	}
+}
+
+// TestHandlePair_ClientDisconnectCancelsContext confirms handlePair passes
+// r.Context() through to the callback (rather than context.Background()),
+// so a client that gives up mid-approval-wait doesn't leave HandlePair
+// blocked past its own lifetime.
+func TestHandlePair_ClientDisconnectCancelsContext(t *testing.T) {
+	ctxCanceled := make(chan struct{})
+	callbacks := &fakeCallbacks{
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
+			<-ctx.Done()
+			close(ctxCanceled)
+			return "", ctx.Err()
+		},
+	}
+	baseURL, client := startTestServer(t, callbacks)
+
+	body, _ := json.Marshal(pairRequestBody{PIN: "123456", ClientName: "peer"})
+	reqCtx, cancel := context.WithCancel(context.Background())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, baseURL+"/api/v1/pair", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("NewRequestWithContext() error = %v", err)
+	}
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	if _, err := client.Do(req); err == nil {
+		t.Fatal("expected client-side cancellation error")
+	}
+
+	select {
+	case <-ctxCanceled:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server to observe request context cancellation")
 	}
 }
 

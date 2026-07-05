@@ -32,6 +32,14 @@ type pairRequestPayload struct {
 	RemoteAddr string `json:"remoteAddr"`
 }
 
+// pairRequestResolvedPayload is published on share:pair-request-resolved
+// once a request raised via awaitPairApproval is no longer pending
+// (answered, timed out, or the requester disconnected) -- lets the approval
+// dialog dismiss itself even if RespondPairing was never called for it.
+type pairRequestResolvedPayload struct {
+	RequestID string `json:"requestId"`
+}
+
 // Deps are the out-ports/collaborators Service needs.
 type Deps struct {
 	HostRepo   out.HostRepository

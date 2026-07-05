@@ -1,7 +1,12 @@
 import { useEffect } from 'react'
 import { Dialog, Button } from '../../../shared/ui'
 import { respondPairing } from '../../../shared/api/share'
-import { subscribe, topics, type SharePairRequestPayload } from '../../../shared/api/events'
+import {
+  subscribe,
+  topics,
+  type SharePairRequestPayload,
+  type SharePairRequestResolvedPayload,
+} from '../../../shared/api/events'
 import { usePairRequestStore } from '../model/pairRequests'
 import './PairApprovalDialog.css'
 
@@ -15,14 +20,27 @@ export function PairApprovalDialog() {
     })
   }, [])
 
+  // The backend resolves a request (answered, timed out, or the requester
+  // disconnected) independently of whatever this dialog does -- without
+  // this, a request that times out server-side while still showing here
+  // would never clear, since respond() below only clears on its own call.
+  useEffect(() => {
+    return subscribe<SharePairRequestResolvedPayload>(topics.sharePairRequestResolved(), (payload) => {
+      usePairRequestStore.getState().clearRequest(payload.requestId)
+    })
+  }, [])
+
   const requests = usePairRequestStore((s) => s.requests)
   const entry = Object.entries(requests)[0]
   if (!entry) return null
   const [requestId, payload] = entry
 
   async function respond(approve: boolean) {
-    await respondPairing(requestId, approve)
-    usePairRequestStore.getState().clearRequest(requestId)
+    try {
+      await respondPairing(requestId, approve)
+    } finally {
+      usePairRequestStore.getState().clearRequest(requestId)
+    }
   }
 
   return (

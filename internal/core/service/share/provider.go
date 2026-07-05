@@ -1,6 +1,7 @@
 package share
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -28,7 +29,7 @@ func (s *Service) Info() in.ShareInfo {
 // HandlePair implements in.ShareServerCallbacks, answering POST
 // /api/v1/pair. It validates pin, then blocks for the local user's
 // approve/deny decision (via RespondPairing) before issuing a token.
-func (s *Service) HandlePair(pin, clientName, remoteAddr string) (string, error) {
+func (s *Service) HandlePair(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 	s.mu.Lock()
 	if !s.enabled {
 		s.mu.Unlock()
@@ -56,7 +57,7 @@ func (s *Service) HandlePair(pin, clientName, remoteAddr string) (string, error)
 	s.pinFailures = 0
 	s.mu.Unlock()
 
-	approved, err := s.awaitPairApproval(clientName, remoteAddr)
+	approved, err := s.awaitPairApproval(ctx, clientName, remoteAddr)
 	if err != nil {
 		return "", err
 	}
@@ -68,8 +69,13 @@ func (s *Service) HandlePair(pin, clientName, remoteAddr string) (string, error)
 }
 
 // awaitPairApproval publishes share:pair-request and blocks (up to
-// pairApprovalTimeout) for the matching RespondPairing call.
-func (s *Service) awaitPairApproval(clientName, remoteAddr string) (approved bool, err error) {
+// pairApprovalTimeout) for the matching RespondPairing call. It also
+// unblocks early if ctx is canceled (the inbound HTTP request's client
+// disconnected) so a token is never issued for a peer that already gave up
+// -- without this, a late RespondPairing(true) after the caller's own
+// client-side timeout would silently mint and persist a client no one is
+// there to receive.
+func (s *Service) awaitPairApproval(ctx context.Context, clientName, remoteAddr string) (approved bool, err error) {
 	requestID := uuid.NewString()
 	respCh := make(chan bool, 1)
 
@@ -80,6 +86,9 @@ func (s *Service) awaitPairApproval(clientName, remoteAddr string) (approved boo
 		s.mu.Lock()
 		delete(s.pending, requestID)
 		s.mu.Unlock()
+		if s.pub != nil {
+			s.pub.Publish(out.TopicSharePairRequestResolved(), pairRequestResolvedPayload{RequestID: requestID})
+		}
 	}()
 
 	if s.pub != nil {
@@ -94,6 +103,8 @@ func (s *Service) awaitPairApproval(clientName, remoteAddr string) (approved boo
 	case approved = <-respCh:
 		return approved, nil
 	case <-time.After(pairApprovalTimeout):
+		return false, in.ErrPairTimeout
+	case <-ctx.Done():
 		return false, in.ErrPairTimeout
 	}
 }

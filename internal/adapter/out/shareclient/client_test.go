@@ -16,14 +16,14 @@ import (
 // sharehttp.Server as this client's counterpart.
 type fakeCallbacks struct {
 	info      in.ShareInfo
-	pairFunc  func(pin, clientName, remoteAddr string) (string, error)
+	pairFunc  func(ctx context.Context, pin, clientName, remoteAddr string) (string, error)
 	hostsFunc func(token string) ([]domain.SharedHost, error)
 }
 
 func (f *fakeCallbacks) Info() in.ShareInfo { return f.info }
 
-func (f *fakeCallbacks) HandlePair(pin, clientName, remoteAddr string) (string, error) {
-	return f.pairFunc(pin, clientName, remoteAddr)
+func (f *fakeCallbacks) HandlePair(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
+	return f.pairFunc(ctx, pin, clientName, remoteAddr)
 }
 
 func (f *fakeCallbacks) HostsForToken(token string) ([]domain.SharedHost, error) {
@@ -76,7 +76,7 @@ func TestInfo_TOFUAcceptsFirstCertThenPinsIt(t *testing.T) {
 
 func TestPair_Success(t *testing.T) {
 	address, port := startTestServer(t, &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) {
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 			if pin != "123456" || clientName != "kim-laptop" {
 				t.Fatalf("unexpected pair args: pin=%q clientName=%q", pin, clientName)
 			}
@@ -99,7 +99,7 @@ func TestPair_Success(t *testing.T) {
 
 func TestPair_RejectedAndLockedOut(t *testing.T) {
 	address, port := startTestServer(t, &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) {
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) {
 			if pin == "locked" {
 				return "", in.ErrLockedOut
 			}
@@ -155,7 +155,7 @@ func TestFetchHosts_CertMismatchReturnsErrPeerCertMismatch(t *testing.T) {
 
 func TestPair_CertMismatchReturnsErrPeerCertMismatch(t *testing.T) {
 	address, port := startTestServer(t, &fakeCallbacks{
-		pairFunc: func(pin, clientName, remoteAddr string) (string, error) { return "unused", nil },
+		pairFunc: func(ctx context.Context, pin, clientName, remoteAddr string) (string, error) { return "unused", nil },
 	})
 	client := New()
 

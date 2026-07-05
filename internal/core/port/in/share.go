@@ -1,6 +1,7 @@
 package in
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -88,7 +89,10 @@ type ShareServerCallbacks interface {
 	// HandlePair validates pin, then blocks (up to the service's approval
 	// timeout) for the local user's approve/deny decision via
 	// RespondPairing. remoteAddr is shown to the user, not otherwise trusted.
-	HandlePair(pin, clientName, remoteAddr string) (token string, err error)
+	// ctx is the inbound HTTP request's context -- if the caller disconnects
+	// before the approval decision arrives, HandlePair returns without
+	// issuing a token instead of completing a pairing for an absent peer.
+	HandlePair(ctx context.Context, pin, clientName, remoteAddr string) (token string, err error)
 	// HostsForToken validates token and returns the shared host list.
 	HostsForToken(token string) ([]domain.SharedHost, error)
 }

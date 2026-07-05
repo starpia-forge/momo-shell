@@ -18,6 +18,12 @@
   flex: 1;
 }
 
+.direct-add-peer__waiting {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .direct-add-peer__actions {
   display: flex;
   justify-content: flex-end;

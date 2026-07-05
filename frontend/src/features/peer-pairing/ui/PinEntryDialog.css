@@ -5,6 +5,12 @@
   width: 260px;
 }
 
+.pin-entry__waiting {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .pin-entry__actions {
   display: flex;
   justify-content: flex-end;

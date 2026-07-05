@@ -182,7 +182,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := s.callbacks.HandlePair(req.PIN, req.ClientName, r.RemoteAddr)
+	token, err := s.callbacks.HandlePair(r.Context(), req.PIN, req.ClientName, r.RemoteAddr)
 	if err != nil {
 		if errors.Is(err, in.ErrLockedOut) {
 			w.Header().Set("Retry-After", "60")

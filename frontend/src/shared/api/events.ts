@@ -11,6 +11,7 @@ export const topics = {
   transferZmodem: (sessionId: string) => `transfer:zmodem:${sessionId}`,
   osFileDrop: () => `os:filedrop`,
   sharePairRequest: () => `share:pair-request`,
+  sharePairRequestResolved: () => `share:pair-request-resolved`,
   sharePeersUpdated: () => `share:peers-updated`,
 }
 
@@ -78,6 +79,13 @@ export interface SharePairRequestPayload {
   requestId: string
   clientName: string
   remoteAddr: string
+}
+
+/** Published once a share:pair-request is no longer pending (answered,
+ * timed out, or the requester disconnected) -- lets the approval dialog
+ * dismiss itself even if respondPairing was never called for it. */
+export interface SharePairRequestResolvedPayload {
+  requestId: string
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

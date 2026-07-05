@@ -1,6 +1,7 @@
 package share
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -27,12 +28,12 @@ func TestHandlePair_WrongPinFiveTimesLocksOut(t *testing.T) {
 	}
 
 	for i := 0; i < maxPinFailures; i++ {
-		if _, err := ts.svc.HandlePair("000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrPinMismatch) {
+		if _, err := ts.svc.HandlePair(context.Background(), "000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrPinMismatch) {
 			t.Fatalf("attempt %d: err = %v, want ErrPinMismatch", i, err)
 		}
 	}
 
-	if _, err := ts.svc.HandlePair("000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrLockedOut) {
+	if _, err := ts.svc.HandlePair(context.Background(), "000000", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrLockedOut) {
 		t.Fatalf("after %d failures: err = %v, want ErrLockedOut", maxPinFailures, err)
 	}
 }
@@ -50,7 +51,7 @@ func TestHandlePair_ApproveIssuesToken(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		token, pairErr = ts.svc.HandlePair(status.PIN, "kim-laptop", "10.0.0.5:1234")
+		token, pairErr = ts.svc.HandlePair(context.Background(), status.PIN, "kim-laptop", "10.0.0.5:1234")
 	}()
 
 	requestID := waitForPairRequest(t, ts.pub)
@@ -82,7 +83,7 @@ func TestHandlePair_DenyReturnsErrPairDenied(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, pairErr = ts.svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
+		_, pairErr = ts.svc.HandlePair(context.Background(), status.PIN, "peer", "10.0.0.5:1234")
 	}()
 
 	requestID := waitForPairRequest(t, ts.pub)
@@ -104,15 +105,55 @@ func TestHandlePair_TimeoutReturnsErrPairTimeout(t *testing.T) {
 		t.Fatalf("EnableSharing() error = %v", err)
 	}
 
-	_, pairErr := ts.svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
+	_, pairErr := ts.svc.HandlePair(context.Background(), status.PIN, "peer", "10.0.0.5:1234")
 	if !errors.Is(pairErr, in.ErrPairTimeout) {
 		t.Fatalf("HandlePair() error = %v, want ErrPairTimeout", pairErr)
 	}
 }
 
+// TestHandlePair_ContextCanceledDuringApprovalSkipsTokenIssuance guards
+// against the HS-03 ghost-client bug: if the caller (the HTTP request)
+// disconnects while HandlePair is still waiting for the local user's
+// approve/deny decision, a RespondPairing(true) that arrives afterward must
+// not mint and persist a client no one is there to receive.
+func TestHandlePair_ContextCanceledDuringApprovalSkipsTokenIssuance(t *testing.T) {
+	ts := newTestService()
+	status, err := ts.svc.EnableSharing(nil)
+	if err != nil {
+		t.Fatalf("EnableSharing() error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	var pairErr error
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, pairErr = ts.svc.HandlePair(ctx, status.PIN, "peer", "10.0.0.5:1234")
+	}()
+
+	requestID := waitForPairRequest(t, ts.pub)
+	cancel()
+	wg.Wait()
+
+	if !errors.Is(pairErr, in.ErrPairTimeout) {
+		t.Fatalf("HandlePair() error = %v, want ErrPairTimeout", pairErr)
+	}
+
+	// A decision arriving after the caller gave up must be a no-op --
+	// the pending request was already cleaned up by awaitPairApproval.
+	if err := ts.svc.RespondPairing(requestID, true); err == nil {
+		t.Fatal("RespondPairing() after cancellation: expected error (no pending request), got nil")
+	}
+	if ts.clients.count() != 0 {
+		t.Fatalf("clients.count() = %d, want 0 (no ghost client)", ts.clients.count())
+	}
+}
+
 func TestHandlePair_WhileDisabledReturnsUnauthorized(t *testing.T) {
 	ts := newTestService()
-	if _, err := ts.svc.HandlePair("123456", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrShareUnauthorized) {
+	if _, err := ts.svc.HandlePair(context.Background(), "123456", "peer", "10.0.0.5:1234"); !errors.Is(err, in.ErrShareUnauthorized) {
 		t.Fatalf("err = %v, want ErrShareUnauthorized", err)
 	}
 }
@@ -132,7 +173,7 @@ func TestHostsForToken_ValidTokenReturnsSharedHosts(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		token, _ = ts.svc.HandlePair(status.PIN, "kim-laptop", "10.0.0.5:1234")
+		token, _ = ts.svc.HandlePair(context.Background(), status.PIN, "kim-laptop", "10.0.0.5:1234")
 	}()
 	requestID := waitForPairRequest(t, ts.pub)
 	_ = ts.svc.RespondPairing(requestID, true)
@@ -175,7 +216,7 @@ func TestHostsForToken_SkipsHostsDeletedSinceSelection(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		token, _ = ts.svc.HandlePair(status.PIN, "peer", "10.0.0.5:1234")
+		token, _ = ts.svc.HandlePair(context.Background(), status.PIN, "peer", "10.0.0.5:1234")
 	}()
 	requestID := waitForPairRequest(t, ts.pub)
 	_ = ts.svc.RespondPairing(requestID, true)

@@ -47,6 +47,7 @@ export function PinEntryDialog({ peerId, peerName, onClose }: PinEntryDialogProp
           autoFocus
           error={error}
         />
+        {pending && <p className="pin-entry__waiting">상대방의 승인을 기다리는 중...</p>}
         <div className="pin-entry__actions">
           <Button type="submit" variant="primary" disabled={pending || pin.length !== 6}>
             연결

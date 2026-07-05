@@ -21,6 +21,13 @@ import (
 
 const requestTimeout = 10 * time.Second
 
+// pairRequestTimeout applies only to Pair: the provider's HandlePair blocks
+// for up to the local user's approval decision (share.pairApprovalTimeout,
+// 60s; sharehttp.approvalWriteTimeout gives the server 90s to accommodate
+// it), so the shared 10s requestTimeout would abort every pairing attempt
+// before a human has a realistic chance to click approve/deny.
+const pairRequestTimeout = 90 * time.Second
+
 var (
 	// errCertMismatchInternal marks a handshake failure caused by our own
 	// VerifyPeerCertificate rejecting a pinned-cert mismatch, so the
@@ -68,6 +75,7 @@ func (c *Client) Info(address string, port int, certFP string) (out.PeerInfo, st
 
 func (c *Client) Pair(address string, port int, certFP, pin, clientName string) (token, observedFP string, err error) {
 	httpClient, observed := pinnedClient(certFP)
+	httpClient.Timeout = pairRequestTimeout
 
 	reqBody, err := json.Marshal(struct {
 		PIN        string `json:"pin"`

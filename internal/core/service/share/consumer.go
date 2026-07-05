@@ -53,9 +53,18 @@ func (s *Service) Close() {
 }
 
 func (s *Service) onDiscoveryUpdate(peers []out.DiscoveredPeer) {
+	// This instance's own mDNS advertisement (started when sharing is
+	// enabled, see EnableSharing) is indistinguishable on the wire from any
+	// other peer's -- filter it out by instance ID so it never shows up as
+	// a discoverable "peer" of itself.
+	selfID, _ := s.settings.InstanceID()
+
 	s.cmu.Lock()
 	discovered := make(map[string]out.DiscoveredPeer, len(peers))
 	for _, p := range peers {
+		if p.InstanceID == selfID {
+			continue
+		}
 		discovered[p.InstanceID] = p
 	}
 	s.discovered = discovered
