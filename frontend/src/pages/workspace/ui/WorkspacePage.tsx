@@ -2,12 +2,14 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
 import { DestinationBar } from '../../../features/file-upload'
+import { PairApprovalDialog } from '../../../features/peer-pairing'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { FileBrowserPanel } from '../../../widgets/file-browser'
 import { HistoryPanel } from '../../../widgets/history-panel'
 import { HostSidebar } from '../../../widgets/host-sidebar'
 import { RightDock } from '../../../widgets/right-dock'
+import { SharePanel } from '../../../widgets/share-panel'
 import { StatusBar } from '../../../widgets/status-bar'
 import { TabBar, createLocalTab, useTabStore, type Tab } from '../../../widgets/tab-bar'
 import { TransferCenter } from '../../../widgets/transfer-center'
@@ -142,11 +144,13 @@ export function WorkspacePage() {
             />
           }
           filesPanel={<FileBrowserPanel sessionId={activeTab?.sessionId ?? null} isSSH={activeTab?.kind === 'ssh'} />}
+          sharePanel={<SharePanel />}
         />
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
       <TransferCenter />
       <HostKeyPrompt />
+      <PairApprovalDialog />
       <DestinationBar />
     </div>
   )

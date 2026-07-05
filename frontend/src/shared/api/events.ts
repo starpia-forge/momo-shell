@@ -10,6 +10,7 @@ export const topics = {
   transferProgress: (taskId: string) => `transfer:progress:${taskId}`,
   transferZmodem: (sessionId: string) => `transfer:zmodem:${sessionId}`,
   osFileDrop: () => `os:filedrop`,
+  sharePairRequest: () => `share:pair-request`,
 }
 
 export interface SessionStatePayload {
@@ -68,6 +69,14 @@ export interface TransferZmodemPayload {
   direction: 'upload' | 'download'
   phase: 'detected' | 'active' | 'done' | 'failed' | 'canceled'
   taskId?: string
+}
+
+/** Published when an incoming /pair request is awaiting the local user's
+ * approve/deny decision via respondPairing. */
+export interface SharePairRequestPayload {
+  requestId: string
+  clientName: string
+  remoteAddr: string
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

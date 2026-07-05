@@ -69,6 +69,10 @@ export function registerGlobalShortcuts(): () => void {
       e.preventDefault()
       e.stopPropagation()
       useRightDockStore.getState().toggle('files')
+    } else if (e.shiftKey && e.key.toLowerCase() === 's') {
+      e.preventDefault()
+      e.stopPropagation()
+      useRightDockStore.getState().toggle('share')
     } else if (!e.shiftKey && e.key.toLowerCase() === 'f') {
       e.preventDefault()
       e.stopPropagation()

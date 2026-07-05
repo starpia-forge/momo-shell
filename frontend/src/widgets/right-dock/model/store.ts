@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type RightDockTab = 'history' | 'files'
+export type RightDockTab = 'history' | 'files' | 'share'
 
 interface RightDockStore {
   open: boolean

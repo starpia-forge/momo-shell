@@ -176,6 +176,44 @@ export namespace wails {
 	        this.rows = source["rows"];
 	    }
 	}
+	export class ShareClientDTO {
+	    id: string;
+	    name: string;
+	    pairedAt: number;
+	    lastSeenAt?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ShareClientDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.pairedAt = source["pairedAt"];
+	        this.lastSeenAt = source["lastSeenAt"];
+	    }
+	}
+	export class ShareStatusDTO {
+	    enabled: boolean;
+	    pin: string;
+	    port: number;
+	    instanceName: string;
+	    sharedHostIds: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ShareStatusDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.pin = source["pin"];
+	        this.port = source["port"];
+	        this.instanceName = source["instanceName"];
+	        this.sharedHostIds = source["sharedHostIds"];
+	    }
+	}
 	export class TaskInfoDTO {
 	    id: string;
 	    sessionId: string;
