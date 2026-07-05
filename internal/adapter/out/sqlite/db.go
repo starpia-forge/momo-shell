@@ -13,13 +13,18 @@ import (
 )
 
 // DefaultPath returns the standard on-disk location for the app database,
-// creating its parent directory if necessary.
+// creating its parent directory if necessary. MOMO_DATA_DIR overrides the
+// app directory entirely -- used to run two isolated instances on one
+// machine (e.g. Phase 5's two-app LAN-sharing manual verification).
 func DefaultPath() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("sqlite: resolve config dir: %w", err)
+	appDir := os.Getenv("MOMO_DATA_DIR")
+	if appDir == "" {
+		dir, err := os.UserConfigDir()
+		if err != nil {
+			return "", fmt.Errorf("sqlite: resolve config dir: %w", err)
+		}
+		appDir = filepath.Join(dir, "momo-shell")
 	}
-	appDir := filepath.Join(dir, "momo-shell")
 	if err := os.MkdirAll(appDir, 0o700); err != nil {
 		return "", fmt.Errorf("sqlite: create app dir: %w", err)
 	}

@@ -7,8 +7,19 @@
 }
 
 .shared-hosts__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 4px 8px;
   color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.shared-hosts__add-by-address {
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
   font-size: 12px;
 }
 

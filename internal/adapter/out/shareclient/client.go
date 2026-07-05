@@ -22,10 +22,11 @@ import (
 const requestTimeout = 10 * time.Second
 
 var (
-	// ErrCertMismatch is returned when a peer presents a certificate that
-	// doesn't match a previously pinned fingerprint -- the peer may have
-	// been reinstalled/impersonated since pairing.
-	ErrCertMismatch = errors.New("shareclient: certificate fingerprint mismatch (peer's certificate changed)")
+	// errCertMismatchInternal marks a handshake failure caused by our own
+	// VerifyPeerCertificate rejecting a pinned-cert mismatch, so the
+	// exported methods can translate it to out.ErrPeerCertMismatch --
+	// distinct from a generic network error, which they pass through as-is.
+	errCertMismatchInternal = errors.New("shareclient: certificate fingerprint mismatch (peer's certificate changed)")
 	// ErrPairRejected covers wrong PIN, user denial, and approval timeout
 	// -- the provider intentionally makes these indistinguishable.
 	ErrPairRejected  = errors.New("shareclient: pairing rejected (wrong pin, denied, or timed out)")
@@ -46,7 +47,7 @@ func (c *Client) Info(address string, port int, certFP string) (out.PeerInfo, st
 
 	resp, err := httpClient.Get(fmt.Sprintf("https://%s:%d/api/v1/info", address, port))
 	if err != nil {
-		return out.PeerInfo{}, "", err
+		return out.PeerInfo{}, "", observed.translateErr(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -78,7 +79,7 @@ func (c *Client) Pair(address string, port int, certFP, pin, clientName string) 
 
 	resp, err := httpClient.Post(fmt.Sprintf("https://%s:%d/api/v1/pair", address, port), "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return "", "", err
+		return "", "", observed.translateErr(err)
 	}
 	defer resp.Body.Close()
 
@@ -101,7 +102,7 @@ func (c *Client) Pair(address string, port int, certFP, pin, clientName string) 
 
 // FetchHosts returns out.ErrPeerUnauthorized on a 401 response.
 func (c *Client) FetchHosts(address string, port int, certFP, token string) ([]domain.SharedHost, error) {
-	httpClient, _ := pinnedClient(certFP)
+	httpClient, observed := pinnedClient(certFP)
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://%s:%d/api/v1/hosts", address, port), nil)
 	if err != nil {
@@ -111,7 +112,7 @@ func (c *Client) FetchHosts(address string, port int, certFP, token string) ([]d
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, observed.translateErr(err)
 	}
 	defer resp.Body.Close()
 
@@ -130,9 +131,21 @@ func (c *Client) FetchHosts(address string, port int, certFP, token string) ([]d
 }
 
 // observedCert captures the fingerprint of whatever certificate the peer
-// presents during a request, so callers can persist it for future pinning.
+// presents during a request (so callers can persist it for future pinning)
+// and whether it mismatched a pinned certFP.
 type observedCert struct {
 	fingerprint string
+	mismatch    bool
+}
+
+// translateErr replaces a pinned-cert-mismatch handshake failure with
+// out.ErrPeerCertMismatch; any other error (network failure, timeout,
+// etc.) passes through unchanged.
+func (o *observedCert) translateErr(err error) error {
+	if o.mismatch {
+		return out.ErrPeerCertMismatch
+	}
+	return err
 }
 
 // pinnedClient builds an http.Client whose TLS verification is entirely
@@ -153,7 +166,8 @@ func pinnedClient(certFP string) (*http.Client, *observedCert) {
 			fp := hex.EncodeToString(sum[:])
 			observed.fingerprint = fp
 			if certFP != "" && fp != certFP {
-				return ErrCertMismatch
+				observed.mismatch = true
+				return errCertMismatchInternal
 			}
 			return nil
 		},

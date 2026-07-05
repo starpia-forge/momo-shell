@@ -68,8 +68,9 @@ func TestInfo_TOFUAcceptsFirstCertThenPinsIt(t *testing.T) {
 		t.Fatalf("Info() (pinned, matching) error = %v", err)
 	}
 
-	if _, _, err := client.Info(address, port, "0000000000000000000000000000000000000000000000000000000000000000"); err == nil {
-		t.Fatal("expected error for mismatched pinned fingerprint")
+	_, _, err = client.Info(address, port, "0000000000000000000000000000000000000000000000000000000000000000")
+	if !errors.Is(err, out.ErrPeerCertMismatch) {
+		t.Fatalf("err = %v, want ErrPeerCertMismatch", err)
 	}
 }
 
@@ -137,6 +138,30 @@ func TestFetchHosts_ValidAndInvalidToken(t *testing.T) {
 
 	if _, err := client.FetchHosts(address, port, "", "bogus"); !errors.Is(err, out.ErrPeerUnauthorized) {
 		t.Fatalf("err = %v, want ErrPeerUnauthorized", err)
+	}
+}
+
+func TestFetchHosts_CertMismatchReturnsErrPeerCertMismatch(t *testing.T) {
+	address, port := startTestServer(t, &fakeCallbacks{
+		hostsFunc: func(token string) ([]domain.SharedHost, error) { return nil, nil },
+	})
+	client := New()
+
+	wrongFP := "0000000000000000000000000000000000000000000000000000000000000000"
+	if _, err := client.FetchHosts(address, port, wrongFP, "any-token"); !errors.Is(err, out.ErrPeerCertMismatch) {
+		t.Fatalf("err = %v, want ErrPeerCertMismatch", err)
+	}
+}
+
+func TestPair_CertMismatchReturnsErrPeerCertMismatch(t *testing.T) {
+	address, port := startTestServer(t, &fakeCallbacks{
+		pairFunc: func(pin, clientName, remoteAddr string) (string, error) { return "unused", nil },
+	})
+	client := New()
+
+	wrongFP := "0000000000000000000000000000000000000000000000000000000000000000"
+	if _, _, err := client.Pair(address, port, wrongFP, "123456", "peer"); !errors.Is(err, out.ErrPeerCertMismatch) {
+		t.Fatalf("err = %v, want ErrPeerCertMismatch", err)
 	}
 }
 

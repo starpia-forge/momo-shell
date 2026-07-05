@@ -22,12 +22,17 @@ type fileStore struct {
 	keyPath  string
 }
 
+// newFileStore resolves its app directory the same way sqlite.DefaultPath
+// does, including the MOMO_DATA_DIR override (see there for why).
 func newFileStore() (*fileStore, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return nil, fmt.Errorf("keychain: resolve config dir: %w", err)
+	appDir := os.Getenv("MOMO_DATA_DIR")
+	if appDir == "" {
+		dir, err := os.UserConfigDir()
+		if err != nil {
+			return nil, fmt.Errorf("keychain: resolve config dir: %w", err)
+		}
+		appDir = filepath.Join(dir, "momo-shell")
 	}
-	appDir := filepath.Join(dir, "momo-shell")
 	if err := os.MkdirAll(appDir, 0o700); err != nil {
 		return nil, fmt.Errorf("keychain: create app dir: %w", err)
 	}

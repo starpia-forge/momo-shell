@@ -86,6 +86,12 @@ type PeerInfo struct {
 // rather than merely mark the peer offline.
 var ErrPeerUnauthorized = errors.New("share: peer rejected our token")
 
+// ErrPeerCertMismatch is returned by any PeerClient method called with a
+// non-empty certFP when the peer presents a different certificate than the
+// one pinned at pairing time -- the peer may have been reinstalled or is
+// being impersonated.
+var ErrPeerCertMismatch = errors.New("share: peer certificate fingerprint changed since pairing")
+
 // PeerClient is the driven port for calling another instance's LAN share
 // API. certFP == "" means TOFU: accept whatever certificate the peer
 // presents and return its fingerprint for the caller to persist; a
