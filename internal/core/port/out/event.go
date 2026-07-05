@@ -58,3 +58,9 @@ func TopicTransferZmodem(sessionID string) string {
 func TopicOSFileDrop() string {
 	return "os:filedrop"
 }
+
+// TopicSharePairRequest notifies the frontend of an incoming /pair request
+// awaiting the local user's approve/deny decision via RespondPairing.
+func TopicSharePairRequest() string {
+	return "share:pair-request"
+}

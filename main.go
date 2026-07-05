@@ -4,11 +4,13 @@ import (
 	"context"
 	"embed"
 	"log"
+	"path/filepath"
 
 	wailsapp "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
+	"momo-shell/internal/adapter/in/sharehttp"
 	wailsfacade "momo-shell/internal/adapter/in/wails"
 	"momo-shell/internal/adapter/out/keychain"
 	"momo-shell/internal/adapter/out/pty"
@@ -20,6 +22,7 @@ import (
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
 	"momo-shell/internal/core/service/session"
+	"momo-shell/internal/core/service/share"
 	"momo-shell/internal/core/service/transfer"
 )
 
@@ -47,6 +50,8 @@ func main() {
 	hostRepo := sqlite.NewHostRepo(db)
 	knownHostsRepo := sqlite.NewKnownHostsRepo(db)
 	historyRepo := sqlite.NewHistoryRepo(db)
+	shareClientRepo := sqlite.NewShareClientRepo(db)
+	shareSettingsRepo := sqlite.NewShareSettingsRepo(db)
 	sshOpener := sshconn.New(sshconn.WithFileSystemFactory(sftp.NewFromClient))
 	localOpener := pty.NewOpener()
 
@@ -68,6 +73,17 @@ func main() {
 	transferSvc := transfer.New(transfer.Deps{Shell: sessionSvc, Pub: publisher, Zmodem: zmodem.New()})
 	sessionSvc.SetMiddleware(transferSvc)
 
+	shareSvc := share.New(share.Deps{HostRepo: hostRepo, Clients: shareClientRepo, Settings: shareSettingsRepo, Pub: publisher})
+	shareCert, err := sharehttp.LoadOrCreateCert(filepath.Dir(dbPath))
+	if err != nil {
+		log.Fatalf("load or create share certificate: %v", err)
+	}
+	// Two-phase wiring breaks the shareSvc <-> shareServer construction cycle,
+	// the same pattern as sessionSvc.SetMiddleware above: the server needs a
+	// callback into shareSvc, and shareSvc needs to Start/Stop the server.
+	shareServer := sharehttp.New(shareSvc, shareCert)
+	shareSvc.SetServer(shareServer)
+
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	clipboardWriter := wailsfacade.NewClipboardWriter()
 	transferDialogs := wailsfacade.NewTransferDialogs()
@@ -76,6 +92,7 @@ func main() {
 	historyService := wailsfacade.NewHistoryService(historySvc)
 	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
 	transferService := wailsfacade.NewTransferService(transferSvc, transferDialogs)
+	shareService := wailsfacade.NewShareService(shareSvc)
 	fileDropRelay := wailsfacade.NewFileDropRelay(publisher)
 
 	err = wailsapp.Run(&options.App{
@@ -101,6 +118,7 @@ func main() {
 		OnShutdown: func(ctx context.Context) {
 			sessionSvc.CloseAll()
 			historySvc.Close()
+			_ = shareSvc.DisableSharing()
 			db.Close()
 		},
 		Bind: []interface{}{
@@ -109,6 +127,7 @@ func main() {
 			historyService,
 			clipboardService,
 			transferService,
+			shareService,
 		},
 	})
 

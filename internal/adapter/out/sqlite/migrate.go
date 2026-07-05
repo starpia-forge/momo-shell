@@ -7,7 +7,7 @@ import (
 
 // schemaVersion tracks applied migrations via PRAGMA user_version so Open
 // is idempotent across app restarts.
-const schemaVersion = 1
+const schemaVersion = 2
 
 func migrate(db *sql.DB) error {
 	var version int
@@ -17,6 +17,11 @@ func migrate(db *sql.DB) error {
 
 	if version < 1 {
 		if err := migrateV1(db); err != nil {
+			return err
+		}
+	}
+	if version < 2 {
+		if err := migrateV2(db); err != nil {
 			return err
 		}
 	}
@@ -66,6 +71,46 @@ func migrateV1(db *sql.DB) error {
 	for _, stmt := range stmts {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("sqlite: migrate v1: %w", err)
+		}
+	}
+	return nil
+}
+
+// migrateV2 adds the tables backing LAN host sharing
+// (docs/plan/06-phase5-host-sharing.md): share_peers caches peers this
+// instance has paired with or discovered (consumer role, from M2 on),
+// share_clients tracks peers this instance has issued a bearer token to
+// (provider role), and share_settings is a small key-value store for this
+// instance's identity and its shared-host selection.
+func migrateV2(db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS share_peers (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			address TEXT NOT NULL,
+			port INTEGER NOT NULL,
+			cert_fingerprint TEXT NOT NULL,
+			paired_at INTEGER NOT NULL,
+			last_sync_at INTEGER,
+			hosts_json TEXT NOT NULL DEFAULT '[]'
+		)`,
+		`CREATE TABLE IF NOT EXISTS share_clients (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			token_hash TEXT NOT NULL,
+			paired_at INTEGER NOT NULL,
+			last_seen_at INTEGER
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_share_clients_token_hash ON share_clients(token_hash)`,
+		`CREATE TABLE IF NOT EXISTS share_settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		)`,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("sqlite: migrate v2: %w", err)
 		}
 	}
 	return nil
