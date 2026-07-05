@@ -1,0 +1,12 @@
+.pin-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 260px;
+}
+
+.pin-entry__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -11,6 +11,7 @@ export const topics = {
   transferZmodem: (sessionId: string) => `transfer:zmodem:${sessionId}`,
   osFileDrop: () => `os:filedrop`,
   sharePairRequest: () => `share:pair-request`,
+  sharePeersUpdated: () => `share:peers-updated`,
 }
 
 export interface SessionStatePayload {

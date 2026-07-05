@@ -22,6 +22,29 @@ type ShareClientDTO struct {
 	LastSeenAt *int64 `json:"lastSeenAt,omitempty"`
 }
 
+// SharedHostDTO mirrors domain.SharedHost, which already excludes secret
+// and structural fields (id, authType, keyPath) by construction.
+type SharedHostDTO struct {
+	Name     string   `json:"name"`
+	Address  string   `json:"address"`
+	Port     int      `json:"port"`
+	Labels   []string `json:"labels"`
+	Username string   `json:"username"`
+}
+
+// PeerViewDTO is the JSON-facing snapshot of one peer shown in the host
+// sidebar's shared-hosts section.
+type PeerViewDTO struct {
+	ID         string          `json:"id"`
+	Name       string          `json:"name"`
+	Address    string          `json:"address"`
+	Port       int             `json:"port"`
+	Paired     bool            `json:"paired"`
+	Online     bool            `json:"online"`
+	LastSyncAt *int64          `json:"lastSyncAt,omitempty"`
+	Hosts      []SharedHostDTO `json:"hosts"`
+}
+
 // ShareService is the Wails-bound facade over in.ShareUseCase. It only
 // converts between JSON-facing DTOs and domain types -- no business logic.
 type ShareService struct {
@@ -76,6 +99,42 @@ func (s *ShareService) RespondPairing(requestID string, approve bool) error {
 	return s.uc.RespondPairing(requestID, approve)
 }
 
+func (s *ShareService) ListPeers() ([]PeerViewDTO, error) {
+	peers, err := s.uc.ListPeers()
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]PeerViewDTO, len(peers))
+	for i, p := range peers {
+		dtos[i] = peerViewToDTO(p)
+	}
+	return dtos, nil
+}
+
+func (s *ShareService) PairWithPeer(peerID string, pin string) error {
+	return s.uc.PairWithPeer(peerID, pin)
+}
+
+func (s *ShareService) AddPeerByAddress(address string, port int, pin string) error {
+	return s.uc.AddPeerByAddress(address, port, pin)
+}
+
+func (s *ShareService) RemovePeer(peerID string) error {
+	return s.uc.RemovePeer(peerID)
+}
+
+func (s *ShareService) FetchSharedHosts(peerID string) ([]SharedHostDTO, error) {
+	hosts, err := s.uc.FetchSharedHosts(peerID)
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]SharedHostDTO, len(hosts))
+	for i, h := range hosts {
+		dtos[i] = sharedHostToDTO(h)
+	}
+	return dtos, nil
+}
+
 func statusToDTO(status in.ShareStatus) ShareStatusDTO {
 	return ShareStatusDTO{
 		Enabled:       status.Enabled,
@@ -93,4 +152,28 @@ func clientToDTO(c domain.ShareClient) ShareClientDTO {
 		dto.LastSeenAt = &t
 	}
 	return dto
+}
+
+func peerViewToDTO(p in.PeerView) PeerViewDTO {
+	dto := PeerViewDTO{
+		ID:      p.ID,
+		Name:    p.Name,
+		Address: p.Address,
+		Port:    p.Port,
+		Paired:  p.Paired,
+		Online:  p.Online,
+		Hosts:   make([]SharedHostDTO, len(p.Hosts)),
+	}
+	if p.LastSyncAt != nil {
+		t := p.LastSyncAt.Unix()
+		dto.LastSyncAt = &t
+	}
+	for i, h := range p.Hosts {
+		dto.Hosts[i] = sharedHostToDTO(h)
+	}
+	return dto
+}
+
+func sharedHostToDTO(h domain.SharedHost) SharedHostDTO {
+	return SharedHostDTO{Name: h.Name, Address: h.Address, Port: h.Port, Labels: h.Labels, Username: h.Username}
 }

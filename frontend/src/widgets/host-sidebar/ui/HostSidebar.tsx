@@ -4,6 +4,7 @@ import { useSessionStore } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
 import { HostFormDialog, confirmAndDeleteHost } from '../../../features/host-crud'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
+import { SharedHostsSection } from './SharedHostsSection'
 import './HostSidebar.css'
 
 interface HostSidebarProps {
@@ -108,6 +109,8 @@ export function HostSidebar({ onConnect }: HostSidebarProps) {
       <button className="host-sidebar__add" onClick={() => setDialog({})}>
         + 호스트 추가
       </button>
+
+      <SharedHostsSection />
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextMenuItems(menu.host)} onClose={() => setMenu(null)} />}
 
