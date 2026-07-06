@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
+import { cn } from '../../../shared/lib/cn'
 import { attach, detach, fitSession } from '../lib/terminal-registry'
 import { useSessionStore } from '../model/store'
-import './TerminalPane.css'
 
 interface TerminalPaneProps {
   sessionId: string
@@ -42,16 +42,19 @@ export function TerminalPane({ sessionId, onReconnect }: TerminalPaneProps) {
   const isSSH = session?.kind === 'ssh'
 
   return (
-    <div className="terminal-pane">
-      <div ref={containerRef} className={ended ? 'terminal-pane__host terminal-pane__host--dimmed' : 'terminal-pane__host'} />
+    <div className="terminal-pane relative w-full h-full">
+      <div ref={containerRef} className={cn('w-full h-full', ended && 'opacity-40')} />
       {ended && (
-        <div className="terminal-pane__overlay">
-          <div className="terminal-pane__overlay-message">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2 rounded px-4 py-2 bg-surface border border-line text-fg text-[13px] pointer-events-auto">
             {isSSH ? (
               <>
                 <div>연결 끊김{session?.error ? `: ${session.error}` : ''}</div>
                 {onReconnect && (
-                  <button className="terminal-pane__reconnect" onClick={onReconnect}>
+                  <button
+                    className="rounded px-3 py-1 border border-accent bg-accent text-on-accent text-[12px] cursor-pointer hover:opacity-90"
+                    onClick={onReconnect}
+                  >
                     재연결
                   </button>
                 )}

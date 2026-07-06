@@ -28,6 +28,7 @@ import { b64ToBytes } from '../../../shared/lib/base64'
 import { useSessionStore } from '../model/store'
 import { useHostKeyPromptStore } from '../model/hostKeyPrompts'
 import { parseOsc7Path } from './osc7'
+import { readTerminalTheme } from './terminal-theme'
 
 // The xterm.js instance is owned here, outside React, in a detached host
 // div. TerminalPane only ever attaches/detaches that div -- it never
@@ -73,7 +74,7 @@ function createTerminalEntry(id: string): void {
     allowProposedApi: true,
     fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
     fontSize: currentFontSize,
-    theme: { background: '#1b2636' },
+    theme: readTerminalTheme(),
   })
 
   const fit = new FitAddon()
@@ -284,6 +285,15 @@ export function setFontSize(size: number): void {
 
 export function resetFontSize(): void {
   setFontSize(DEFAULT_FONT_SIZE)
+}
+
+/** Re-applies the current theme to every live terminal. Unused for now
+ * (only one theme exists) -- exported for a future theme-switch feature. */
+export function applyTerminalTheme(): void {
+  const theme = readTerminalTheme()
+  registry.forEach((entry) => {
+    entry.term.options.theme = theme
+  })
 }
 
 export function disposeSession(id: string): void {
