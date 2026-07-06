@@ -18,6 +18,21 @@
   --theme-shadow: rgba(0, 0, 0, 0.3);
 }
 
+[data-theme='light'] {
+  --theme-canvas: #f5f7fa;
+  --theme-surface: #ffffff;
+  --theme-line: #d4dce8;
+  --theme-fg: #1f2a3a;
+  --theme-muted: #5c6b82;
+  --theme-accent: #2f6fe4;
+  --theme-on-accent: #ffffff;
+  --theme-danger: #d64545;
+  --theme-success: #2e9e64;
+  --theme-warning: #a8860d;
+  --theme-overlay: rgba(0, 0, 0, 0.35);
+  --theme-shadow: rgba(0, 0, 0, 0.15);
+}
+
 /* ── 계층 2: Tailwind 시맨틱 토큰 (@theme inline) ───── */
 @theme inline {
   --color-*: initial;

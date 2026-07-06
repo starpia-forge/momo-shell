@@ -9,6 +9,8 @@ export {
   getFontSize,
   setFontSize,
   resetFontSize,
+  setScrollback,
+  applyTerminalTheme,
   searchSession,
   clearSearchSession,
   focusSession,

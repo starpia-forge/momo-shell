@@ -53,6 +53,11 @@ const MIN_FONT_SIZE = 8
 const MAX_FONT_SIZE = 32
 let currentFontSize = DEFAULT_FONT_SIZE
 
+const DEFAULT_SCROLLBACK = 10000
+const MIN_SCROLLBACK = 1000
+const MAX_SCROLLBACK = 100000
+let currentScrollback = DEFAULT_SCROLLBACK
+
 // Cell metrics depend on the font actually being loaded; re-fit every
 // attached terminal once it is, correcting any fallback-font sizing done
 // before that point.
@@ -70,7 +75,7 @@ if (typeof document !== 'undefined' && document.fonts) {
 // and what they seed the session store with.
 function createTerminalEntry(id: string): void {
   const term = new Terminal({
-    scrollback: 10000,
+    scrollback: currentScrollback,
     allowProposedApi: true,
     fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
     fontSize: currentFontSize,
@@ -287,8 +292,15 @@ export function resetFontSize(): void {
   setFontSize(DEFAULT_FONT_SIZE)
 }
 
-/** Re-applies the current theme to every live terminal. Unused for now
- * (only one theme exists) -- exported for a future theme-switch feature. */
+export function setScrollback(lines: number): void {
+  currentScrollback = Math.min(MAX_SCROLLBACK, Math.max(MIN_SCROLLBACK, lines))
+  registry.forEach((entry) => {
+    entry.term.options.scrollback = currentScrollback
+  })
+}
+
+/** Re-applies the current theme to every live terminal -- called by the
+ * settings bridge whenever the user switches appearance.theme. */
 export function applyTerminalTheme(): void {
   const theme = readTerminalTheme()
   registry.forEach((entry) => {

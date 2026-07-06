@@ -1,4 +1,4 @@
-import { getFontSize, setFontSize, resetFontSize } from '../entities/session'
+import { useSettingsStore } from '../entities/settings'
 import { useTerminalSearchStore } from '../features/terminal-search'
 import { useRightDockStore } from '../widgets/right-dock'
 import { useTabStore } from '../widgets/tab-bar'
@@ -32,15 +32,17 @@ export function registerGlobalShortcuts(): () => void {
     if (e.key === '=' || e.key === '+') {
       e.preventDefault()
       e.stopPropagation()
-      setFontSize(getFontSize() + FONT_STEP)
+      const settings = useSettingsStore.getState()
+      settings.setFontSize(settings.fontSize + FONT_STEP)
     } else if (e.key === '-') {
       e.preventDefault()
       e.stopPropagation()
-      setFontSize(getFontSize() - FONT_STEP)
+      const settings = useSettingsStore.getState()
+      settings.setFontSize(settings.fontSize - FONT_STEP)
     } else if (e.key === '0') {
       e.preventDefault()
       e.stopPropagation()
-      resetFontSize()
+      useSettingsStore.getState().resetFontSize()
     } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
       e.preventDefault()
       e.stopPropagation()

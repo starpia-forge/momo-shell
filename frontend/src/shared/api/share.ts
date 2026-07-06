@@ -12,6 +12,8 @@ import {
   RemovePeer,
   FetchSharedHosts,
   ImportSharedHost,
+  DeviceName,
+  SetDeviceName,
 } from '../../../wailsjs/go/wails/ShareService'
 import { asHost, type Host } from './host'
 
@@ -114,6 +116,14 @@ export async function fetchSharedHosts(peerId: string): Promise<SharedHost[]> {
 
 export async function importSharedHost(peerId: string, index: number): Promise<Host> {
   return asHost(await ImportSharedHost(peerId, index))
+}
+
+export async function getDeviceName(): Promise<string> {
+  return DeviceName()
+}
+
+export async function setDeviceName(name: string): Promise<void> {
+  await SetDeviceName(name)
 }
 
 // describeShareError translates a backend error's message (Go errors cross
