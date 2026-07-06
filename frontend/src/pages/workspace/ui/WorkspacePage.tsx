@@ -15,7 +15,6 @@ import { StatusBar } from '../../../widgets/status-bar'
 import { TabBar, useTabStore, type Tab } from '../../../widgets/tab-bar'
 import { TransferCenter } from '../../../widgets/transfer-center'
 import { WorkspaceLayout, findLeaf, leaves, useWorkspaceLayoutStore } from '../../../widgets/workspace-layout'
-import './WorkspacePage.css'
 
 export function WorkspacePage() {
   const tabs = useTabStore((s) => s.tabs)
@@ -135,13 +134,13 @@ export function WorkspacePage() {
   }
 
   return (
-    <div className="workspace">
+    <div className="workspace flex flex-col h-screen w-screen bg-canvas text-fg">
       <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} />
-      <div className="workspace__body">
-        <div className="workspace__sidebar">
+      <div className="flex-1 flex min-h-0">
+        <div className="flex-none w-55">
           <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
         </div>
-        <div className="workspace__pane">
+        <div className="flex-1 min-w-0 min-h-0 p-1 overflow-hidden">
           {homeActive ? (
             <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
           ) : (

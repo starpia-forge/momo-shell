@@ -1,7 +1,6 @@
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/700.css';
 @import 'tailwindcss';
-@import './tokens.css';
 
 /* ── 계층 1: 테마 팔레트 (런타임 변수) ─────────────── */
 :root {

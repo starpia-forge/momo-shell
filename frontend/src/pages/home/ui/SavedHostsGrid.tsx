@@ -3,6 +3,7 @@ import { useHostStore, type Host } from '../../../entities/host'
 import { useSessionStore } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
 import { HostFormDialog, confirmAndDeleteHost } from '../../../features/host-crud'
+import { cn } from '../../../shared/lib/cn'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 
 interface SavedHostsGridProps {
@@ -11,6 +12,13 @@ interface SavedHostsGridProps {
 
 type SortMode = 'recent' | 'name'
 type DotStatus = 'running' | 'connecting' | 'error' | 'idle'
+
+const DOT: Record<DotStatus, string> = {
+  running: 'bg-success',
+  connecting: 'bg-warning',
+  error: 'bg-danger',
+  idle: 'bg-line',
+}
 
 export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
   const hosts = useHostStore((s) => s.hosts)
@@ -71,18 +79,18 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
   }
 
   return (
-    <section className="home-section">
-      <div className="home-section__header">
-        <span className="home-section__title">내 호스트 ({filtered.length})</span>
-        <div className="home-section__actions">
+    <section>
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-[14px] font-semibold">내 호스트 ({filtered.length})</span>
+        <div className="flex items-center gap-2.5">
           <input
-            className="home-section__search"
+            className="px-2 py-1.5 rounded border border-line bg-surface text-fg text-[12px]"
             placeholder="🔍 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
-            className="home-section__link-btn"
+            className="border-none bg-transparent text-accent cursor-pointer text-[12px]"
             onClick={() => setSortMode((m) => (m === 'recent' ? 'name' : 'recent'))}
             title="정렬 방식 전환"
           >
@@ -91,33 +99,37 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
         </div>
       </div>
 
-      <div className="home-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
         {filtered.map((host) => (
           <div
             key={host.id}
-            className="home-card"
+            className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-line bg-surface cursor-pointer text-left hover:border-accent"
             onDoubleClick={() => void handleConnect(host)}
             onContextMenu={(e) => openContextMenu(e, host)}
           >
-            <div className="home-card__header">
-              <span className={`home-card__dot home-card__dot--${statusFor(host.id)}`} />
-              <span className="home-card__name">{host.name}</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={cn('flex-shrink-0 w-2 h-2 rounded-full', DOT[statusFor(host.id)])} />
+              <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">{host.name}</span>
             </div>
-            <div className="home-card__address">{host.address}</div>
-            <button className="home-card__connect" onClick={() => void handleConnect(host)}>
+            <div className="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
+            <button
+              className="self-start border border-line bg-canvas text-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
+              onClick={() => void handleConnect(host)}
+            >
               연결
             </button>
           </div>
         ))}
 
-        <button className="home-card home-card--add" onClick={() => setDialog({})}>
+        <button
+          className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-muted text-[13px] hover:text-fg"
+          onClick={() => setDialog({})}
+        >
           + 새 호스트
         </button>
       </div>
 
-      {filtered.length === 0 && (
-        <div className="home-section__empty">호스트를 추가해 시작하세요</div>
-      )}
+      {filtered.length === 0 && <div className="text-muted text-[12px] py-2">호스트를 추가해 시작하세요</div>}
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextMenuItems(menu.host)} onClose={() => setMenu(null)} />}
       {dialog && <HostFormDialog open hostId={dialog.hostId} cloneFrom={dialog.cloneFrom} onClose={() => setDialog(null)} />}

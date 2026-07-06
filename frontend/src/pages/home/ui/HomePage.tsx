@@ -1,7 +1,6 @@
 import type { Host } from '../../../entities/host'
 import { SavedHostsGrid } from './SavedHostsGrid'
 import { SharedHostsGrid } from './SharedHostsGrid'
-import './HomePage.css'
 
 interface HomePageProps {
   onConnect: (host: Host, sessionId: string) => void
@@ -10,7 +9,7 @@ interface HomePageProps {
 
 export function HomePage({ onConnect, onConnectShared }: HomePageProps) {
   return (
-    <div className="home-page">
+    <div className="home-page h-full overflow-y-auto p-4 px-5 bg-canvas text-fg flex flex-col gap-6">
       <SavedHostsGrid onConnect={onConnect} />
       <SharedHostsGrid onConnect={onConnect} onConnectShared={onConnectShared} />
     </div>

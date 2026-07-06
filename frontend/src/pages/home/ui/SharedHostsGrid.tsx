@@ -4,6 +4,7 @@ import { removePeer, fetchSharedHosts, importSharedHost, describeShareError, typ
 import { PinEntryDialog, DirectAddPeerDialog } from '../../../features/peer-pairing'
 import { CredentialDialog } from '../../../features/shared-host-connect'
 import { useHostStore, type Host } from '../../../entities/host'
+import { cn } from '../../../shared/lib/cn'
 import { ContextMenu, useToastStore, type ContextMenuItem } from '../../../shared/ui'
 
 interface SharedHostsGridProps {
@@ -68,55 +69,58 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
   }
 
   return (
-    <section className="home-section">
-      <div className="home-section__header">
-        <span className="home-section__title">공유 호스트</span>
-        <div className="home-section__actions">
-          <button className="home-section__link-btn" onClick={() => setAddingByAddress(true)}>
+    <section>
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-[14px] font-semibold">공유 호스트</span>
+        <div className="flex items-center gap-2.5">
+          <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setAddingByAddress(true)}>
             IP로 추가
           </button>
         </div>
       </div>
 
-      {peers.length === 0 && <div className="home-section__empty">발견된 공유 피어가 없습니다</div>}
+      {peers.length === 0 && <div className="text-muted text-[12px] py-2">발견된 공유 피어가 없습니다</div>}
 
       {peers.map((peer) => (
-        <div key={peer.id} className="home-peer-group">
+        <div key={peer.id} className="mb-3.5">
           <div
-            className={['home-peer-group__header', !peer.online && 'home-peer-group__header--offline'].filter(Boolean).join(' ')}
+            className={cn('flex items-center gap-2 py-1.5', !peer.online && 'text-muted opacity-60')}
             onContextMenu={(e) => peer.paired && openPeerMenu(e, peer)}
           >
-            <span className="home-peer-group__icon">📡</span>
-            <span className="home-peer-group__name">
+            <span>📡</span>
+            <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">
               {peer.name}
               {peer.paired ? ` (${peer.hosts.length})` : ''}
             </span>
             {!peer.online && peer.lastSyncAt && (
-              <span className="home-peer-group__sync">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
+              <span className="text-[10px] text-muted">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
             )}
             {!peer.paired && (
-              <button className="home-section__link-btn" onClick={() => setPairing({ id: peer.id, name: peer.name })}>
+              <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setPairing({ id: peer.id, name: peer.name })}>
                 연결
               </button>
             )}
           </div>
 
           {peer.paired && (
-            <div className="home-grid">
-              {peer.hosts.length === 0 && <div className="home-section__empty">공유된 호스트가 없습니다</div>}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
+              {peer.hosts.length === 0 && <div className="text-muted text-[12px] py-2">공유된 호스트가 없습니다</div>}
               {peer.hosts.map((h, index) => (
                 <div
                   key={`${h.address}:${h.port}`}
-                  className="home-card"
+                  className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-line bg-surface cursor-pointer text-left hover:border-accent"
                   onDoubleClick={() => setConnecting(h)}
                   onContextMenu={(e) => openHostMenu(e, peer.id, index, h)}
                 >
-                  <div className="home-card__header">
-                    <span className="home-card__badge">⇢</span>
-                    <span className="home-card__name">{h.name}</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-accent">⇢</span>
+                    <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">{h.name}</span>
                   </div>
-                  <div className="home-card__address">{h.address}</div>
-                  <button className="home-card__connect" onClick={() => setConnecting(h)}>
+                  <div className="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap">{h.address}</div>
+                  <button
+                    className="self-start border border-line bg-canvas text-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
+                    onClick={() => setConnecting(h)}
+                  >
                     연결
                   </button>
                 </div>
