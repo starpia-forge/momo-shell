@@ -34,6 +34,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
   const screen = useTabStore((s) => s.screen)
   const showHome = useTabStore((s) => s.showHome)
   const showSettings = useTabStore((s) => s.showSettings)
+  const showSftp = useTabStore((s) => s.showSftp)
   const sessions = useSessionStore((s) => s.sessions)
   const hosts = useHostStore((s) => s.hosts)
 
@@ -126,6 +127,16 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
           <path d="M3 11 12 3l9 8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
+      </button>
+      <button
+        className={cn(
+          'flex-none px-3 border-none border-r border-line bg-transparent text-muted text-[12px] font-semibold cursor-pointer hover:text-fg',
+          screen === 'sftp' && 'text-fg bg-canvas',
+        )}
+        onClick={showSftp}
+        aria-label="SFTP"
+      >
+        SFTP
       </button>
       <div className="flex items-stretch min-w-0 overflow-x-auto">
         {tabs.map((tab, index) => {

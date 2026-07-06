@@ -11,6 +11,9 @@ interface HostFormDialogProps {
   hostId?: string
   /** Prefill fields from an existing host without editing it (host-sidebar's "복제"). */
   cloneFrom?: Host
+  /** Called with the saved host right after a successful save (SFTP page's
+   * ConnectGate uses this to connect immediately after registering a new host). */
+  onSaved?: (host: Host) => void
 }
 
 interface FormState {
@@ -59,7 +62,7 @@ function formFromHost(h: Host): FormState {
   }
 }
 
-export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDialogProps) {
+export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: HostFormDialogProps) {
   const existing = useHostStore((s) => (hostId ? s.hosts[hostId] : undefined))
   const save = useHostStore((s) => s.save)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -93,7 +96,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
   }
   const isValid = Object.values(errors).every((e) => !e)
 
-  async function persist(): Promise<string> {
+  async function persist(): Promise<Host> {
     const host = await save({
       id: savedId,
       name: form.name.trim(),
@@ -108,7 +111,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
       await setHostSecret(host.id, form.secret)
     }
     setSavedId(host.id)
-    return host.id
+    return host
   }
 
   async function handleTestConnection() {
@@ -116,8 +119,8 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
     setTesting(true)
     setTestResult(null)
     try {
-      const id = await persist()
-      setTestResult(await testConnection(id))
+      const host = await persist()
+      setTestResult(await testConnection(host.id))
     } finally {
       setTesting(false)
     }
@@ -127,7 +130,8 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
     if (!isValid) return
     setSaving(true)
     try {
-      await persist()
+      const host = await persist()
+      onSaved?.(host)
       onClose()
     } finally {
       setSaving(false)

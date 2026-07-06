@@ -32,6 +32,11 @@ describe('screen', () => {
     expect(useTabStore.getState().screen).toBe('settings')
   })
 
+  it('showSftp switches to sftp', () => {
+    useTabStore.getState().showSftp()
+    expect(useTabStore.getState().screen).toBe('sftp')
+  })
+
   it('addTab switches to workspace', () => {
     useTabStore.getState().addTab(makeTab())
     expect(useTabStore.getState().screen).toBe('workspace')
@@ -70,5 +75,18 @@ describe('screen', () => {
     useTabStore.getState().showSettings()
     useTabStore.getState().removeTab('t1')
     expect(useTabStore.getState().screen).toBe('settings')
+  })
+
+  it('addTab while on sftp switches to workspace', () => {
+    useTabStore.getState().showSftp()
+    useTabStore.getState().addTab(makeTab())
+    expect(useTabStore.getState().screen).toBe('workspace')
+  })
+
+  it('removeTab of the last tab falls back to home even while on sftp', () => {
+    useTabStore.getState().addTab(makeTab())
+    useTabStore.getState().showSftp()
+    useTabStore.getState().removeTab('t1')
+    expect(useTabStore.getState().screen).toBe('home')
   })
 })

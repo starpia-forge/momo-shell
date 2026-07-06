@@ -13,8 +13,8 @@ export interface Tab {
   subtitle: string
 }
 
-/** Which of the three center-slot views WorkspacePage renders. */
-export type Screen = 'home' | 'settings' | 'workspace'
+/** Which of the center-slot views WorkspacePage renders. */
+export type Screen = 'home' | 'settings' | 'sftp' | 'workspace'
 
 interface TabBarStore {
   tabs: Tab[]
@@ -31,6 +31,7 @@ interface TabBarStore {
   replaceSession: (tabId: string, sessionId: string) => void
   showHome: () => void
   showSettings: () => void
+  showSftp: () => void
 }
 
 export const useTabStore = create<TabBarStore>((set) => ({
@@ -72,4 +73,5 @@ export const useTabStore = create<TabBarStore>((set) => ({
     })),
   showHome: () => set({ screen: 'home' }),
   showSettings: () => set({ screen: 'settings' }),
+  showSftp: () => set({ screen: 'sftp' }),
 }))

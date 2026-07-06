@@ -7,6 +7,7 @@ import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { HomePage } from '../../home'
 import { SettingsPage } from '../../settings'
+import { SftpPage } from '../../sftp'
 import { FileBrowserPanel } from '../../../widgets/file-browser'
 import { HistoryPanel } from '../../../widgets/history-panel'
 import { HostSidebar } from '../../../widgets/host-sidebar'
@@ -140,6 +141,8 @@ export function WorkspacePage() {
       <div className="flex-1 flex min-h-0">
         {screen === 'settings' ? (
           <SettingsPage />
+        ) : screen === 'sftp' ? (
+          <SftpPage />
         ) : (
           <>
             <div className="flex-none w-55">
