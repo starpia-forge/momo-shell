@@ -31,8 +31,9 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
   const popoverOpen = useTabStore((s) => s.newTabPopoverOpen)
   const openPopover = useTabStore((s) => s.openNewTabPopover)
   const closePopover = useTabStore((s) => s.closeNewTabPopover)
-  const homeActive = useTabStore((s) => s.homeActive)
+  const screen = useTabStore((s) => s.screen)
   const showHome = useTabStore((s) => s.showHome)
+  const showSettings = useTabStore((s) => s.showSettings)
   const sessions = useSessionStore((s) => s.sessions)
   const hosts = useHostStore((s) => s.hosts)
 
@@ -116,7 +117,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
       <button
         className={cn(
           'flex-none flex items-center justify-center w-9 border-none border-r border-line bg-transparent text-muted cursor-pointer hover:text-fg',
-          homeActive && 'text-fg bg-canvas',
+          screen === 'home' && 'text-fg bg-canvas',
         )}
         onClick={showHome}
         aria-label="홈"
@@ -199,6 +200,24 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
           </div>
         )}
       </div>
+
+      <button
+        className={cn(
+          'flex-none flex items-center justify-center w-9 ml-auto border-none border-l border-line bg-transparent text-muted cursor-pointer hover:text-fg',
+          screen === 'settings' && 'text-fg bg-canvas',
+        )}
+        onClick={showSettings}
+        aria-label="설정"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
     </div>
   )
 }

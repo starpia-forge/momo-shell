@@ -6,6 +6,7 @@ import { PairApprovalDialog } from '../../../features/peer-pairing'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { HomePage } from '../../home'
+import { SettingsPage } from '../../settings'
 import { FileBrowserPanel } from '../../../widgets/file-browser'
 import { HistoryPanel } from '../../../widgets/history-panel'
 import { HostSidebar } from '../../../widgets/host-sidebar'
@@ -19,7 +20,7 @@ import { WorkspaceLayout, findLeaf, leaves, useWorkspaceLayoutStore } from '../.
 export function WorkspacePage() {
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
-  const homeActive = useTabStore((s) => s.homeActive)
+  const screen = useTabStore((s) => s.screen)
   const trees = useWorkspaceLayoutStore((s) => s.trees)
   const focusedLeafMap = useWorkspaceLayoutStore((s) => s.focusedLeaf)
 
@@ -141,7 +142,9 @@ export function WorkspacePage() {
           <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
         </div>
         <div className="flex-1 min-w-0 min-h-0 p-1 overflow-hidden">
-          {homeActive ? (
+          {screen === 'settings' ? (
+            <SettingsPage />
+          ) : screen === 'home' ? (
             <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
           ) : (
             activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />

@@ -13,12 +13,14 @@ export interface Tab {
   subtitle: string
 }
 
+/** Which of the three center-slot views WorkspacePage renders. */
+export type Screen = 'home' | 'settings' | 'workspace'
+
 interface TabBarStore {
   tabs: Tab[]
   activeId: string | null
   newTabPopoverOpen: boolean
-  /** True when the home page (host management) is shown instead of the active tab's workspace. */
-  homeActive: boolean
+  screen: Screen
   addTab: (tab: Tab) => void
   removeTab: (id: string) => void
   setActive: (id: string) => void
@@ -28,15 +30,16 @@ interface TabBarStore {
   activateByIndex: (index: number) => void
   replaceSession: (tabId: string, sessionId: string) => void
   showHome: () => void
+  showSettings: () => void
 }
 
 export const useTabStore = create<TabBarStore>((set) => ({
   tabs: [],
   activeId: null,
   newTabPopoverOpen: false,
-  homeActive: true,
+  screen: 'home',
   addTab: (tab) =>
-    set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id, newTabPopoverOpen: false, homeActive: false })),
+    set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id, newTabPopoverOpen: false, screen: 'workspace' })),
   removeTab: (id) =>
     set((s) => {
       const idx = s.tabs.findIndex((t) => t.id === id)
@@ -45,9 +48,9 @@ export const useTabStore = create<TabBarStore>((set) => ({
       if (activeId === id) {
         activeId = tabs[idx]?.id ?? tabs[idx - 1]?.id ?? null
       }
-      return { tabs, activeId, homeActive: tabs.length === 0 ? true : s.homeActive }
+      return { tabs, activeId, screen: tabs.length === 0 ? 'home' : s.screen }
     }),
-  setActive: (id) => set({ activeId: id, homeActive: false }),
+  setActive: (id) => set({ activeId: id, screen: 'workspace' }),
   reorder: (fromIndex, toIndex) =>
     set((s) => {
       if (fromIndex === toIndex) return s
@@ -61,11 +64,12 @@ export const useTabStore = create<TabBarStore>((set) => ({
   activateByIndex: (index) =>
     set((s) => {
       const tab = s.tabs[index]
-      return tab ? { activeId: tab.id, homeActive: false } : {}
+      return tab ? { activeId: tab.id, screen: 'workspace' } : {}
     }),
   replaceSession: (tabId, sessionId) =>
     set((s) => ({
       tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, sessionId } : t)),
     })),
-  showHome: () => set({ homeActive: true }),
+  showHome: () => set({ screen: 'home' }),
+  showSettings: () => set({ screen: 'settings' }),
 }))

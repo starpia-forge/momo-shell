@@ -13,49 +13,62 @@ function makeTab(overrides: Partial<Tab> = {}): Tab {
 }
 
 beforeEach(() => {
-  useTabStore.setState({ tabs: [], activeId: null, homeActive: true, newTabPopoverOpen: false })
+  useTabStore.setState({ tabs: [], activeId: null, screen: 'home', newTabPopoverOpen: false })
 })
 
-describe('homeActive', () => {
-  it('starts true', () => {
-    expect(useTabStore.getState().homeActive).toBe(true)
+describe('screen', () => {
+  it('starts on home', () => {
+    expect(useTabStore.getState().screen).toBe('home')
   })
 
-  it('showHome sets it true', () => {
-    useTabStore.setState({ homeActive: false })
+  it('showHome switches to home', () => {
+    useTabStore.setState({ screen: 'workspace' })
     useTabStore.getState().showHome()
-    expect(useTabStore.getState().homeActive).toBe(true)
+    expect(useTabStore.getState().screen).toBe('home')
   })
 
-  it('addTab clears it', () => {
-    useTabStore.getState().addTab(makeTab())
-    expect(useTabStore.getState().homeActive).toBe(false)
+  it('showSettings switches to settings', () => {
+    useTabStore.getState().showSettings()
+    expect(useTabStore.getState().screen).toBe('settings')
   })
 
-  it('setActive clears it', () => {
+  it('addTab switches to workspace', () => {
     useTabStore.getState().addTab(makeTab())
-    useTabStore.getState().showHome()
+    expect(useTabStore.getState().screen).toBe('workspace')
+  })
+
+  it('setActive switches to workspace', () => {
+    useTabStore.getState().addTab(makeTab())
+    useTabStore.getState().showSettings()
     useTabStore.getState().setActive('t1')
-    expect(useTabStore.getState().homeActive).toBe(false)
+    expect(useTabStore.getState().screen).toBe('workspace')
   })
 
-  it('activateByIndex clears it only when the index resolves to a tab', () => {
+  it('activateByIndex switches to workspace only when the index resolves to a tab', () => {
     useTabStore.getState().addTab(makeTab())
-    useTabStore.getState().showHome()
+    useTabStore.getState().showSettings()
     useTabStore.getState().activateByIndex(5)
-    expect(useTabStore.getState().homeActive).toBe(true)
+    expect(useTabStore.getState().screen).toBe('settings')
 
     useTabStore.getState().activateByIndex(0)
-    expect(useTabStore.getState().homeActive).toBe(false)
+    expect(useTabStore.getState().screen).toBe('workspace')
   })
 
   it('removeTab restores home once the last tab is closed, but not while tabs remain', () => {
     useTabStore.getState().addTab(makeTab({ id: 't1' }))
     useTabStore.getState().addTab(makeTab({ id: 't2' }))
     useTabStore.getState().removeTab('t1')
-    expect(useTabStore.getState().homeActive).toBe(false)
+    expect(useTabStore.getState().screen).toBe('workspace')
 
     useTabStore.getState().removeTab('t2')
-    expect(useTabStore.getState().homeActive).toBe(true)
+    expect(useTabStore.getState().screen).toBe('home')
+  })
+
+  it('removeTab leaves a non-workspace screen (e.g. settings) untouched while tabs remain', () => {
+    useTabStore.getState().addTab(makeTab({ id: 't1' }))
+    useTabStore.getState().addTab(makeTab({ id: 't2' }))
+    useTabStore.getState().showSettings()
+    useTabStore.getState().removeTab('t1')
+    expect(useTabStore.getState().screen).toBe('settings')
   })
 })
