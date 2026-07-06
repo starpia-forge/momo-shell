@@ -93,6 +93,28 @@
   opacity: 1;
 }
 
+.tab-bar__home {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  border: none;
+  border-right: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.tab-bar__home:hover {
+  color: var(--color-text);
+}
+
+.tab-bar__home--active {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
 .tab-bar__add-wrap {
   position: relative;
   flex: none;

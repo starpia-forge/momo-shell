@@ -17,6 +17,8 @@ interface TabBarStore {
   tabs: Tab[]
   activeId: string | null
   newTabPopoverOpen: boolean
+  /** True when the home page (host management) is shown instead of the active tab's workspace. */
+  homeActive: boolean
   addTab: (tab: Tab) => void
   removeTab: (id: string) => void
   setActive: (id: string) => void
@@ -25,13 +27,16 @@ interface TabBarStore {
   closeNewTabPopover: () => void
   activateByIndex: (index: number) => void
   replaceSession: (tabId: string, sessionId: string) => void
+  showHome: () => void
 }
 
 export const useTabStore = create<TabBarStore>((set) => ({
   tabs: [],
   activeId: null,
   newTabPopoverOpen: false,
-  addTab: (tab) => set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id, newTabPopoverOpen: false })),
+  homeActive: true,
+  addTab: (tab) =>
+    set((s) => ({ tabs: [...s.tabs, tab], activeId: tab.id, newTabPopoverOpen: false, homeActive: false })),
   removeTab: (id) =>
     set((s) => {
       const idx = s.tabs.findIndex((t) => t.id === id)
@@ -40,9 +45,9 @@ export const useTabStore = create<TabBarStore>((set) => ({
       if (activeId === id) {
         activeId = tabs[idx]?.id ?? tabs[idx - 1]?.id ?? null
       }
-      return { tabs, activeId }
+      return { tabs, activeId, homeActive: tabs.length === 0 ? true : s.homeActive }
     }),
-  setActive: (id) => set({ activeId: id }),
+  setActive: (id) => set({ activeId: id, homeActive: false }),
   reorder: (fromIndex, toIndex) =>
     set((s) => {
       if (fromIndex === toIndex) return s
@@ -56,10 +61,11 @@ export const useTabStore = create<TabBarStore>((set) => ({
   activateByIndex: (index) =>
     set((s) => {
       const tab = s.tabs[index]
-      return tab ? { activeId: tab.id } : {}
+      return tab ? { activeId: tab.id, homeActive: false } : {}
     }),
   replaceSession: (tabId, sessionId) =>
     set((s) => ({
       tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, sessionId } : t)),
     })),
+  showHome: () => set({ homeActive: true }),
 }))

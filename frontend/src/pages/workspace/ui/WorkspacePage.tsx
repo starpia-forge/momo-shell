@@ -1,17 +1,18 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect } from 'react'
 import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
 import { DestinationBar } from '../../../features/file-upload'
 import { PairApprovalDialog } from '../../../features/peer-pairing'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
+import { HomePage } from '../../home'
 import { FileBrowserPanel } from '../../../widgets/file-browser'
 import { HistoryPanel } from '../../../widgets/history-panel'
 import { HostSidebar } from '../../../widgets/host-sidebar'
 import { RightDock } from '../../../widgets/right-dock'
 import { SharePanel } from '../../../widgets/share-panel'
 import { StatusBar } from '../../../widgets/status-bar'
-import { TabBar, createLocalTab, useTabStore, type Tab } from '../../../widgets/tab-bar'
+import { TabBar, useTabStore, type Tab } from '../../../widgets/tab-bar'
 import { TransferCenter } from '../../../widgets/transfer-center'
 import { WorkspaceLayout, findLeaf, leaves, useWorkspaceLayoutStore } from '../../../widgets/workspace-layout'
 import './WorkspacePage.css'
@@ -19,15 +20,9 @@ import './WorkspacePage.css'
 export function WorkspacePage() {
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
+  const homeActive = useTabStore((s) => s.homeActive)
   const trees = useWorkspaceLayoutStore((s) => s.trees)
   const focusedLeafMap = useWorkspaceLayoutStore((s) => s.focusedLeaf)
-  const opened = useRef(false)
-
-  useEffect(() => {
-    if (opened.current) return
-    opened.current = true
-    void createLocalTab()
-  }, [])
 
   const activeTab = tabs.find((t) => t.id === activeId)
 
@@ -147,7 +142,11 @@ export function WorkspacePage() {
           <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
         </div>
         <div className="workspace__pane">
-          {activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />}
+          {homeActive ? (
+            <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
+          ) : (
+            activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />
+          )}
         </div>
         <RightDock
           historyPanel={

@@ -22,6 +22,8 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
   const popoverOpen = useTabStore((s) => s.newTabPopoverOpen)
   const openPopover = useTabStore((s) => s.openNewTabPopover)
   const closePopover = useTabStore((s) => s.closeNewTabPopover)
+  const homeActive = useTabStore((s) => s.homeActive)
+  const showHome = useTabStore((s) => s.showHome)
   const sessions = useSessionStore((s) => s.sessions)
   const hosts = useHostStore((s) => s.hosts)
 
@@ -102,6 +104,16 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
 
   return (
     <div className="tab-bar" onDragOver={handleBarDragOver} onDrop={handleBarDrop}>
+      <button
+        className={`tab-bar__home ${homeActive ? 'tab-bar__home--active' : ''}`}
+        onClick={showHome}
+        aria-label="홈"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 11 12 3l9 8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
       <div className="tab-bar__tabs">
         {tabs.map((tab, index) => {
           const state = sessions[tab.sessionId]?.state ?? 'idle'
