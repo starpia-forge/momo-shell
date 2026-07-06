@@ -146,6 +146,10 @@ func (s *TransferService) Chmod(sessionID, path string, mode uint32) error {
 	return s.uc.Chmod(sessionID, path, mode)
 }
 
+func (s *TransferService) CopyRemote(sessionID string, srcPaths []string, dstDir string) error {
+	return s.uc.CopyRemote(sessionID, srcPaths, dstDir)
+}
+
 func (s *TransferService) CancelTransfer(taskID string) error {
 	return s.uc.Cancel(taskID)
 }

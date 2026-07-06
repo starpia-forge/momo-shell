@@ -22,6 +22,10 @@ export function Chmod(arg1, arg2, arg3) {
   return window['go']['wails']['TransferService']['Chmod'](arg1, arg2, arg3);
 }
 
+export function CopyRemote(arg1, arg2, arg3) {
+  return window['go']['wails']['TransferService']['CopyRemote'](arg1, arg2, arg3);
+}
+
 export function Download(arg1, arg2, arg3, arg4) {
   return window['go']['wails']['TransferService']['Download'](arg1, arg2, arg3, arg4);
 }

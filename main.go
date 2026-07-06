@@ -23,6 +23,7 @@ import (
 	"momo-shell/internal/adapter/out/zmodem"
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
+	"momo-shell/internal/core/service/localfs"
 	"momo-shell/internal/core/service/session"
 	"momo-shell/internal/core/service/settings"
 	"momo-shell/internal/core/service/share"
@@ -103,6 +104,7 @@ func main() {
 	shareSvc.SetServer(shareServer)
 
 	settingsSvc := settings.New(settingsRepo)
+	localfsSvc := localfs.New()
 
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	clipboardWriter := wailsfacade.NewClipboardWriter()
@@ -114,6 +116,7 @@ func main() {
 	transferService := wailsfacade.NewTransferService(transferSvc, transferDialogs)
 	shareService := wailsfacade.NewShareService(shareSvc)
 	settingsService := wailsfacade.NewSettingsService(settingsSvc, version)
+	localFSService := wailsfacade.NewLocalFSService(localfsSvc)
 	fileDropRelay := wailsfacade.NewFileDropRelay(publisher)
 
 	err = wailsapp.Run(&options.App{
@@ -154,6 +157,7 @@ func main() {
 			transferService,
 			shareService,
 			settingsService,
+			localFSService,
 		},
 	})
 
