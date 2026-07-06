@@ -48,6 +48,13 @@ type ShareUseCase interface {
 	// other saved host. The credential is not carried over -- the caller
 	// (frontend) is responsible for a subsequent SetHostSecret if desired.
 	ImportSharedHost(peerID string, index int) (domain.Host, error)
+
+	// DeviceName returns the effective name this instance presents to
+	// peers -- the custom override if set, otherwise os.Hostname().
+	DeviceName() (string, error)
+	// SetDeviceName sets a custom device name override ("" clears it, back
+	// to os.Hostname()). Re-advertises immediately if sharing is enabled.
+	SetDeviceName(name string) error
 }
 
 // PeerView is the consumer-side snapshot of one peer shown in the host

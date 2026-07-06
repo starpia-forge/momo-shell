@@ -124,6 +124,7 @@ func NewShareSettingsRepo(db *sql.DB) *ShareSettingsRepo {
 const (
 	settingsKeyInstanceID    = "instance_id"
 	settingsKeySharedHostIDs = "shared_host_ids"
+	settingsKeyDeviceName    = "device_name"
 )
 
 // InstanceID returns this instance's persistent identifier, generating and
@@ -164,6 +165,16 @@ func (r *ShareSettingsRepo) SetSharedHostIDs(ids []string) error {
 		return fmt.Errorf("sqlite: marshal shared host ids: %w", err)
 	}
 	return r.set(settingsKeySharedHostIDs, string(data))
+}
+
+// DeviceName returns the custom device name override, or "" if unset.
+func (r *ShareSettingsRepo) DeviceName() (string, error) {
+	value, _, err := r.get(settingsKeyDeviceName)
+	return value, err
+}
+
+func (r *ShareSettingsRepo) SetDeviceName(name string) error {
+	return r.set(settingsKeyDeviceName, name)
 }
 
 func (r *ShareSettingsRepo) get(key string) (string, bool, error) {

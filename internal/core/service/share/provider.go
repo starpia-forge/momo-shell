@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,9 +20,8 @@ import (
 // Info implements in.ShareServerCallbacks, answering GET /api/v1/info.
 func (s *Service) Info() in.ShareInfo {
 	instanceID, _ := s.settings.InstanceID()
-	name, _ := os.Hostname()
 	hostIDs, _ := s.settings.SharedHostIDs()
-	return in.ShareInfo{Ver: 1, ID: instanceID, Name: name, HostCount: len(hostIDs)}
+	return in.ShareInfo{Ver: 1, ID: instanceID, Name: s.deviceName(), HostCount: len(hostIDs)}
 }
 
 // HandlePair implements in.ShareServerCallbacks, answering POST

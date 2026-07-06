@@ -6,6 +6,10 @@ export function AddPeerByAddress(arg1, arg2, arg3) {
   return window['go']['wails']['ShareService']['AddPeerByAddress'](arg1, arg2, arg3);
 }
 
+export function DeviceName() {
+  return window['go']['wails']['ShareService']['DeviceName']();
+}
+
 export function DisableSharing() {
   return window['go']['wails']['ShareService']['DisableSharing']();
 }
@@ -44,6 +48,10 @@ export function RespondPairing(arg1, arg2) {
 
 export function RevokeClient(arg1) {
   return window['go']['wails']['ShareService']['RevokeClient'](arg1);
+}
+
+export function SetDeviceName(arg1) {
+  return window['go']['wails']['ShareService']['SetDeviceName'](arg1);
 }
 
 export function SetSharedHosts(arg1) {

@@ -112,6 +112,7 @@ type fakeSettings struct {
 	mu            sync.Mutex
 	instanceID    string
 	sharedHostIDs []string
+	deviceName    string
 }
 
 func newFakeSettings() *fakeSettings {
@@ -137,6 +138,19 @@ func (s *fakeSettings) SetSharedHostIDs(ids []string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sharedHostIDs = append([]string{}, ids...)
+	return nil
+}
+
+func (s *fakeSettings) DeviceName() (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.deviceName, nil
+}
+
+func (s *fakeSettings) SetDeviceName(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.deviceName = name
 	return nil
 }
 

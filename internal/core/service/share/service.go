@@ -6,7 +6,9 @@ package share
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +16,9 @@ import (
 	"momo-shell/internal/core/port/in"
 	"momo-shell/internal/core/port/out"
 )
+
+// maxDeviceNameBytes mirrors the mDNS instance-name label length limit.
+const maxDeviceNameBytes = 63
 
 const (
 	maxPinFailures      = 5
@@ -137,8 +142,7 @@ func (s *Service) EnableSharing(hostIDs []string) (in.ShareStatus, error) {
 			_ = s.server.Stop(context.Background())
 			return in.ShareStatus{}, err
 		}
-		name, _ := os.Hostname()
-		if err := s.announcer.Announce(instanceID, name, port); err != nil {
+		if err := s.announcer.Announce(instanceID, s.deviceName(), port); err != nil {
 			_ = s.server.Stop(context.Background())
 			return in.ShareStatus{}, err
 		}
@@ -171,7 +175,6 @@ func (s *Service) Status() (in.ShareStatus, error) {
 	if err != nil {
 		return in.ShareStatus{}, err
 	}
-	name, _ := os.Hostname()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -179,9 +182,52 @@ func (s *Service) Status() (in.ShareStatus, error) {
 		Enabled:       s.enabled,
 		PIN:           s.pin,
 		Port:          s.port,
-		InstanceName:  name,
+		InstanceName:  s.deviceName(),
 		SharedHostIDs: hostIDs,
 	}, nil
+}
+
+// deviceName returns the effective name this instance presents to peers --
+// the custom override if set, otherwise os.Hostname().
+func (s *Service) deviceName() string {
+	name, err := s.settings.DeviceName()
+	if err != nil || name == "" {
+		hostname, _ := os.Hostname()
+		return hostname
+	}
+	return name
+}
+
+func (s *Service) DeviceName() (string, error) {
+	return s.deviceName(), nil
+}
+
+// SetDeviceName sets a custom device name override ("" clears it, back to
+// os.Hostname()), then re-advertises immediately if sharing is currently
+// enabled -- otherwise the new name would only take effect on the next
+// EnableSharing call.
+func (s *Service) SetDeviceName(name string) error {
+	name = strings.TrimSpace(name)
+	if len(name) > maxDeviceNameBytes {
+		return fmt.Errorf("share: device name exceeds %d bytes", maxDeviceNameBytes)
+	}
+	if err := s.settings.SetDeviceName(name); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	enabled, port := s.enabled, s.port
+	s.mu.Unlock()
+	if !enabled {
+		return nil
+	}
+
+	instanceID, err := s.settings.InstanceID()
+	if err != nil {
+		return err
+	}
+	s.announcer.Stop()
+	return s.announcer.Announce(instanceID, s.deviceName(), port)
 }
 
 func (s *Service) SetSharedHosts(hostIDs []string) error {

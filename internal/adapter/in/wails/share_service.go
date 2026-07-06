@@ -143,6 +143,14 @@ func (s *ShareService) ImportSharedHost(peerID string, index int) (HostDTO, erro
 	return hostToDTO(host), nil
 }
 
+func (s *ShareService) DeviceName() (string, error) {
+	return s.uc.DeviceName()
+}
+
+func (s *ShareService) SetDeviceName(name string) error {
+	return s.uc.SetDeviceName(name)
+}
+
 func statusToDTO(status in.ShareStatus) ShareStatusDTO {
 	return ShareStatusDTO{
 		Enabled:       status.Enabled,

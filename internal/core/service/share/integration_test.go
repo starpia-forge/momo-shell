@@ -157,6 +157,7 @@ func TestTwoInstancePairingAndSharing(t *testing.T) {
 	secretsA := newMemSecretStore()
 	serviceA := share.New(share.Deps{
 		Peers:      sqlite.NewPeerRepo(dbA),
+		Settings:   sqlite.NewShareSettingsRepo(dbA),
 		Secrets:    secretsA,
 		PeerClient: shareclient.New(),
 		Pub:        &capturingPublisher{},

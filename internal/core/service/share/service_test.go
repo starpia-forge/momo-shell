@@ -1,6 +1,7 @@
 package share
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -124,6 +125,103 @@ func TestSetSharedHosts_UpdatesSelectionWithoutTouchingPIN(t *testing.T) {
 	}
 	if len(after.SharedHostIDs) != 2 {
 		t.Fatalf("SharedHostIDs = %v, want 2 entries", after.SharedHostIDs)
+	}
+}
+
+func TestDeviceName_FallsBackToHostnameWhenUnset(t *testing.T) {
+	ts := newTestService()
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatalf("os.Hostname() error = %v", err)
+	}
+
+	name, err := ts.svc.DeviceName()
+	if err != nil {
+		t.Fatalf("DeviceName() error = %v", err)
+	}
+	if name != hostname {
+		t.Fatalf("DeviceName() = %q, want hostname %q", name, hostname)
+	}
+}
+
+func TestDeviceName_UsesCustomOverride(t *testing.T) {
+	ts := newTestService()
+
+	if err := ts.svc.SetDeviceName("kim-laptop"); err != nil {
+		t.Fatalf("SetDeviceName() error = %v", err)
+	}
+	name, err := ts.svc.DeviceName()
+	if err != nil {
+		t.Fatalf("DeviceName() error = %v", err)
+	}
+	if name != "kim-laptop" {
+		t.Fatalf("DeviceName() = %q, want kim-laptop", name)
+	}
+}
+
+func TestSetDeviceName_RejectsTooLong(t *testing.T) {
+	ts := newTestService()
+
+	long := make([]byte, 64)
+	for i := range long {
+		long[i] = 'a'
+	}
+	if err := ts.svc.SetDeviceName(string(long)); err == nil {
+		t.Fatal("expected error for device name exceeding 63 bytes")
+	}
+}
+
+func TestSetDeviceName_NoAnnounceWhenDisabled(t *testing.T) {
+	ts := newTestService()
+
+	if err := ts.svc.SetDeviceName("kim-laptop"); err != nil {
+		t.Fatalf("SetDeviceName() error = %v", err)
+	}
+	if ts.announcer.announced != 0 {
+		t.Fatalf("announcer.Announce() called %d times, want 0 (sharing disabled)", ts.announcer.announced)
+	}
+}
+
+func TestSetDeviceName_ReannouncesWhenEnabled(t *testing.T) {
+	ts := newTestService()
+
+	if _, err := ts.svc.EnableSharing([]string{"h1"}); err != nil {
+		t.Fatalf("EnableSharing() error = %v", err)
+	}
+	if ts.announcer.announced != 1 {
+		t.Fatalf("announcer.Announce() called %d times, want 1 (initial)", ts.announcer.announced)
+	}
+
+	if err := ts.svc.SetDeviceName("kim-laptop"); err != nil {
+		t.Fatalf("SetDeviceName() error = %v", err)
+	}
+	if ts.announcer.stopCount() != 1 {
+		t.Fatalf("announcer.Stop() called %d times, want 1", ts.announcer.stopCount())
+	}
+	if ts.announcer.announced != 2 {
+		t.Fatalf("announcer.Announce() called %d times, want 2 (re-announced)", ts.announcer.announced)
+	}
+	if ts.announcer.lastName != "kim-laptop" {
+		t.Fatalf("announcer.Announce() lastName = %q, want kim-laptop", ts.announcer.lastName)
+	}
+	if ts.announcer.lastPort != 47800 {
+		t.Fatalf("announcer.Announce() lastPort = %d, want unchanged 47800", ts.announcer.lastPort)
+	}
+}
+
+func TestStatus_InstanceNameReflectsCustomDeviceName(t *testing.T) {
+	ts := newTestService()
+
+	if err := ts.svc.SetDeviceName("kim-laptop"); err != nil {
+		t.Fatalf("SetDeviceName() error = %v", err)
+	}
+	status, err := ts.svc.Status()
+	if err != nil {
+		t.Fatalf("Status() error = %v", err)
+	}
+	if status.InstanceName != "kim-laptop" {
+		t.Fatalf("Status().InstanceName = %q, want kim-laptop", status.InstanceName)
 	}
 }
 

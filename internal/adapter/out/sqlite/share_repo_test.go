@@ -169,6 +169,40 @@ func TestShareSettingsRepo_SharedHostIDsRoundTrips(t *testing.T) {
 	}
 }
 
+func TestShareSettingsRepo_DeviceNameEmptyUntilSet(t *testing.T) {
+	repo := newTestShareSettingsRepo(t)
+
+	name, err := repo.DeviceName()
+	if err != nil {
+		t.Fatalf("DeviceName() error = %v", err)
+	}
+	if name != "" {
+		t.Fatalf("DeviceName() (before set) = %q, want empty", name)
+	}
+
+	if err := repo.SetDeviceName("kim-laptop"); err != nil {
+		t.Fatalf("SetDeviceName() error = %v", err)
+	}
+	name, err = repo.DeviceName()
+	if err != nil {
+		t.Fatalf("DeviceName() error = %v", err)
+	}
+	if name != "kim-laptop" {
+		t.Fatalf("DeviceName() = %q, want kim-laptop", name)
+	}
+
+	if err := repo.SetDeviceName(""); err != nil {
+		t.Fatalf("SetDeviceName() (clear) error = %v", err)
+	}
+	name, err = repo.DeviceName()
+	if err != nil {
+		t.Fatalf("DeviceName() error = %v", err)
+	}
+	if name != "" {
+		t.Fatalf("DeviceName() after clear = %q, want empty", name)
+	}
+}
+
 func newTestPeerRepo(t *testing.T) *PeerRepo {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.db")

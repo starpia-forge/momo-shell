@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -260,8 +259,7 @@ func (s *Service) syncOnce() {
 }
 
 func (s *Service) localClientName() string {
-	name, _ := os.Hostname()
-	return name
+	return s.deviceName()
 }
 
 func peerTokenRef(peerID string) string {

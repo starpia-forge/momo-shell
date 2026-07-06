@@ -4,6 +4,8 @@ import {wails} from '../models';
 
 export function AddPeerByAddress(arg1:string,arg2:number,arg3:string):Promise<void>;
 
+export function DeviceName():Promise<string>;
+
 export function DisableSharing():Promise<void>;
 
 export function EnableSharing(arg1:Array<string>):Promise<wails.ShareStatusDTO>;
@@ -23,6 +25,8 @@ export function RemovePeer(arg1:string):Promise<void>;
 export function RespondPairing(arg1:string,arg2:boolean):Promise<void>;
 
 export function RevokeClient(arg1:string):Promise<void>;
+
+export function SetDeviceName(arg1:string):Promise<void>;
 
 export function SetSharedHosts(arg1:Array<string>):Promise<void>;
 

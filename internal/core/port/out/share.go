@@ -38,6 +38,10 @@ type ShareSettings interface {
 	InstanceID() (string, error)
 	SharedHostIDs() ([]string, error)
 	SetSharedHostIDs(ids []string) error
+	// DeviceName returns the custom device name override, or "" if unset
+	// (the caller should fall back to os.Hostname()).
+	DeviceName() (string, error)
+	SetDeviceName(name string) error
 }
 
 // PeerRepository persists peers this instance has paired with in the
