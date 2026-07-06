@@ -24,12 +24,16 @@ import (
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
 	"momo-shell/internal/core/service/session"
+	"momo-shell/internal/core/service/settings"
 	"momo-shell/internal/core/service/share"
 	"momo-shell/internal/core/service/transfer"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+// version is injected at build time via -ldflags "-X main.version=...".
+var version = "dev"
 
 func main() {
 	// Composition root: wire ports to adapters. Nothing above this function
@@ -55,6 +59,7 @@ func main() {
 	shareClientRepo := sqlite.NewShareClientRepo(db)
 	shareSettingsRepo := sqlite.NewShareSettingsRepo(db)
 	peerRepo := sqlite.NewPeerRepo(db)
+	settingsRepo := sqlite.NewSettingsRepo(db)
 	sshOpener := sshconn.New(sshconn.WithFileSystemFactory(sftp.NewFromClient))
 	localOpener := pty.NewOpener()
 
@@ -97,6 +102,8 @@ func main() {
 	shareServer := sharehttp.New(shareSvc, shareCert)
 	shareSvc.SetServer(shareServer)
 
+	settingsSvc := settings.New(settingsRepo)
+
 	keyFileBrowser := wailsfacade.NewKeyFileBrowser()
 	clipboardWriter := wailsfacade.NewClipboardWriter()
 	transferDialogs := wailsfacade.NewTransferDialogs()
@@ -106,6 +113,7 @@ func main() {
 	clipboardService := wailsfacade.NewClipboardService(clipboardWriter)
 	transferService := wailsfacade.NewTransferService(transferSvc, transferDialogs)
 	shareService := wailsfacade.NewShareService(shareSvc)
+	settingsService := wailsfacade.NewSettingsService(settingsSvc, version)
 	fileDropRelay := wailsfacade.NewFileDropRelay(publisher)
 
 	err = wailsapp.Run(&options.App{
@@ -145,6 +153,7 @@ func main() {
 			clipboardService,
 			transferService,
 			shareService,
+			settingsService,
 		},
 	})
 

@@ -1,5 +1,17 @@
 export namespace wails {
 	
+	export class AppInfoDTO {
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppInfoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	    }
+	}
 	export class HistoryEntryDTO {
 	    id: number;
 	    hostId?: string;

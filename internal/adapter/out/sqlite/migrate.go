@@ -7,7 +7,7 @@ import (
 
 // schemaVersion tracks applied migrations via PRAGMA user_version so Open
 // is idempotent across app restarts.
-const schemaVersion = 2
+const schemaVersion = 3
 
 func migrate(db *sql.DB) error {
 	var version int
@@ -22,6 +22,11 @@ func migrate(db *sql.DB) error {
 	}
 	if version < 2 {
 		if err := migrateV2(db); err != nil {
+			return err
+		}
+	}
+	if version < 3 {
+		if err := migrateV3(db); err != nil {
 			return err
 		}
 	}
@@ -111,6 +116,25 @@ func migrateV2(db *sql.DB) error {
 	for _, stmt := range stmts {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("sqlite: migrate v2: %w", err)
+		}
+	}
+	return nil
+}
+
+// migrateV3 adds app_settings, a flat key-value store for app-wide
+// settings (docs/plan/09-settings.md) -- appearance theme and terminal
+// defaults, distinct from share_settings which is share-domain identity.
+func migrateV3(db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS app_settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		)`,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("sqlite: migrate v3: %w", err)
 		}
 	}
 	return nil

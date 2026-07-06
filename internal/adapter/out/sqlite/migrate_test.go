@@ -49,3 +49,42 @@ func TestMigrate_V1ToV2AddsShareTables(t *testing.T) {
 		}
 	}
 }
+
+// TestMigrate_V2ToV3AddsAppSettings simulates an existing v2 database
+// (schema_version=2, no app_settings table) being opened by the current
+// code, asserting the v3 migration runs and the new table is queryable.
+func TestMigrate_V2ToV3AddsAppSettings(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.db")
+
+	db, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if _, err := db.Exec("PRAGMA user_version = 2"); err != nil {
+		t.Fatalf("reset schema version: %v", err)
+	}
+	if _, err := db.Exec("DROP TABLE IF EXISTS app_settings"); err != nil {
+		t.Fatalf("drop app_settings: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() (reopen) error = %v", err)
+	}
+	defer reopened.Close()
+
+	var version int
+	if err := reopened.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("read schema version: %v", err)
+	}
+	if version != schemaVersion {
+		t.Fatalf("schema version = %d, want %d", version, schemaVersion)
+	}
+
+	if _, err := reopened.Exec("SELECT * FROM app_settings LIMIT 1"); err != nil {
+		t.Fatalf("table app_settings not queryable after migration: %v", err)
+	}
+}
