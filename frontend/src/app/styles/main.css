@@ -1,0 +1,60 @@
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/700.css';
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* ── 계층 1: 테마 팔레트 (런타임 변수) ─────────────── */
+:root {
+  --theme-canvas: #1b2636;
+  --theme-surface: #22314a;
+  --theme-line: #34486b;
+  --theme-fg: #e8edf5;
+  --theme-muted: #9aa9c2;
+  --theme-accent: #4f8cff;
+  --theme-on-accent: #ffffff;
+  --theme-danger: #ef5b5b;
+  --theme-success: #4caf7d;
+  --theme-warning: #e0c341;
+  --theme-overlay: rgba(0, 0, 0, 0.5);
+  --theme-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ── 계층 2: Tailwind 시맨틱 토큰 (@theme inline) ───── */
+@theme inline {
+  --color-*: initial;
+  --color-canvas: var(--theme-canvas);
+  --color-surface: var(--theme-surface);
+  --color-line: var(--theme-line);
+  --color-fg: var(--theme-fg);
+  --color-muted: var(--theme-muted);
+  --color-accent: var(--theme-accent);
+  --color-on-accent: var(--theme-on-accent);
+  --color-danger: var(--theme-danger);
+  --color-success: var(--theme-success);
+  --color-warning: var(--theme-warning);
+  --color-overlay: var(--theme-overlay);
+}
+
+@theme {
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  --shadow-float: 0 4px 12px var(--theme-shadow);
+  --animate-pulse-dot: pulse-dot 1s ease-in-out infinite;
+  --animate-spin: spin 0.6s linear infinite;
+  @keyframes pulse-dot {
+    50% {
+      opacity: 0.3;
+    }
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-canvas text-fg font-mono antialiased;
+    line-height: normal;
+  }
+}

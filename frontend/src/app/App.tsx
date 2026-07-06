@@ -3,7 +3,7 @@ import { registerFileDropRouter } from '../features/file-upload'
 import { WorkspacePage } from '../pages/workspace'
 import { ToastHost } from '../shared/ui'
 import { registerGlobalShortcuts } from './keyboard'
-import './styles/global.css'
+import './styles/main.css'
 
 export default function App() {
   useEffect(() => registerGlobalShortcuts(), [])
