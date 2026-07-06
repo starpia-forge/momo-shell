@@ -12,6 +12,7 @@ frontend/package.json.md5
 .claude
 .codex
 .gemini
+.claudedocs
 
 # MCP
 .playwright-mcp
