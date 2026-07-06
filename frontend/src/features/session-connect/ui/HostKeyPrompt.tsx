@@ -1,7 +1,6 @@
 import { Dialog, Button } from '../../../shared/ui'
 import { useHostKeyPromptStore } from '../../../entities/session'
 import { respondHostKey } from '../../../shared/api/session'
-import './HostKeyPrompt.css'
 
 // Mounted once (see pages/workspace). Renders at most one prompt at a time
 // -- concurrent unrecognized host keys are rare enough that queuing them
@@ -21,15 +20,15 @@ export function HostKeyPrompt() {
 
   return (
     <Dialog open onClose={() => respond('cancel')} title="호스트 키 확인">
-      <div className="host-key-prompt">
+      <div className="flex flex-col gap-2.5 w-80 text-[13px]">
         <p>
           <strong>
             {payload.address}:{payload.port}
           </strong>{' '}
           ({payload.algo})의 키가 등록되어 있지 않습니다.
         </p>
-        <p className="host-key-prompt__fingerprint">{payload.fingerprint}</p>
-        <div className="host-key-prompt__actions">
+        <p className="font-mono text-[12px] px-2 py-1.5 bg-canvas rounded break-all">{payload.fingerprint}</p>
+        <div className="flex justify-end gap-2">
           <Button variant="primary" onClick={() => respond('trust')}>
             신뢰하고 저장
           </Button>

@@ -8,7 +8,6 @@ import {
   type SharePairRequestResolvedPayload,
 } from '../../../shared/api/events'
 import { usePairRequestStore } from '../model/pairRequests'
-import './PairApprovalDialog.css'
 
 // Mounted once (see pages/workspace), same one-at-a-time shape as
 // HostKeyPrompt -- concurrent pairing requests are rare enough that
@@ -45,11 +44,11 @@ export function PairApprovalDialog() {
 
   return (
     <Dialog open onClose={() => respond(false)} title="공유 연결 요청">
-      <div className="pair-approval">
+      <div className="flex flex-col gap-2.5 w-80 text-[13px]">
         <p>
           <strong>{payload.clientName}</strong>({payload.remoteAddr})에서 호스트 공유 연결을 요청했습니다.
         </p>
-        <div className="pair-approval__actions">
+        <div className="flex justify-end gap-2">
           <Button variant="primary" onClick={() => respond(true)}>
             허용
           </Button>

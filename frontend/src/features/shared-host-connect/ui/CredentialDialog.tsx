@@ -3,7 +3,6 @@ import { Dialog, Button, TextInput } from '../../../shared/ui'
 import { browseForKeyFile, type AuthType, type Host } from '../../../shared/api/host'
 import type { SharedHost } from '../../../shared/api/share'
 import { connectSharedHost } from '../lib/connectSharedHost'
-import './CredentialDialog.css'
 
 interface CredentialDialogProps {
   sharedHost: SharedHost
@@ -50,23 +49,23 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
   return (
     <Dialog open onClose={onClose} title={`${sharedHost.name}에 연결`}>
       <form
-        className="credential-dialog"
+        className="flex flex-col gap-3 w-75 text-[13px]"
         onSubmit={(e) => {
           e.preventDefault()
           void submit()
         }}
       >
-        <p className="credential-dialog__target">
+        <p className="m-0 text-muted font-mono text-[12px]">
           {sharedHost.address}:{sharedHost.port}
         </p>
 
         <TextInput label="사용자명" value={username} onChange={(e) => setUsername(e.target.value)} />
 
-        <div className="credential-dialog__field">
-          <span className="credential-dialog__label">인증 방식</span>
-          <div className="credential-dialog__radios">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] text-muted">인증 방식</span>
+          <div className="flex gap-3">
             {(['password', 'privateKey', 'agent'] as const).map((type) => (
-              <label key={type} className="credential-dialog__radio">
+              <label key={type} className="flex items-center gap-1 cursor-pointer">
                 <input type="radio" name="authType" checked={authType === type} onChange={() => setAuthType(type)} />
                 {type === 'password' ? '비밀번호' : type === 'privateKey' ? 'SSH 키' : 'Agent'}
               </label>
@@ -80,7 +79,7 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
 
         {authType === 'privateKey' && (
           <>
-            <div className="credential-dialog__row">
+            <div className="flex items-end gap-2 [&>*:first-child]:flex-1">
               <TextInput label="키 파일*" value={keyPath} readOnly error={keyPathError} />
               <Button type="button" onClick={handleBrowseKeyFile}>
                 찾아보기
@@ -90,14 +89,14 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
           </>
         )}
 
-        <label className="credential-dialog__checkbox">
+        <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={saveAsHost} onChange={(e) => setSaveAsHost(e.target.checked)} />
           내 호스트로 저장하며 연결
         </label>
 
-        {error && <div className="credential-dialog__error">{error}</div>}
+        {error && <div className="text-danger text-[12px]">{error}</div>}
 
-        <div className="credential-dialog__actions">
+        <div className="flex justify-end gap-2">
           <Button type="submit" variant="primary" disabled={!isValid || connecting}>
             {connecting ? '연결 중...' : '연결'}
           </Button>

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { detectUploadConflicts, uploadFiles, type ConflictPolicy } from '../../../shared/api'
 import { ConflictDialog } from '../../../shared/ui'
 import { useFileUploadStore } from '../model/store'
-import './DestinationBar.css'
 
 const AUTO_PROCEED_MS = 3000
 
@@ -65,10 +64,10 @@ export function DestinationBar() {
   return (
     <>
       {pending && (
-        <div className="destination-bar">
-          <span className="destination-bar__label">{pending.paths.length}개 파일을</span>
+        <div className="fixed left-1/2 bottom-6 -translate-x-1/2 z-100 flex items-center gap-2 px-3 py-2 rounded-lg bg-surface border border-line shadow-[0_4px_16px_rgba(0,0,0,0.35)] text-fg text-[12px]">
+          <span className="whitespace-nowrap text-muted">{pending.paths.length}개 파일을</span>
           <input
-            className="destination-bar__path"
+            className="min-w-55 px-2 py-1 rounded border border-line bg-canvas text-fg text-[12px]"
             value={cwd}
             autoFocus
             onChange={(e) => setCwd(e.target.value)}
@@ -77,11 +76,17 @@ export function DestinationBar() {
               if (e.key === 'Escape') cancel()
             }}
           />
-          <span className="destination-bar__label">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
-          <button className="destination-bar__action" onClick={() => void commit(pending.sessionId, pending.paths, cwd)}>
+          <span className="whitespace-nowrap text-muted">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
+          <button
+            className="border border-line bg-accent text-on-accent rounded px-2.5 py-1 text-[12px] cursor-pointer"
+            onClick={() => void commit(pending.sessionId, pending.paths, cwd)}
+          >
             지금 업로드
           </button>
-          <button className="destination-bar__action destination-bar__action--cancel" onClick={cancel}>
+          <button
+            className="border border-line bg-canvas text-fg rounded px-2.5 py-1 text-[12px] cursor-pointer"
+            onClick={cancel}
+          >
             취소
           </button>
         </div>

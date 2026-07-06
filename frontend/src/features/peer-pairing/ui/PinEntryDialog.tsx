@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Dialog, Button, TextInput } from '../../../shared/ui'
 import { pairWithPeer, describeShareError } from '../../../shared/api/share'
 import { loadPeers } from '../../../entities/peer'
-import './PinEntryDialog.css'
 
 interface PinEntryDialogProps {
   peerId: string
@@ -32,7 +31,7 @@ export function PinEntryDialog({ peerId, peerName, onClose }: PinEntryDialogProp
   return (
     <Dialog open onClose={onClose} title={`${peerName}에 연결`}>
       <form
-        className="pin-entry"
+        className="flex flex-col gap-3 w-65"
         onSubmit={(e) => {
           e.preventDefault()
           void submit()
@@ -47,8 +46,8 @@ export function PinEntryDialog({ peerId, peerName, onClose }: PinEntryDialogProp
           autoFocus
           error={error}
         />
-        {pending && <p className="pin-entry__waiting">상대방의 승인을 기다리는 중...</p>}
-        <div className="pin-entry__actions">
+        {pending && <p className="m-0 text-[12px] text-muted">상대방의 승인을 기다리는 중...</p>}
+        <div className="flex justify-end gap-2">
           <Button type="submit" variant="primary" disabled={pending || pin.length !== 6}>
             연결
           </Button>

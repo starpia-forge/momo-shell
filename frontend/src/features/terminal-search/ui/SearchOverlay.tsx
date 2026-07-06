@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { clearSearchSession, focusSession, searchSession } from '../../../entities/session'
-import './SearchOverlay.css'
 
 interface SearchOverlayProps {
   sessionId: string
@@ -32,16 +31,20 @@ export function SearchOverlay({ sessionId, onClose }: SearchOverlayProps) {
   }
 
   return (
-    <div className="terminal-search">
+    <div className="absolute top-1 right-1 z-25 flex items-center gap-1 px-1.5 py-1 rounded bg-surface border border-line shadow-float">
       <input
         ref={inputRef}
-        className="terminal-search__input"
+        className="w-55 px-1.5 py-1 rounded-sm border border-line bg-canvas text-fg text-[12px]"
         value={term}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setTerm(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="검색 (Enter: 다음, Shift+Enter: 이전)"
       />
-      <button className="terminal-search__close" onClick={handleClose} aria-label="검색 닫기">
+      <button
+        className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
+        onClick={handleClose}
+        aria-label="검색 닫기"
+      >
         ×
       </button>
     </div>

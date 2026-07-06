@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import { cn } from '../../../shared/lib/cn'
 import { Dialog, Button, TextInput } from '../../../shared/ui'
 import { setHostSecret, testConnection, browseForKeyFile, type AuthType, type Host, type TestResult } from '../../../shared/api/host'
 import { useHostStore } from '../../../entities/host'
-import './HostFormDialog.css'
 
 interface HostFormDialogProps {
   open: boolean
@@ -154,14 +154,14 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
 
   return (
     <Dialog open={open} onClose={onClose} title={hostId ? '호스트 편집' : '호스트 추가'}>
-      <div className="host-form">
+      <div className="host-form flex flex-col gap-3 w-90">
         <TextInput
           label="이름*"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           error={errors.name}
         />
-        <div className="host-form__row">
+        <div className="flex gap-2 items-end *:flex-1">
           <TextInput
             label="주소*"
             value={form.address}
@@ -176,19 +176,27 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
           />
         </div>
 
-        <div className="host-form__field">
-          <span className="host-form__label">라벨</span>
-          <div className="host-form__chips">
+        <div className="flex flex-col gap-1">
+          <span className="text-[12px] text-muted">라벨</span>
+          <div className="flex flex-wrap gap-1.5 items-center">
             {form.labels.map((label) => (
-              <span key={label} className="host-form__chip">
+              <span
+                key={label}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-canvas border border-line text-[12px]"
+              >
                 {label}
-                <button type="button" onClick={() => removeLabel(label)} aria-label={`${label} 제거`}>
+                <button
+                  type="button"
+                  className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none"
+                  onClick={() => removeLabel(label)}
+                  aria-label={`${label} 제거`}
+                >
                   ×
                 </button>
               </span>
             ))}
             <input
-              className="host-form__chip-input"
+              className="flex-1 min-w-20 border-none bg-transparent text-fg text-[12px] outline-none"
               value={form.labelDraft}
               placeholder="+ 추가"
               onChange={(e) => setForm((f) => ({ ...f, labelDraft: e.target.value }))}
@@ -210,11 +218,11 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
           error={errors.username}
         />
 
-        <div className="host-form__field">
-          <span className="host-form__label">인증 방식</span>
-          <div className="host-form__radios">
+        <div className="flex flex-col gap-1">
+          <span className="text-[12px] text-muted">인증 방식</span>
+          <div className="flex gap-3">
             {(['password', 'privateKey', 'agent'] as const).map((type) => (
-              <label key={type} className="host-form__radio">
+              <label key={type} className="flex items-center gap-1 text-[13px]">
                 <input
                   type="radio"
                   name="authType"
@@ -228,7 +236,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
         </div>
 
         {form.authType === 'password' && (
-          <div className="host-form__row">
+          <div className="flex gap-2 items-end">
             <TextInput
               label="비밀번호"
               type={form.showSecret ? 'text' : 'password'}
@@ -236,7 +244,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
               onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value, secretTouched: true }))}
               placeholder={hostId ? '변경하지 않으려면 비워두세요' : ''}
             />
-            <label className="host-form__checkbox">
+            <label className="flex items-center gap-1 text-[12px] whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={form.showSecret}
@@ -249,7 +257,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
 
         {form.authType === 'privateKey' && (
           <>
-            <div className="host-form__row">
+            <div className="flex gap-2 items-end">
               <TextInput label="키 파일*" value={form.keyPath} readOnly error={errors.keyPath} />
               <Button type="button" onClick={handleBrowseKeyFile}>
                 찾아보기
@@ -266,7 +274,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
         )}
 
         {testResult && (
-          <div className={`host-form__test-result host-form__test-result--${testResult.ok ? 'ok' : 'fail'}`}>
+          <div className={cn('text-[12px] px-2 py-1.5 rounded', testResult.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger')}>
             {testResult.ok
               ? '연결 성공'
               : `실패 (${testResult.stage === 'tcp' ? '주소 불가' : testResult.stage === 'handshake' ? '호스트키 불일치' : '인증 실패'})${
@@ -275,11 +283,11 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom }: HostFormDia
           </div>
         )}
 
-        <div className="host-form__actions">
+        <div className="flex justify-between items-center mt-2">
           <Button type="button" onClick={handleTestConnection} disabled={!isValid || testing}>
             {testing ? '테스트 중...' : '연결 테스트'}
           </Button>
-          <div className="host-form__actions-right">
+          <div className="flex gap-2">
             <Button type="button" onClick={onClose}>
               취소
             </Button>

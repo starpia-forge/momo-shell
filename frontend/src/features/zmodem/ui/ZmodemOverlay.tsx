@@ -9,7 +9,6 @@ import {
   type TransferZmodemPayload,
 } from '../../../shared/api'
 import { Spinner } from '../../../shared/ui'
-import './ZmodemOverlay.css'
 
 interface ZmodemOverlayProps {
   sessionId: string
@@ -62,14 +61,22 @@ export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
   const percent = progress && progress.total > 0 ? Math.round((progress.bytes / progress.total) * 100) : null
 
   return (
-    <div className="zmodem-overlay">
+    <div className="absolute left-2 right-2 bottom-2 z-10 flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface border border-line shadow-[0_2px_8px_rgba(0,0,0,0.3)] text-fg text-[12px]">
       {state.phase === 'detected' && state.direction === 'upload' && (
         <>
-          <span className="zmodem-overlay__text">원격에서 rz 대기 중 -- 보낼 파일을 선택하세요</span>
-          <button className="zmodem-overlay__action" onClick={handlePickFiles}>
+          <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+            원격에서 rz 대기 중 -- 보낼 파일을 선택하세요
+          </span>
+          <button
+            className="flex-none border border-line bg-accent text-on-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
+            onClick={handlePickFiles}
+          >
             파일 선택
           </button>
-          <button className="zmodem-overlay__action zmodem-overlay__action--cancel" onClick={handleCancel}>
+          <button
+            className="flex-none border border-line bg-canvas text-fg rounded px-2 py-[3px] text-[11px] cursor-pointer"
+            onClick={handleCancel}
+          >
             취소
           </button>
         </>
@@ -77,18 +84,23 @@ export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
       {state.phase === 'active' && (
         <>
           <Spinner size={12} />
-          <span className="zmodem-overlay__text">
+          <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
             {state.direction === 'upload' ? '전송 중' : '수신 중'}
             {progress && `: ${progress.file} (${formatBytes(progress.bytes)}${percent !== null ? ` / ${percent}%` : ''})`}
           </span>
-          <button className="zmodem-overlay__action zmodem-overlay__action--cancel" onClick={handleCancel}>
+          <button
+            className="flex-none border border-line bg-canvas text-fg rounded px-2 py-[3px] text-[11px] cursor-pointer"
+            onClick={handleCancel}
+          >
             취소
           </button>
         </>
       )}
-      {state.phase === 'done' && <span className="zmodem-overlay__text">전송 완료</span>}
-      {state.phase === 'failed' && <span className="zmodem-overlay__text zmodem-overlay__text--error">전송 실패</span>}
-      {state.phase === 'canceled' && <span className="zmodem-overlay__text">전송 취소됨</span>}
+      {state.phase === 'done' && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">전송 완료</span>}
+      {state.phase === 'failed' && (
+        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-danger">전송 실패</span>
+      )}
+      {state.phase === 'canceled' && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">전송 취소됨</span>}
     </div>
   )
 }

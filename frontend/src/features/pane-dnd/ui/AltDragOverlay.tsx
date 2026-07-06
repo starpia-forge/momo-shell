@@ -1,7 +1,6 @@
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { dragSourceProps } from '../lib/dragSource'
 import { useAltHeld } from '../lib/useAltHeld'
-import './AltDragOverlay.css'
 
 interface AltDragOverlayProps {
   payload: PaneDragPayload
@@ -13,5 +12,10 @@ interface AltDragOverlayProps {
 export function AltDragOverlay({ payload }: AltDragOverlayProps) {
   const altHeld = useAltHeld()
   if (!altHeld) return null
-  return <div className="pane-dnd-alt-overlay" {...dragSourceProps(payload)} />
+  return (
+    <div
+      className="absolute inset-0 z-15 cursor-grab outline-[1px] outline-dashed outline-accent outline-offset-[-1px]"
+      {...dragSourceProps(payload)}
+    />
+  )
 }
