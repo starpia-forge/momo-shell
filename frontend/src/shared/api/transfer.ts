@@ -4,6 +4,7 @@ import {
   CancelTransfer,
   CancelZmodem,
   Chmod,
+  CopyRemote,
   Download,
   HomeDir,
   ListRemoteDir,
@@ -101,6 +102,12 @@ export async function removeRemote(sessionId: string, path: string): Promise<voi
 
 export async function chmodRemote(sessionId: string, path: string, mode: number): Promise<void> {
   await Chmod(sessionId, path, mode)
+}
+
+/** Stream-copies files within sessionId's remote file system into dstDir --
+ * SFTP has no server-side copy. Files only in v1. */
+export async function copyRemoteFiles(sessionId: string, srcPaths: string[], dstDir: string): Promise<void> {
+  await CopyRemote(sessionId, srcPaths, dstDir)
 }
 
 export async function cancelTransfer(taskId: string): Promise<void> {
