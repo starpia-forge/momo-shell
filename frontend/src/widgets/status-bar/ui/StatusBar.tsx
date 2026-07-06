@@ -1,5 +1,4 @@
 import { useSessionStore } from '../../../entities/session'
-import './StatusBar.css'
 
 interface StatusBarProps {
   sessionId: string | null
@@ -9,7 +8,7 @@ export function StatusBar({ sessionId }: StatusBarProps) {
   const session = useSessionStore((s) => (sessionId ? s.sessions[sessionId] : undefined))
 
   return (
-    <div className="status-bar">
+    <div className="flex-none h-6 flex items-center gap-4 px-3 text-[12px] bg-surface border-t border-line text-muted">
       {session ? (
         <>
           <span>{session.kind === 'ssh' ? 'SSH' : session.shell || 'shell'}</span>

@@ -3,9 +3,9 @@ import { useHostStore, type Host } from '../../../entities/host'
 import { useSessionStore } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
 import { HostFormDialog, confirmAndDeleteHost } from '../../../features/host-crud'
+import { cn } from '../../../shared/lib/cn'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import { SharedHostsSection } from './SharedHostsSection'
-import './HostSidebar.css'
 
 interface HostSidebarProps {
   onConnect: (host: Host, sessionId: string) => void
@@ -16,6 +16,13 @@ interface HostSidebarProps {
 
 type SortMode = 'recent' | 'name'
 type DotStatus = 'running' | 'connecting' | 'error' | 'idle'
+
+const DOT: Record<DotStatus, string> = {
+  running: 'bg-success',
+  connecting: 'bg-warning animate-pulse-dot',
+  error: 'bg-danger',
+  idle: 'bg-line',
+}
 
 export function HostSidebar({ onConnect, onConnectShared }: HostSidebarProps) {
   const hosts = useHostStore((s) => s.hosts)
@@ -76,40 +83,48 @@ export function HostSidebar({ onConnect, onConnectShared }: HostSidebarProps) {
   }
 
   return (
-    <div className="host-sidebar">
-      <div className="host-sidebar__search">
-        <input placeholder="🔍 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+    <div className="flex flex-col h-full bg-surface border-r border-line text-fg text-[13px]">
+      <div className="p-2">
+        <input
+          className="w-full px-2 py-1.5 rounded border border-line bg-canvas text-fg text-[12px]"
+          placeholder="🔍 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
       </div>
-      <div className="host-sidebar__toolbar">
+      <div className="flex justify-between items-center px-2 py-1 text-muted text-[12px]">
         <span>내 호스트 ({filtered.length})</span>
         <button
-          className="host-sidebar__sort-toggle"
+          className="border-none bg-transparent text-accent cursor-pointer text-[12px]"
           onClick={() => setSortMode((m) => (m === 'recent' ? 'name' : 'recent'))}
           title="정렬 방식 전환"
         >
           {sortMode === 'recent' ? '최근 연결 순' : '이름순'}
         </button>
       </div>
-      <div className="host-sidebar__list">
+      <div className="flex-1 overflow-y-auto">
         {filtered.map((host) => (
           <div
             key={host.id}
-            className="host-sidebar__item"
+            className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-canvas"
             onDoubleClick={() => void handleConnect(host)}
             onKeyDown={(e) => e.key === 'Enter' && void handleConnect(host)}
             onContextMenu={(e) => openContextMenu(e, host)}
             tabIndex={0}
             role="button"
           >
-            <span className={`host-sidebar__dot host-sidebar__dot--${statusFor(host.id)}`} />
-            <div className="host-sidebar__item-text">
-              <div className="host-sidebar__item-name">{host.name}</div>
-              <div className="host-sidebar__item-address">{host.address}</div>
+            <span className={cn('flex-shrink-0 w-2 h-2 rounded-full', DOT[statusFor(host.id)])} />
+            <div className="min-w-0">
+              <div className="overflow-hidden text-ellipsis whitespace-nowrap">{host.name}</div>
+              <div className="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
             </div>
           </div>
         ))}
       </div>
-      <button className="host-sidebar__add" onClick={() => setDialog({})}>
+      <button
+        className="m-2 px-1.5 py-1.5 rounded border border-dashed border-line bg-transparent text-muted cursor-pointer text-[12px] hover:border-accent hover:text-fg"
+        onClick={() => setDialog({})}
+      >
         + 호스트 추가
       </button>
 

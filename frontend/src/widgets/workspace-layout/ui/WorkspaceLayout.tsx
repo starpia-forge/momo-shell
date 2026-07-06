@@ -7,12 +7,12 @@ import { SearchOverlay, useTerminalSearchStore } from '../../../features/termina
 import { ZmodemOverlay } from '../../../features/zmodem'
 import { decodePaneDrag, isFileDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
 import { markDropTargetHovered } from '../../../shared/lib/fileDropTarget'
+import { cn } from '../../../shared/lib/cn'
 import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
 import { closeLeafOrEscalate } from '../lib/closeLeaf'
 import { splitFocused } from '../lib/splitFocused'
 import { useWorkspaceLayoutStore } from '../model/store'
 import type { LeafNode, PaneNode } from '../model/tree'
-import './WorkspaceLayout.css'
 
 const DOUBLE_CLICK_MS = 300
 
@@ -26,7 +26,7 @@ export function WorkspaceLayout({ tabId, onTabBecameEmpty }: WorkspaceLayoutProp
   const tree = useWorkspaceLayoutStore((s) => s.trees[tabId])
   if (!tree) return null
   return (
-    <div className="workspace-layout">
+    <div className="workspace-layout w-full h-full">
       <LayoutNode tabId={tabId} node={tree} onTabBecameEmpty={onTabBecameEmpty} />
     </div>
   )
@@ -74,7 +74,12 @@ function EqualizeHandle({ onEqualize }: { onEqualize: () => void }) {
     }
   }
 
-  return <PanelResizeHandle className="workspace-layout__handle" onClick={handleClick} />
+  return (
+    <PanelResizeHandle
+      className="workspace-layout__handle flex-none bg-line hover:bg-accent data-[panel-group-direction=horizontal]:w-1 data-[panel-group-direction=horizontal]:cursor-col-resize data-[panel-group-direction=vertical]:h-1 data-[panel-group-direction=vertical]:cursor-row-resize data-[resize-handle-state=drag]:bg-accent"
+      onClick={handleClick}
+    />
+  )
 }
 
 interface PaneViewProps {
@@ -173,23 +178,35 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
 
   return (
     <div
-      className={`pane-view ${isFocused ? 'pane-view--focused' : ''} ${fileDragOver ? 'pane-view--file-drag-over' : ''}`}
+      className={cn(
+        'pane-view [--wails-drop-target:drop] relative flex flex-col w-full h-full min-h-0 outline-[1px] outline-transparent outline-offset-[-1px]',
+        isFocused && 'outline-accent',
+        fileDragOver && 'outline-accent bg-accent/8',
+      )}
       data-session-id={leaf.sessionId}
       onClick={focusThis}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="pane-view__header" onContextMenu={openContextMenu} {...dragSourceProps(dragPayload)}>
-        <div className="pane-view__text">
-          <span className="pane-view__title">{title}</span>
-          {subtitle && <span className="pane-view__subtitle">{subtitle}</span>}
+      <div
+        className="flex-none flex items-center justify-between h-[22px] px-1.5 bg-surface border-b border-line"
+        onContextMenu={openContextMenu}
+        {...dragSourceProps(dragPayload)}
+      >
+        <div className="flex items-baseline gap-1.5 min-w-0 overflow-hidden">
+          <span className="text-[11px] text-fg whitespace-nowrap overflow-hidden text-ellipsis">{title}</span>
+          {subtitle && <span className="text-[10px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{subtitle}</span>}
         </div>
-        <button className="pane-view__close" onClick={handleClose} aria-label={`${title} 닫기`}>
+        <button
+          className="flex-shrink-0 border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none pl-1.5 hover:text-fg"
+          onClick={handleClose}
+          aria-label={`${title} 닫기`}
+        >
           ×
         </button>
       </div>
-      <div className="pane-view__body">
+      <div className="relative flex-1 min-h-0 p-1 overflow-hidden">
         <TerminalPane key={leaf.sessionId} sessionId={leaf.sessionId} onReconnect={isSSH ? () => void handleReconnect() : undefined} />
         <AltDragOverlay payload={dragPayload} />
         {searchOpen && (

@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { useTabStore, type Tab } from '../model/store'
-import { useSessionStore } from '../../../entities/session'
+import { useSessionStore, type SessionState } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
+import { cn } from '../../../shared/lib/cn'
 import { decodePaneDrag, isPaneDrag, type PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { createLocalTab, createSSHTab } from '../lib/createTab'
-import './TabBar.css'
 
 const HOVER_ACTIVATE_MS = 500
+
+const DOT: Record<SessionState | 'idle', string> = {
+  running: 'bg-success',
+  connecting: 'bg-warning animate-pulse-dot',
+  error: 'bg-danger',
+  starting: 'bg-line',
+  closed: 'bg-line',
+  idle: 'bg-line',
+}
 
 interface TabBarProps {
   onCloseTab: (tab: Tab) => void
@@ -103,9 +112,12 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
   }
 
   return (
-    <div className="tab-bar" onDragOver={handleBarDragOver} onDrop={handleBarDrop}>
+    <div className="tab-bar flex-none flex items-stretch h-9 bg-surface border-b border-line" onDragOver={handleBarDragOver} onDrop={handleBarDrop}>
       <button
-        className={`tab-bar__home ${homeActive ? 'tab-bar__home--active' : ''}`}
+        className={cn(
+          'flex-none flex items-center justify-center w-9 border-none border-r border-line bg-transparent text-muted cursor-pointer hover:text-fg',
+          homeActive && 'text-fg bg-canvas',
+        )}
         onClick={showHome}
         aria-label="홈"
       >
@@ -114,13 +126,16 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
           <path d="M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      <div className="tab-bar__tabs">
+      <div className="flex items-stretch min-w-0 overflow-x-auto">
         {tabs.map((tab, index) => {
           const state = sessions[tab.sessionId]?.state ?? 'idle'
           return (
             <div
               key={tab.id}
-              className={`tab-bar__tab ${tab.id === activeId ? 'tab-bar__tab--active' : ''}`}
+              className={cn(
+                'flex items-center gap-1.5 min-w-30 max-w-45 px-2 py-1 border-r border-line cursor-pointer text-muted',
+                tab.id === activeId && 'bg-canvas text-fg',
+              )}
               draggable
               onDragStart={() => setDragIndex(index)}
               onDragOver={(e: DragEvent) => handleTabDragOver(e, tab)}
@@ -129,13 +144,13 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
               onClick={() => setActive(tab.id)}
               onMouseDown={(e) => handleMiddleClick(e, tab)}
             >
-              <span className={`tab-bar__dot tab-bar__dot--${state}`} />
-              <div className="tab-bar__text">
-                <div className="tab-bar__title">{tab.title}</div>
-                <div className="tab-bar__subtitle">{tab.subtitle}</div>
+              <span className={cn('flex-shrink-0 w-[7px] h-[7px] rounded-full', DOT[state])} />
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">{tab.title}</div>
+                <div className="text-[10px] opacity-70 overflow-hidden text-ellipsis whitespace-nowrap">{tab.subtitle}</div>
               </div>
               <button
-                className="tab-bar__close"
+                className="flex-shrink-0 border-none bg-transparent text-inherit cursor-pointer text-[13px] leading-none opacity-60 hover:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation()
                   onCloseTab(tab)
@@ -153,17 +168,31 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
           clipped -- overflow-x:auto on an ancestor forces its overflow-y to
           a non-visible value too, per spec, which would hide an
           absolutely-positioned dropdown anchored inside it. */}
-      <div className="tab-bar__add-wrap">
-        <button className="tab-bar__add" onClick={openPopover} aria-label="새 탭">
+      <div className="relative flex-none">
+        <button
+          className="w-9 h-full border-none border-r border-line bg-transparent text-muted text-[16px] cursor-pointer hover:text-fg"
+          onClick={openPopover}
+          aria-label="새 탭"
+        >
           +
         </button>
         {popoverOpen && (
-          <div className="tab-bar__popover" ref={popoverRef}>
-            <button className="tab-bar__popover-item" onClick={() => void createLocalTab()}>
+          <div
+            className="absolute top-full left-0 z-150 flex flex-col min-w-40 bg-surface border border-line rounded p-1 shadow-float"
+            ref={popoverRef}
+          >
+            <button
+              className="px-2.5 py-1.5 border-none bg-transparent text-fg text-[13px] text-left rounded-sm cursor-pointer hover:bg-canvas"
+              onClick={() => void createLocalTab()}
+            >
               로컬 쉘
             </button>
             {Object.values(hosts).map((h) => (
-              <button key={h.id} className="tab-bar__popover-item" onClick={() => void createSSHTab(h)}>
+              <button
+                key={h.id}
+                className="px-2.5 py-1.5 border-none bg-transparent text-fg text-[13px] text-left rounded-sm cursor-pointer hover:bg-canvas"
+                onClick={() => void createSSHTab(h)}
+              >
                 {h.name}
               </button>
             ))}

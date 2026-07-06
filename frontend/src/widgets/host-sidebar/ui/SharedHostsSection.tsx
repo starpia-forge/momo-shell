@@ -4,8 +4,8 @@ import { removePeer, fetchSharedHosts, importSharedHost, describeShareError, typ
 import { PinEntryDialog, DirectAddPeerDialog } from '../../../features/peer-pairing'
 import { CredentialDialog } from '../../../features/shared-host-connect'
 import { useHostStore, type Host } from '../../../entities/host'
+import { cn } from '../../../shared/lib/cn'
 import { ContextMenu, useToastStore, type ContextMenuItem } from '../../../shared/ui'
-import './SharedHostsSection.css'
 
 interface SharedHostsSectionProps {
   onConnect: (host: Host, sessionId: string) => void
@@ -75,35 +75,36 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
   }
 
   return (
-    <div className="shared-hosts">
-      <div className="shared-hosts__toolbar">
+    <div className="flex-none border-t border-line max-h-60 flex flex-col">
+      <div className="flex items-center justify-between px-2 py-1 text-muted text-[12px]">
         <span>공유 호스트</span>
-        <button className="shared-hosts__add-by-address" onClick={() => setAddingByAddress(true)}>
+        <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setAddingByAddress(true)}>
           IP로 추가
         </button>
       </div>
       {peers.length > 0 && (
-        <div className="shared-hosts__list">
+        <div className="overflow-y-auto">
           {peers.map((peer) => (
-            <div key={peer.id} className="shared-hosts__peer">
+            <div key={peer.id}>
               <div
-                className={['shared-hosts__peer-header', !peer.online && 'shared-hosts__peer-header--offline']
-                  .filter(Boolean)
-                  .join(' ')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1.5 cursor-pointer bg-accent/6 hover:bg-canvas',
+                  !peer.online && 'text-muted opacity-60',
+                )}
                 onClick={() => peer.paired && toggle(peer.id)}
                 onContextMenu={(e) => peer.paired && openPeerMenu(e, peer)}
               >
-                <span className="shared-hosts__peer-icon">📡</span>
-                <span className="shared-hosts__peer-name">
+                <span className="flex-none">📡</span>
+                <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]">
                   {peer.name}
                   {peer.paired ? ` (${peer.hosts.length})` : ''}
                 </span>
                 {!peer.online && peer.lastSyncAt && (
-                  <span className="shared-hosts__peer-sync">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
+                  <span className="flex-none text-[10px] text-muted">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
                 )}
                 {!peer.paired && (
                   <button
-                    className="shared-hosts__connect"
+                    className="flex-none border border-line bg-canvas text-accent rounded px-1.5 py-0.5 text-[11px] cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation()
                       setPairing({ id: peer.id, name: peer.name })
@@ -114,18 +115,18 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
                 )}
               </div>
               {peer.paired && expanded[peer.id] && (
-                <ul className="shared-hosts__host-list">
-                  {peer.hosts.length === 0 && <li className="shared-hosts__empty">공유된 호스트가 없습니다</li>}
+                <ul className="m-0 py-0 pr-2 pb-1 pl-6 flex flex-col gap-0.5">
+                  {peer.hosts.length === 0 && <li className="text-[11px] text-muted py-1">공유된 호스트가 없습니다</li>}
                   {peer.hosts.map((h, index) => (
                     <li
                       key={`${h.address}:${h.port}`}
-                      className="shared-hosts__host-item"
+                      className="flex items-center gap-1.5 text-[12px] text-muted"
                       onDoubleClick={() => setConnecting(h)}
                       onContextMenu={(e) => openHostMenu(e, peer.id, index, h)}
                     >
-                      <span className="shared-hosts__host-badge">⇢</span>
-                      <span className="shared-hosts__host-name">{h.name}</span>
-                      <span className="shared-hosts__host-address">{h.address}</span>
+                      <span className="flex-none text-accent">⇢</span>
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{h.name}</span>
+                      <span className="flex-none text-[11px]">{h.address}</span>
                     </li>
                   ))}
                 </ul>
