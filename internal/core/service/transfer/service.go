@@ -153,6 +153,48 @@ func (s *Service) Chmod(sessionID, p string, mode uint32) error {
 	return remote.Chmod(p, mode)
 }
 
+// CopyRemote stream-copies files (not directories) within sessionID's remote
+// file system into dstDir, keeping their basenames.
+func (s *Service) CopyRemote(sessionID string, srcPaths []string, dstDir string) error {
+	remote, err := s.shell.FileSystem(sessionID)
+	if err != nil {
+		return err
+	}
+	if err := remoteMkdirAll(remote, dstDir); err != nil {
+		return err
+	}
+	for _, src := range srcPaths {
+		entry, err := remote.Stat(src)
+		if err != nil {
+			return err
+		}
+		if entry.IsDir {
+			return fmt.Errorf("copy remote: %s is a directory, not supported", src)
+		}
+		if err := copyRemoteFile(remote, src, path.Join(dstDir, path.Base(src))); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyRemoteFile(remote out.RemoteFileSystem, src, dst string) error {
+	r, err := remote.Open(src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	w, err := remote.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	_, err = io.Copy(w, r)
+	return err
+}
+
 // Upload enqueues one task per entry in localPaths (a file or a directory,
 // transferred recursively) into remoteDir. Entries resolved to "skip" by
 // policy are silently omitted from the returned task IDs.

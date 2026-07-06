@@ -382,3 +382,88 @@ func TestPublishesTaskAndProgressEvents(t *testing.T) {
 		t.Fatalf("expected at least one transfer:progress event")
 	}
 }
+
+func TestCopyRemote_CopiesFileContent(t *testing.T) {
+	remote := newFakeRemoteFS(t)
+	if err := os.WriteFile(remote.native("src.txt"), []byte("copy me"), 0o644); err != nil {
+		t.Fatalf("seed remote file: %v", err)
+	}
+	shell := newFakeShellAccess()
+	shell.set("s1", remote)
+	svc := New(Deps{Shell: shell})
+
+	if err := svc.CopyRemote("s1", []string{"src.txt"}, "dst"); err != nil {
+		t.Fatalf("CopyRemote: %v", err)
+	}
+
+	got, err := os.ReadFile(remote.native("dst/src.txt"))
+	if err != nil {
+		t.Fatalf("read copied file: %v", err)
+	}
+	if string(got) != "copy me" {
+		t.Fatalf("copied content mismatch: got %q", got)
+	}
+	if _, err := os.Stat(remote.native("src.txt")); err != nil {
+		t.Fatalf("expected source to remain after copy: %v", err)
+	}
+}
+
+func TestCopyRemote_MultipleSources(t *testing.T) {
+	remote := newFakeRemoteFS(t)
+	if err := os.WriteFile(remote.native("a.txt"), []byte("aaa"), 0o644); err != nil {
+		t.Fatalf("seed a.txt: %v", err)
+	}
+	if err := os.WriteFile(remote.native("b.txt"), []byte("bbb"), 0o644); err != nil {
+		t.Fatalf("seed b.txt: %v", err)
+	}
+	shell := newFakeShellAccess()
+	shell.set("s1", remote)
+	svc := New(Deps{Shell: shell})
+
+	if err := svc.CopyRemote("s1", []string{"a.txt", "b.txt"}, "dst"); err != nil {
+		t.Fatalf("CopyRemote: %v", err)
+	}
+
+	gotA, errA := os.ReadFile(remote.native("dst/a.txt"))
+	gotB, errB := os.ReadFile(remote.native("dst/b.txt"))
+	if errA != nil || string(gotA) != "aaa" {
+		t.Errorf("a.txt: got %q err %v", gotA, errA)
+	}
+	if errB != nil || string(gotB) != "bbb" {
+		t.Errorf("b.txt: got %q err %v", gotB, errB)
+	}
+}
+
+func TestCopyRemote_DirectorySourceErrors(t *testing.T) {
+	remote := newFakeRemoteFS(t)
+	if err := os.Mkdir(remote.native("adir"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	shell := newFakeShellAccess()
+	shell.set("s1", remote)
+	svc := New(Deps{Shell: shell})
+
+	if err := svc.CopyRemote("s1", []string{"adir"}, "dst"); err == nil {
+		t.Fatal("expected error copying a directory")
+	}
+}
+
+func TestCopyRemote_MissingSourceErrors(t *testing.T) {
+	remote := newFakeRemoteFS(t)
+	shell := newFakeShellAccess()
+	shell.set("s1", remote)
+	svc := New(Deps{Shell: shell})
+
+	if err := svc.CopyRemote("s1", []string{"nope.txt"}, "dst"); err == nil {
+		t.Fatal("expected error for missing source")
+	}
+}
+
+func TestCopyRemote_UnknownSessionErrors(t *testing.T) {
+	shell := newFakeShellAccess()
+	svc := New(Deps{Shell: shell})
+
+	if err := svc.CopyRemote("missing", []string{"a.txt"}, "dst"); err == nil {
+		t.Fatal("expected error for unknown session")
+	}
+}

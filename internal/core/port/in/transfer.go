@@ -65,6 +65,11 @@ type TransferUseCase interface {
 	Remove(sessionID, path string) error
 	Chmod(sessionID, path string, mode uint32) error
 
+	// CopyRemote stream-copies files (not directories) within one session's
+	// remote file system into dstDir, keeping their basenames -- SFTP has no
+	// server-side copy. Synchronous; files only in v1.
+	CopyRemote(sessionID string, srcPaths []string, dstDir string) error
+
 	Cancel(taskID string) error
 	Tasks() []TaskInfo
 
