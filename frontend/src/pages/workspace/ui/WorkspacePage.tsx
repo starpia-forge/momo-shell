@@ -138,28 +138,32 @@ export function WorkspacePage() {
     <div className="workspace flex flex-col h-screen w-screen bg-canvas text-fg">
       <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} />
       <div className="flex-1 flex min-h-0">
-        <div className="flex-none w-55">
-          <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
-        </div>
-        <div className="flex-1 min-w-0 min-h-0 p-1 overflow-hidden">
-          {screen === 'settings' ? (
-            <SettingsPage />
-          ) : screen === 'home' ? (
-            <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
-          ) : (
-            activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />
-          )}
-        </div>
-        <RightDock
-          historyPanel={
-            <HistoryPanel
-              focusedSessionId={activeTab?.sessionId ?? null}
-              currentHostId={activeTab ? (activeTab.kind === 'ssh' ? (activeTab.hostId ?? '') : 'local') : ''}
+        {screen === 'settings' ? (
+          <SettingsPage />
+        ) : (
+          <>
+            <div className="flex-none w-55">
+              <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
+            </div>
+            <div className="flex-1 min-w-0 min-h-0 p-1 overflow-hidden">
+              {screen === 'home' ? (
+                <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
+              ) : (
+                activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />
+              )}
+            </div>
+            <RightDock
+              historyPanel={
+                <HistoryPanel
+                  focusedSessionId={activeTab?.sessionId ?? null}
+                  currentHostId={activeTab ? (activeTab.kind === 'ssh' ? (activeTab.hostId ?? '') : 'local') : ''}
+                />
+              }
+              filesPanel={<FileBrowserPanel sessionId={activeTab?.sessionId ?? null} isSSH={activeTab?.kind === 'ssh'} />}
+              sharePanel={<SharePanel />}
             />
-          }
-          filesPanel={<FileBrowserPanel sessionId={activeTab?.sessionId ?? null} isSSH={activeTab?.kind === 'ssh'} />}
-          sharePanel={<SharePanel />}
-        />
+          </>
+        )}
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
       <TransferCenter />
