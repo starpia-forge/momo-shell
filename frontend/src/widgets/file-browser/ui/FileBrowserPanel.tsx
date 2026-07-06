@@ -20,11 +20,11 @@ import {
 } from '../../../shared/api'
 import { markDropTargetHovered, resolveDropTarget } from '../../../shared/lib/fileDropTarget'
 import { isFileDrag } from '../../../shared/lib/paneDnd'
+import { cn } from '../../../shared/lib/cn'
 import { ConflictDialog, ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
 import { formatModTime, formatSize, joinRemotePath, parentRemotePath } from '../lib/format'
 import { EMPTY_BROWSE_STATE, sessionBrowseState, useFileBrowserStore } from '../model/store'
 import { NamePromptDialog } from './NamePromptDialog'
-import './FileBrowserPanel.css'
 
 interface FileBrowserPanelProps {
   /** The currently-focused pane's session, or null if there is none. */
@@ -105,10 +105,14 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
   }, [sessionId])
 
   if (!sessionId) {
-    return <div className="file-browser file-browser--empty">세션이 없습니다</div>
+    return <div className="flex-1 flex items-center justify-center p-4 text-center text-muted text-[12px]">세션이 없습니다</div>
   }
   if (!isSSH) {
-    return <div className="file-browser file-browser--empty">로컬 세션에서는 파일 브라우저를 사용할 수 없습니다</div>
+    return (
+      <div className="flex-1 flex items-center justify-center p-4 text-center text-muted text-[12px]">
+        로컬 세션에서는 파일 브라우저를 사용할 수 없습니다
+      </div>
+    )
   }
 
   const currentPath = state.path ?? '/'
@@ -217,7 +221,10 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
 
   return (
     <div
-      className={`file-browser ${fileDragOver ? 'file-browser--drag-over' : ''}`}
+      className={cn(
+        'file-browser [--wails-drop-target:drop] flex flex-col flex-1 min-h-0 text-[13px]',
+        fileDragOver && 'outline outline-[1px] outline-accent outline-offset-[-1px] bg-accent/8',
+      )}
       data-session-id={sessionId}
       data-filebrowser="true"
       onDragOver={handlePanelDragOver}
@@ -227,9 +234,9 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
         setFileDragOver(false)
       }}
     >
-      <div className="file-browser__toolbar">
+      <div className="flex items-center gap-1 p-2">
         <button
-          className="file-browser__tool"
+          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer disabled:opacity-40 disabled:cursor-default"
           onClick={() => void refresh(parentRemotePath(currentPath))}
           disabled={currentPath === '/'}
           aria-label="뒤로"
@@ -237,51 +244,71 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
         >
           ←
         </button>
-        <button className="file-browser__tool" onClick={() => void homeDir(sessionId).then(refresh)} aria-label="홈" title="홈">
+        <button
+          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
+          onClick={() => void homeDir(sessionId).then(refresh)}
+          aria-label="홈"
+          title="홈"
+        >
           ~
         </button>
         <input
-          className="file-browser__path"
+          className="flex-1 min-w-0 px-1.5 py-1 rounded border border-line bg-canvas text-fg text-[12px]"
           value={pathInput}
           onChange={(e) => setPathInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void refresh(pathInput)
           }}
         />
-        <button className="file-browser__tool" onClick={() => void refresh(currentPath)} aria-label="새로고침" title="새로고침">
+        <button
+          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
+          onClick={() => void refresh(currentPath)}
+          aria-label="새로고침"
+          title="새로고침"
+        >
           ⟳
         </button>
-        <button className="file-browser__tool" onClick={handleUpload} aria-label="업로드" title="업로드">
+        <button
+          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
+          onClick={handleUpload}
+          aria-label="업로드"
+          title="업로드"
+        >
           ⬆
         </button>
-        <button className="file-browser__tool" onClick={() => setMkdirOpen(true)} aria-label="새 폴더" title="새 폴더">
+        <button
+          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
+          onClick={() => setMkdirOpen(true)}
+          aria-label="새 폴더"
+          title="새 폴더"
+        >
           +
         </button>
       </div>
 
       {state.loading && (
-        <div className="file-browser__status">
+        <div className="flex items-center gap-1.5 p-2 text-muted text-[12px]">
           <Spinner size={12} /> 불러오는 중...
         </div>
       )}
-      {state.error && <div className="file-browser__status file-browser__status--error">{state.error}</div>}
+      {state.error && <div className="p-2 text-danger text-[12px]">{state.error}</div>}
 
       {!state.loading && !state.error && (
-        <div className="file-browser__list">
+        <div className="flex-1 overflow-y-auto">
           {state.entries.map((entry) => (
             <div
               key={entry.path}
-              className="file-browser__row"
+              className="flex items-center gap-1.5 px-2 py-1 cursor-default hover:bg-canvas"
               onDoubleClick={() => handleEntryDoubleClick(entry)}
               onContextMenu={(e) => openMenu(e, entry)}
             >
-              <span className="file-browser__icon">{entry.isDir ? '📁' : '📄'}</span>
-              <span className="file-browser__name" title={entry.name}>
+              <span className="flex-none text-[12px]">{entry.isDir ? '📁' : '📄'}</span>
+              <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.name}>
                 {entry.name}
               </span>
-              <span className="file-browser__size">{entry.isDir ? '—' : formatSize(entry.size)}</span>
-              <span className="file-browser__date">{formatModTime(entry.modTime)}</span>
-              <span className="file-browser__mode">{entry.modeText}</span>
+              <span className="flex-none w-14 text-right text-[11px] text-muted">{entry.isDir ? '—' : formatSize(entry.size)}</span>
+              <span className="flex-none w-17 text-right text-[11px] text-muted">{formatModTime(entry.modTime)}</span>
+              <span className="flex-none w-19 text-right text-[10px] text-muted font-mono">{entry.modeText}</span>
             </div>
           ))}
         </div>

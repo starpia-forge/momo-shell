@@ -3,7 +3,6 @@ import { useHostStore } from '../../../entities/host'
 import { Button } from '../../../shared/ui'
 import { useSharePanelStore } from '../model/store'
 import { loadSharePanel, enableSharing, disableSharing, updateSharedHosts, revokeClient } from '../lib/actions'
-import './SharePanel.css'
 
 export function SharePanel() {
   const status = useSharePanelStore((s) => s.status)
@@ -25,9 +24,9 @@ export function SharePanel() {
   }
 
   return (
-    <div className="share-panel">
-      <div className="share-panel__row">
-        <span className="share-panel__row-label">공유 상태</span>
+    <div className="flex flex-col gap-4 p-3 overflow-y-auto text-[13px] text-fg">
+      <div className="flex items-center justify-between">
+        <span className="text-muted">공유 상태</span>
         <Button
           variant={status.enabled ? 'primary' : 'default'}
           onClick={() => void (status.enabled ? disableSharing() : enableSharing(status.sharedHostIds))}
@@ -37,24 +36,24 @@ export function SharePanel() {
       </div>
 
       {status.enabled && (
-        <div className="share-panel__pin">
-          <span className="share-panel__pin-label">페어링 PIN</span>
-          <span className="share-panel__pin-value">{status.pin}</span>
-          <span className="share-panel__pin-hint">연결 요청 시 상대에게 알려주세요</span>
+        <div className="flex flex-col gap-1 p-2.5 bg-canvas rounded-md">
+          <span className="text-[11px] text-muted">페어링 PIN</span>
+          <span className="font-mono text-[22px] tracking-[0.15em]">{status.pin}</span>
+          <span className="text-[11px] text-muted">연결 요청 시 상대에게 알려주세요</span>
         </div>
       )}
 
-      <div className="share-panel__section">
-        <div className="share-panel__section-title">
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[11px] font-semibold text-muted tracking-wider">
           공유할 호스트 ({hostList.length}개 중 {sharedIds.size}개 선택)
         </div>
         {hostList.length === 0 ? (
-          <div className="share-panel__empty">등록된 호스트가 없습니다</div>
+          <div className="text-[12px] text-muted">등록된 호스트가 없습니다</div>
         ) : (
-          <ul className="share-panel__host-list">
+          <ul className="flex flex-col gap-1 m-0 p-0">
             {hostList.map((h) => (
-              <li key={h.id} className="share-panel__host-item">
-                <label>
+              <li key={h.id}>
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={sharedIds.has(h.id)} onChange={(e) => toggleHost(h.id, e.target.checked)} />
                   {h.name}
                 </label>
@@ -64,14 +63,14 @@ export function SharePanel() {
         )}
       </div>
 
-      <div className="share-panel__section">
-        <div className="share-panel__section-title">연결된 피어</div>
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[11px] font-semibold text-muted tracking-wider">연결된 피어</div>
         {clients.length === 0 ? (
-          <div className="share-panel__empty">아직 연결된 피어가 없습니다</div>
+          <div className="text-[12px] text-muted">아직 연결된 피어가 없습니다</div>
         ) : (
-          <ul className="share-panel__client-list">
+          <ul className="flex flex-col gap-1 m-0 p-0">
             {clients.map((c) => (
-              <li key={c.id} className="share-panel__client-item">
+              <li key={c.id} className="flex items-center justify-between gap-2">
                 <span>{c.name}</span>
                 <Button variant="danger" onClick={() => void revokeClient(c.id)}>
                   회수

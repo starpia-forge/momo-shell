@@ -12,7 +12,6 @@ import {
 import { Toast } from '../../../shared/ui'
 import { formatRelativeTime } from '../lib/formatRelativeTime'
 import { useHistoryPanelStore, type HistoryScopeMode } from '../model/store'
-import './HistoryPanel.css'
 
 interface HistoryPanelProps {
   /** The currently-focused pane's session, or null if there is none. */
@@ -81,16 +80,16 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
   }
 
   return (
-    <div className="history-panel">
-      <div className="history-panel__filters">
+    <div className="flex flex-col flex-1 min-h-0 text-[13px]">
+      <div className="flex gap-1.5 mt-2 px-2 pb-2">
         <input
-          className="history-panel__search"
+          className="flex-1 min-w-0 px-2 py-1.5 rounded border border-line bg-canvas text-fg text-[12px]"
           placeholder="필터"
           value={filter}
           onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
         />
         <select
-          className="history-panel__scope"
+          className="flex-none px-1.5 py-1.5 rounded border border-line bg-canvas text-fg text-[11px]"
           value={scopeMode}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => setScopeMode(e.target.value as HistoryScopeMode)}
         >
@@ -98,16 +97,20 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
           <option value="current">현재 호스트</option>
         </select>
       </div>
-      <div className="history-panel__list">
+      <div className="flex-1 overflow-y-auto">
         {visible.map((entry) => (
-          <div key={entry.id} className="history-panel__row" onClick={() => handleCopy(entry.command)}>
-            <span className="history-panel__time">{formatRelativeTime(entry.executedAt)}</span>
-            <span className="history-panel__command" title={entry.command}>
+          <div
+            key={entry.id}
+            className="group flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-canvas"
+            onClick={() => handleCopy(entry.command)}
+          >
+            <span className="flex-none text-[10px] text-muted w-10">{formatRelativeTime(entry.executedAt)}</span>
+            <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.command}>
               {entry.command}
             </span>
-            <div className="history-panel__actions">
+            <div className="invisible flex-none flex gap-0.5 group-hover:visible">
               <button
-                className="history-panel__action"
+                className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleSend(entry.command)
@@ -118,7 +121,7 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
                 ↵
               </button>
               <button
-                className="history-panel__action history-panel__action--danger"
+                className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-danger"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleDelete(entry.id)

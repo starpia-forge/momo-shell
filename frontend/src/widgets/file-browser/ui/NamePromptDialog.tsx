@@ -27,14 +27,14 @@ export function NamePromptDialog({ open, title, initialValue = '', onConfirm, on
   return (
     <Dialog open={open} onClose={onClose} title={title}>
       <form
-        className="name-prompt"
+        className="flex flex-col gap-3 min-w-60"
         onSubmit={(e) => {
           e.preventDefault()
           submit()
         }}
       >
         <TextInput autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
-        <div className="name-prompt__actions">
+        <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>
             취소
           </Button>

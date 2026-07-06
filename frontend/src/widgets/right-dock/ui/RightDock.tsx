@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useRightDockStore } from '../model/store'
-import './RightDock.css'
+import { cn } from '../../../shared/lib/cn'
 
 interface RightDockProps {
   historyPanel: ReactNode
@@ -18,28 +18,37 @@ export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockPro
   if (!open) return null
 
   return (
-    <div className="right-dock">
-      <div className="right-dock__tabs">
+    <div className="flex flex-col w-70 flex-none h-full bg-surface border-l border-line text-fg">
+      <div className="flex flex-none border-b border-line">
         <button
-          className={['right-dock__tab', active === 'history' && 'right-dock__tab--active'].filter(Boolean).join(' ')}
+          className={cn(
+            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-muted bg-transparent border-none cursor-pointer',
+            active === 'history' && 'bg-canvas text-fg',
+          )}
           onClick={() => useRightDockStore.getState().show('history')}
         >
           히스토리
         </button>
         <button
-          className={['right-dock__tab', active === 'files' && 'right-dock__tab--active'].filter(Boolean).join(' ')}
+          className={cn(
+            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-muted bg-transparent border-none cursor-pointer',
+            active === 'files' && 'bg-canvas text-fg',
+          )}
           onClick={() => useRightDockStore.getState().show('files')}
         >
           파일
         </button>
         <button
-          className={['right-dock__tab', active === 'share' && 'right-dock__tab--active'].filter(Boolean).join(' ')}
+          className={cn(
+            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-muted bg-transparent border-none cursor-pointer',
+            active === 'share' && 'bg-canvas text-fg',
+          )}
           onClick={() => useRightDockStore.getState().show('share')}
         >
           공유
         </button>
       </div>
-      <div className="right-dock__body">{active === 'history' ? historyPanel : active === 'files' ? filesPanel : sharePanel}</div>
+      <div className="flex-1 min-h-0 flex flex-col">{active === 'history' ? historyPanel : active === 'files' ? filesPanel : sharePanel}</div>
     </div>
   )
 }
