@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/in"
@@ -101,6 +102,8 @@ func (s *Service) Remove(path string) error {
 }
 
 // Copy copies files (not directories) into dstDir, keeping their basenames.
+// A source already located at its destination (pasting into the directory
+// it's already in) is left untouched rather than truncated through itself.
 func (s *Service) Copy(srcPaths []string, dstDir string) error {
 	for _, src := range srcPaths {
 		info, err := os.Stat(src)
@@ -110,11 +113,26 @@ func (s *Service) Copy(srcPaths []string, dstDir string) error {
 		if info.IsDir() {
 			return fmt.Errorf("copy: %s is a directory, not supported", src)
 		}
-		if err := copyFile(src, filepath.Join(dstDir, filepath.Base(src)), info.Mode()); err != nil {
+		dst := filepath.Join(dstDir, filepath.Base(src))
+		if samePath(src, dst) {
+			continue
+		}
+		if err := copyFile(src, dst, info.Mode()); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// samePath compares two paths the way the local file system resolves them:
+// case-insensitively on Windows (its paths are case-insensitive), verbatim
+// elsewhere.
+func samePath(a, b string) bool {
+	a, b = filepath.Clean(a), filepath.Clean(b)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
 }
 
 func copyFile(src, dst string, mode os.FileMode) error {

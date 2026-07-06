@@ -154,7 +154,9 @@ func (s *Service) Chmod(sessionID, p string, mode uint32) error {
 }
 
 // CopyRemote stream-copies files (not directories) within sessionID's remote
-// file system into dstDir, keeping their basenames.
+// file system into dstDir, keeping their basenames. A source already located
+// at its destination (pasting into the directory it's already in) is left
+// untouched rather than truncated through itself.
 func (s *Service) CopyRemote(sessionID string, srcPaths []string, dstDir string) error {
 	remote, err := s.shell.FileSystem(sessionID)
 	if err != nil {
@@ -171,7 +173,11 @@ func (s *Service) CopyRemote(sessionID string, srcPaths []string, dstDir string)
 		if entry.IsDir {
 			return fmt.Errorf("copy remote: %s is a directory, not supported", src)
 		}
-		if err := copyRemoteFile(remote, src, path.Join(dstDir, path.Base(src))); err != nil {
+		dst := path.Join(dstDir, path.Base(src))
+		if path.Clean(src) == dst {
+			continue
+		}
+		if err := copyRemoteFile(remote, src, dst); err != nil {
 			return err
 		}
 	}

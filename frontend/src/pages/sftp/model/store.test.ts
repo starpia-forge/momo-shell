@@ -28,11 +28,40 @@ vi.mock('../../../entities/session', () => sessionMocks)
 
 const eventsMocks = vi.hoisted(() => ({
   subscribe: vi.fn(),
-  topics: { sessionState: (id: string) => `session:state:${id}` },
+  topics: { sessionState: (id: string) => `session:state:${id}`, transferTask: () => 'transfer:task' },
 }))
 vi.mock('../../../shared/api/events', () => eventsMocks)
 
-const { useSftpStore } = await import('./store')
+const localfsMocks = vi.hoisted(() => ({
+  copyLocal: vi.fn(),
+  detectLocalConflicts: vi.fn(),
+}))
+vi.mock('../../../shared/api/localfs', () => localfsMocks)
+
+const transferApiMocks = vi.hoisted(() => ({
+  detectUploadConflicts: vi.fn(),
+  uploadFiles: vi.fn(),
+  downloadFiles: vi.fn(),
+}))
+vi.mock('../../../shared/api/transfer', () => transferApiMocks)
+
+const { useSftpStore, initTransferWatcher } = await import('./store')
+
+// initTransferWatcher subscribes to transfer:task exactly once (module-level
+// guard), so the callback is captured the first time any test triggers it
+// and reused afterward -- capturing must happen before vi.resetAllMocks()
+// wipes the mockImplementation used to grab it.
+let capturedTaskCb: ((task: Record<string, unknown>) => void) | null = null
+function transferTaskCb(): (task: Record<string, unknown>) => void {
+  if (!capturedTaskCb) {
+    eventsMocks.subscribe.mockImplementation((topic: string, cb: (task: Record<string, unknown>) => void) => {
+      if (topic === 'transfer:task') capturedTaskCb = cb
+      return vi.fn()
+    })
+    initTransferWatcher()
+  }
+  return capturedTaskCb!
+}
 
 function fakeRemoteOps(overrides: Record<string, unknown> = {}) {
   return {
@@ -77,6 +106,7 @@ beforeEach(() => {
     local: EMPTY_PANE,
     remote: EMPTY_PANE,
     clipboard: null,
+    pendingConflict: null,
   })
 })
 
@@ -208,5 +238,156 @@ describe('select / setClipboard', () => {
   it('setClipboard stores the clipboard payload', () => {
     useSftpStore.getState().setClipboard({ side: 'local', op: 'move', paths: ['/a.txt'] })
     expect(useSftpStore.getState().clipboard).toEqual({ side: 'local', op: 'move', paths: ['/a.txt'] })
+  })
+})
+
+describe('paste (same-side)', () => {
+  it('copies within the local side and keeps the clipboard for repeat pastes', async () => {
+    paneOpsMocks.localOps.copyWithin.mockResolvedValue(undefined)
+    paneOpsMocks.localOps.list.mockResolvedValue([])
+    useSftpStore.setState({ local: { ...EMPTY_PANE, path: '/dst' }, clipboard: { side: 'local', op: 'copy', paths: ['/a.txt'] } })
+
+    await useSftpStore.getState().paste('local')
+
+    expect(paneOpsMocks.localOps.copyWithin).toHaveBeenCalledWith(['/a.txt'], '/dst')
+    expect(useSftpStore.getState().clipboard).toEqual({ side: 'local', op: 'copy', paths: ['/a.txt'] })
+  })
+
+  it('moves within the remote side and clears the clipboard', async () => {
+    const remoteOps = fakeRemoteOps({ moveWithin: vi.fn().mockResolvedValue(undefined), list: vi.fn().mockResolvedValue([]) })
+    useSftpStore.setState({
+      sessionId: 's1',
+      remoteOps,
+      remote: { ...EMPTY_PANE, path: '/dst' },
+      clipboard: { side: 'remote', op: 'move', paths: ['/a.txt'] },
+    })
+
+    await useSftpStore.getState().paste('remote')
+
+    expect(remoteOps.moveWithin).toHaveBeenCalledWith(['/a.txt'], '/dst')
+    expect(useSftpStore.getState().clipboard).toBeNull()
+  })
+})
+
+describe('paste / transferSelection (cross-side)', () => {
+  function setup() {
+    const remoteOps = fakeRemoteOps({ baseName: vi.fn((p: string) => p.split('/').pop()) })
+    useSftpStore.setState({
+      sessionId: 's1',
+      remoteOps,
+      local: { ...EMPTY_PANE, path: '/local/dst' },
+      remote: { ...EMPTY_PANE, path: '/remote/dst' },
+    })
+    return remoteOps
+  }
+
+  it('uploads local -> remote immediately when there are no conflicts', async () => {
+    setup()
+    transferApiMocks.detectUploadConflicts.mockResolvedValue([])
+    transferApiMocks.uploadFiles.mockResolvedValue(['t1'])
+
+    await useSftpStore.getState().transferSelection('local', ['/local/a.txt'])
+
+    expect(transferApiMocks.uploadFiles).toHaveBeenCalledWith('s1', ['/local/a.txt'], '/remote/dst', 'overwrite')
+    expect(useSftpStore.getState().pendingConflict).toBeNull()
+  })
+
+  it('surfaces a pendingConflict and resumes with the chosen policy', async () => {
+    setup()
+    transferApiMocks.detectUploadConflicts.mockResolvedValue(['a.txt'])
+    transferApiMocks.uploadFiles.mockResolvedValue(['t1'])
+
+    await useSftpStore.getState().transferSelection('local', ['/local/a.txt'])
+
+    const conflict = useSftpStore.getState().pendingConflict
+    expect(conflict?.names).toEqual(['a.txt'])
+    expect(transferApiMocks.uploadFiles).not.toHaveBeenCalled()
+
+    conflict!.resume('rename')
+    await Promise.resolve()
+
+    expect(transferApiMocks.uploadFiles).toHaveBeenCalledWith('s1', ['/local/a.txt'], '/remote/dst', 'rename')
+    expect(useSftpStore.getState().pendingConflict).toBeNull()
+  })
+
+  it('paste of a cross-side move clears the clipboard right away (deletion is deferred to the done event)', async () => {
+    setup()
+    localfsMocks.detectLocalConflicts.mockResolvedValue([])
+    transferApiMocks.downloadFiles.mockResolvedValue(['t2'])
+    useSftpStore.setState({ clipboard: { side: 'remote', op: 'move', paths: ['/remote/a.txt'] } })
+
+    await useSftpStore.getState().paste('local')
+
+    expect(transferApiMocks.downloadFiles).toHaveBeenCalledWith('s1', ['/remote/a.txt'], '/local/dst', 'overwrite')
+    expect(useSftpStore.getState().clipboard).toBeNull()
+  })
+})
+
+describe('transfer watcher', () => {
+  beforeEach(() => {
+    transferTaskCb() // ensure the watcher is registered before each test touches it
+  })
+
+  it('refreshes the destination pane once its transfer reports done', async () => {
+    const remoteOps = fakeRemoteOps({ list: vi.fn().mockResolvedValue([{ name: 'x', path: '/r/x', size: 0, mode: 0, modeText: '', modTime: 0, isDir: false }]) })
+    useSftpStore.setState({ sessionId: 's1', remoteOps, remote: { ...EMPTY_PANE, path: '/r' } })
+
+    transferTaskCb()({ id: 't1', sessionId: 's1', kind: 'upload', state: 'done', src: '/local/x', dst: '/r' })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(remoteOps.list).toHaveBeenCalledWith('/r')
+  })
+
+  it('ignores a done event for a different session', async () => {
+    const remoteOps = fakeRemoteOps()
+    useSftpStore.setState({ sessionId: 's1', remoteOps, remote: { ...EMPTY_PANE, path: '/r' } })
+
+    transferTaskCb()({ id: 't1', sessionId: 'other', kind: 'upload', state: 'done', src: '/local/x', dst: '/r' })
+    await Promise.resolve()
+
+    expect(remoteOps.list).not.toHaveBeenCalled()
+  })
+
+  it('deletes a cross-side move source only once its task reports done, using the task-reported src', async () => {
+    const remoteOps = fakeRemoteOps({ baseName: vi.fn((p: string) => p.split('/').pop()) })
+    useSftpStore.setState({
+      sessionId: 's1',
+      remoteOps,
+      local: { ...EMPTY_PANE, path: '/local/dst' },
+      remote: { ...EMPTY_PANE, path: '/remote/dst' },
+    })
+    transferApiMocks.detectUploadConflicts.mockResolvedValue([])
+    transferApiMocks.uploadFiles.mockResolvedValue(['t3'])
+    paneOpsMocks.localOps.remove.mockResolvedValue(undefined)
+
+    // A cross-side move: local -> remote, deferred delete on the local source.
+    useSftpStore.setState({ clipboard: { side: 'local', op: 'move', paths: ['/local/dst/a.txt'] } })
+    await useSftpStore.getState().paste('remote')
+
+    transferTaskCb()({ id: 't3', sessionId: 's1', kind: 'upload', state: 'done', src: '/local/dst/a.txt', dst: '/remote/dst' })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(paneOpsMocks.localOps.remove).toHaveBeenCalledWith('/local/dst/a.txt')
+  })
+
+  it('preserves the source when a move task fails', async () => {
+    const remoteOps = fakeRemoteOps()
+    useSftpStore.setState({
+      sessionId: 's1',
+      remoteOps,
+      local: { ...EMPTY_PANE, path: '/local/dst' },
+      remote: { ...EMPTY_PANE, path: '/remote/dst' },
+    })
+    transferApiMocks.detectUploadConflicts.mockResolvedValue([])
+    transferApiMocks.uploadFiles.mockResolvedValue(['t4'])
+    useSftpStore.setState({ clipboard: { side: 'local', op: 'move', paths: ['/local/dst/b.txt'] } })
+
+    await useSftpStore.getState().paste('remote')
+    transferTaskCb()({ id: 't4', sessionId: 's1', kind: 'upload', state: 'failed', src: '/local/dst/b.txt', dst: '/remote/dst' })
+    await Promise.resolve()
+
+    expect(paneOpsMocks.localOps.remove).not.toHaveBeenCalled()
   })
 })

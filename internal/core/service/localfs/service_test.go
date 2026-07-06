@@ -139,6 +139,24 @@ func TestCopy_FileContentAndMultipleSources(t *testing.T) {
 	}
 }
 
+func TestCopy_SamePathIsNoOpAndPreservesContent(t *testing.T) {
+	dir := t.TempDir()
+	f := writeFile(t, dir, "same.txt", "keep-me")
+
+	svc := New()
+	if err := svc.Copy([]string{f}, dir); err != nil {
+		t.Fatalf("Copy: %v", err)
+	}
+
+	got, err := os.ReadFile(f)
+	if err != nil {
+		t.Fatalf("read after self-copy: %v", err)
+	}
+	if string(got) != "keep-me" {
+		t.Fatalf("self-copy corrupted the source: got %q", got)
+	}
+}
+
 func TestCopy_DirectorySourceRejected(t *testing.T) {
 	srcDir := t.TempDir()
 	dstDir := t.TempDir()

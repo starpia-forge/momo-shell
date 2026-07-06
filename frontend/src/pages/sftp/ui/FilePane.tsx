@@ -1,8 +1,10 @@
-import { useState, type MouseEvent } from 'react'
+import { useState, type DragEvent, type MouseEvent } from 'react'
 import { cn } from '../../../shared/lib/cn'
+import { isFileDrag } from '../../../shared/lib/paneDnd'
 import { formatModTime, formatSize, NamePromptDialog } from '../../../widgets/file-browser'
 import { ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
 import type { RemoteEntry } from '../../../shared/api/transfer'
+import { decodeSftpDrag, encodeSftpDrag, isSftpDrag } from '../lib/dnd'
 import type { PaneOps } from '../model/paneOps'
 import { useSftpStore, type PaneState } from '../model/store'
 import { PaneHeader } from './PaneHeader'
@@ -13,6 +15,10 @@ interface FilePaneProps {
   ops: PaneOps
   /** Remote pane only -- shown as the ⏏ disconnect button in the header. */
   onDisconnect?: () => void
+  /** Notifies SftpPage that an OS file drag is currently hovering this pane,
+   * so its os:filedrop handler (coordinates only, no DOM target) knows
+   * which pane to drop into. */
+  onFileDragHover?: () => void
 }
 
 interface MenuState {
@@ -21,18 +27,26 @@ interface MenuState {
   entry: RemoteEntry
 }
 
+const TRANSFER_LABEL: Record<'local' | 'remote', string> = { local: '업로드', remote: '다운로드' }
+
 /** One SFTP pane (local or remote), driven entirely through PaneOps so the
  * same component serves both sides -- see model/paneOps.ts's rationale. */
-export function FilePane({ side, ops, onDisconnect }: FilePaneProps) {
+export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneProps) {
   const pane = useSftpStore((s) => s[side]) as PaneState
   const refresh = useSftpStore((s) => (side === 'local' ? s.refreshLocal : s.refreshRemote))
   const select = useSftpStore((s) => s.select)
+  const clipboard = useSftpStore((s) => s.clipboard)
+  const setClipboard = useSftpStore((s) => s.setClipboard)
+  const transferSelection = useSftpStore((s) => s.transferSelection)
+  const paste = useSftpStore((s) => s.paste)
 
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [emptyMenu, setEmptyMenu] = useState<{ x: number; y: number } | null>(null)
   const [mkdirOpen, setMkdirOpen] = useState(false)
   const [renameTarget, setRenameTarget] = useState<RemoteEntry | null>(null)
   const [propsEntry, setPropsEntry] = useState<RemoteEntry | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
 
   // Home-directory resolution happens once via the page's initLocal() (local)
   // or connect() (remote) -- this pane only renders whatever path is current.
@@ -73,19 +87,68 @@ export function FilePane({ side, ops, onDisconnect }: FilePaneProps) {
     setMenu({ x: e.clientX, y: e.clientY, entry })
   }
 
+  function openEmptyMenu(e: MouseEvent) {
+    e.preventDefault()
+    setEmptyMenu({ x: e.clientX, y: e.clientY })
+  }
+
   const menuItems: ContextMenuItem[] = menu
     ? [
+        { label: TRANSFER_LABEL[side], onClick: () => void transferSelection(side, [menu.entry.path]) },
+        { label: '복사', onClick: () => setClipboard({ side, op: 'copy', paths: [menu.entry.path] }) },
+        { label: '이동', onClick: () => setClipboard({ side, op: 'move', paths: [menu.entry.path] }) },
+        ...(clipboard ? [{ label: '붙여넣기', onClick: () => void paste(side) }] : []),
         { label: '이름 변경', onClick: () => setRenameTarget(menu.entry) },
         { label: '속성', onClick: () => setPropsEntry(menu.entry) },
         { label: '삭제', danger: true, onClick: () => handleDelete(menu.entry) },
       ]
     : []
 
+  const emptyMenuItems: ContextMenuItem[] = emptyMenu
+    ? [
+        ...(clipboard ? [{ label: '붙여넣기', onClick: () => void paste(side) }] : []),
+        { label: '새 폴더', onClick: () => setMkdirOpen(true) },
+      ]
+    : []
+
+  function handlePaneDragOver(e: DragEvent) {
+    if (isSftpDrag(e.dataTransfer)) {
+      e.preventDefault()
+      setDragOver(true)
+      return
+    }
+    if (isFileDrag(e.dataTransfer)) {
+      setDragOver(true)
+      onFileDragHover?.()
+    }
+  }
+
+  function handlePaneDragLeave(e: DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false)
+  }
+
+  function handlePaneDrop(e: DragEvent) {
+    e.preventDefault()
+    setDragOver(false)
+    if (isFileDrag(e.dataTransfer)) return // handled by SftpPage's os:filedrop subscription instead
+    const payload = decodeSftpDrag(e.dataTransfer)
+    if (!payload || payload.side === side) return // same-pane drop is a no-op in v1
+    void transferSelection(payload.side, payload.paths)
+  }
+
   return (
     <div
-      className={cn('flex-1 basis-0 min-w-0 min-h-0 flex flex-col text-[13px]', side === 'local' && 'border-r border-line')}
+      className={cn(
+        'flex-1 basis-0 min-w-0 min-h-0 flex flex-col text-[13px]',
+        side === 'local' && 'border-r border-line',
+        dragOver && 'outline outline-[1px] outline-accent outline-offset-[-1px] bg-accent/8'
+      )}
       data-sftp-pane={side}
       onClick={() => select(side, null)}
+      onContextMenu={openEmptyMenu}
+      onDragOver={handlePaneDragOver}
+      onDragLeave={handlePaneDragLeave}
+      onDrop={handlePaneDrop}
     >
       <PaneHeader path={path} ops={ops} onNavigate={(p) => void refresh(p)} onNewFolder={() => setMkdirOpen(true)} onDisconnect={onDisconnect} />
 
@@ -102,6 +165,8 @@ export function FilePane({ side, ops, onDisconnect }: FilePaneProps) {
             <div
               key={entry.path}
               className={`flex items-center gap-1.5 px-2 py-1 cursor-default hover:bg-canvas ${pane.selected === entry.path ? 'bg-canvas' : ''}`}
+              draggable
+              onDragStart={(e) => encodeSftpDrag(e.dataTransfer, { side, paths: [entry.path] })}
               onClick={(e) => {
                 e.stopPropagation()
                 select(side, entry.path)
@@ -121,6 +186,7 @@ export function FilePane({ side, ops, onDisconnect }: FilePaneProps) {
       )}
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
+      {emptyMenu && <ContextMenu x={emptyMenu.x} y={emptyMenu.y} items={emptyMenuItems} onClose={() => setEmptyMenu(null)} />}
       <NamePromptDialog open={mkdirOpen} title="새 폴더" onConfirm={handleNewFolder} onClose={() => setMkdirOpen(false)} />
       <NamePromptDialog
         open={renameTarget !== null}

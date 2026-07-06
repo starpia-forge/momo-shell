@@ -434,6 +434,28 @@ func TestCopyRemote_MultipleSources(t *testing.T) {
 	}
 }
 
+func TestCopyRemote_SamePathIsNoOpAndPreservesContent(t *testing.T) {
+	remote := newFakeRemoteFS(t)
+	if err := os.WriteFile(remote.native("same.txt"), []byte("keep-me"), 0o644); err != nil {
+		t.Fatalf("seed remote file: %v", err)
+	}
+	shell := newFakeShellAccess()
+	shell.set("s1", remote)
+	svc := New(Deps{Shell: shell})
+
+	if err := svc.CopyRemote("s1", []string{"same.txt"}, ""); err != nil {
+		t.Fatalf("CopyRemote: %v", err)
+	}
+
+	got, err := os.ReadFile(remote.native("same.txt"))
+	if err != nil {
+		t.Fatalf("read after self-copy: %v", err)
+	}
+	if string(got) != "keep-me" {
+		t.Fatalf("self-copy corrupted the source: got %q", got)
+	}
+}
+
 func TestCopyRemote_DirectorySourceErrors(t *testing.T) {
 	remote := newFakeRemoteFS(t)
 	if err := os.Mkdir(remote.native("adir"), 0o755); err != nil {
