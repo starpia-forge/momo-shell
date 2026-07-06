@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import './ContextMenu.css'
+import { cn } from '../../lib/cn'
 
 export interface ContextMenuItem {
   label: string
@@ -33,11 +33,18 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   }, [onClose])
 
   return (
-    <div className="context-menu" ref={ref} style={{ left: x, top: y }}>
+    <div
+      className="context-menu fixed z-200 flex min-w-[140px] flex-col gap-0 rounded border border-line bg-surface p-1 shadow-float"
+      ref={ref}
+      style={{ left: x, top: y }}
+    >
       {items.map((item) => (
         <button
           key={item.label}
-          className={['context-menu__item', item.danger && 'context-menu__item--danger'].filter(Boolean).join(' ')}
+          className={cn(
+            'rounded-sm px-2.5 py-1.5 text-left text-[13px] cursor-pointer hover:bg-canvas',
+            item.danger ? 'text-danger' : 'text-fg',
+          )}
           onClick={() => {
             item.onClick()
             onClose()

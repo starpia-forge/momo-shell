@@ -1,5 +1,4 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import './Dialog.css'
 
 interface DialogProps {
   open: boolean
@@ -47,9 +46,18 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
   if (!open) return null
 
   return (
-    <div className="dialog__backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog__panel" ref={panelRef} role="dialog" aria-modal="true" aria-label={title}>
-        {title && <div className="dialog__title">{title}</div>}
+    <div
+      className="dialog__backdrop fixed inset-0 z-100 flex items-center justify-center bg-overlay"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="dialog__panel min-w-80 max-w-[90vw] max-h-[85vh] overflow-auto rounded-md border border-line bg-surface p-4 text-fg"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        {title && <div className="mb-3 text-[15px] font-semibold">{title}</div>}
         {children}
       </div>
     </div>

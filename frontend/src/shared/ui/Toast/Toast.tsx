@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import './Toast.css'
 
 interface ToastProps {
   message: string
@@ -14,5 +13,9 @@ export function Toast({ message, durationMs = 1500, onDismiss }: ToastProps) {
     return () => clearTimeout(timer)
   }, [durationMs, onDismiss])
 
-  return <div className="toast">{message}</div>
+  return (
+    <div className="toast fixed right-4 bottom-4 z-500 rounded px-3.5 py-2 bg-surface border border-line text-fg text-[12px] shadow-float">
+      {message}
+    </div>
+  )
 }

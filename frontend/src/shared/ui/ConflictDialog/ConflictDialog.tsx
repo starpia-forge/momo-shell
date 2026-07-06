@@ -1,7 +1,6 @@
 import type { ConflictPolicy } from '../../api/transfer'
 import { Button } from '../Button/Button'
 import { Dialog } from '../Dialog/Dialog'
-import './ConflictDialog.css'
 
 interface ConflictDialogProps {
   open: boolean
@@ -25,15 +24,15 @@ export function ConflictDialog({ open, conflicts, onChoice, onClose }: ConflictD
 
   return (
     <Dialog open={open} onClose={onClose} title="이름 충돌">
-      <div className="conflict-dialog">
-        <p className="conflict-dialog__message">다음 {conflicts.length}개 파일이 이미 존재합니다:</p>
-        <ul className="conflict-dialog__list">
+      <div className="conflict-dialog flex flex-col gap-3 min-w-70 max-w-90">
+        <p className="m-0 text-[13px]">다음 {conflicts.length}개 파일이 이미 존재합니다:</p>
+        <ul className="m-0 max-h-35 list-disc overflow-y-auto pl-[18px] text-[12px] text-muted">
           {conflicts.slice(0, VISIBLE_LIMIT).map((name) => (
             <li key={name}>{name}</li>
           ))}
           {conflicts.length > VISIBLE_LIMIT && <li>외 {conflicts.length - VISIBLE_LIMIT}개...</li>}
         </ul>
-        <div className="conflict-dialog__actions">
+        <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>
             취소
           </Button>
