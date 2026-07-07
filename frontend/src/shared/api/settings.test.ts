@@ -9,17 +9,25 @@ describe('parseAppSettings', () => {
         'appearance.accent': 'blue',
         'terminal.fontSize': '18',
         'terminal.scrollback': '5000',
+        'general.language': 'ja',
       })
     ).toEqual({
       theme: 'light',
       accent: 'blue',
       fontSize: 18,
       scrollback: 5000,
+      language: 'ja',
     })
   })
 
   it('falls back to defaults for missing keys', () => {
-    expect(parseAppSettings({})).toEqual({ theme: 'dark', accent: 'pink', fontSize: 14, scrollback: 10000 })
+    expect(parseAppSettings({})).toEqual({
+      theme: 'dark',
+      accent: 'pink',
+      fontSize: 14,
+      scrollback: 10000,
+      language: 'system',
+    })
   })
 
   it('falls back to defaults for garbage numeric values', () => {
@@ -28,6 +36,7 @@ describe('parseAppSettings', () => {
       accent: 'pink',
       fontSize: 14,
       scrollback: 10000,
+      language: 'system',
     })
   })
 
@@ -37,5 +46,9 @@ describe('parseAppSettings', () => {
 
   it('falls back to pink for an unknown accent value', () => {
     expect(parseAppSettings({ 'appearance.accent': 'chartreuse' }).accent).toBe('pink')
+  })
+
+  it('falls back to system for an unknown language value', () => {
+    expect(parseAppSettings({ 'general.language': 'fr' }).language).toBe('system')
   })
 })

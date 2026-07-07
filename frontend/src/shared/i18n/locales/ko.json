@@ -1,0 +1,325 @@
+{
+  "common": {
+    "confirm": "확인",
+    "cancel": "취소",
+    "close": "닫기",
+    "delete": "삭제",
+    "save": "저장",
+    "edit": "수정",
+    "retry": "다시 시도",
+    "connect": "연결",
+    "connecting": "연결 중...",
+    "refresh": "새로고침",
+    "copy": "복사",
+    "move": "이동",
+    "paste": "붙여넣기",
+    "newFolder": "새 폴더",
+    "rename": "이름 변경",
+    "addHost": "새 호스트",
+    "upload": "업로드",
+    "download": "다운로드",
+    "home": "홈",
+    "loading": "불러오는 중..."
+  },
+  "settings": {
+    "tabs": {
+      "general": "일반",
+      "appearance": "모양",
+      "terminal": "터미널",
+      "sharing": "공유",
+      "about": "정보"
+    },
+    "general": {
+      "title": "일반",
+      "language": "언어",
+      "languageDesc": "앱 표시 언어. 변경 즉시 적용됩니다.",
+      "languageSystem": "시스템 기본값",
+      "languageChangeFailed": "언어 변경에 실패했습니다"
+    },
+    "appearance": {
+      "title": "모양",
+      "themeDark": "다크",
+      "themeLight": "라이트",
+      "themeDesc": "앱 전체에 적용되는 테마를 선택합니다. 터미널을 포함한 모든 영역이 함께 전환됩니다.",
+      "accentLabel": "포인트 컬러",
+      "accentDesc": "앱 전체의 강조 색상을 선택합니다",
+      "themeChangeFailed": "테마 변경에 실패했습니다",
+      "accentChangeFailed": "포인트 컬러 변경에 실패했습니다"
+    },
+    "terminal": {
+      "title": "터미널",
+      "fontSize": "폰트 크기",
+      "scrollback": "스크롤백",
+      "scrollbackRange": "1,000 ~ 100,000줄",
+      "scrollbackChangeFailed": "스크롤백 설정 변경에 실패했습니다"
+    },
+    "sharing": {
+      "title": "공유",
+      "deviceName": "장치 이름",
+      "deviceNameDesc": "다음 mDNS 광고·페어링부터 적용됩니다",
+      "deviceNameSaved": "장치 이름을 저장했습니다"
+    },
+    "about": {
+      "title": "정보"
+    }
+  },
+  "home": {
+    "savedHosts": {
+      "title": "내 호스트",
+      "count": "{{count}}개",
+      "searchPlaceholder": "이름, 주소, 라벨 검색",
+      "sortRecent": "최근 연결",
+      "sortName": "이름순",
+      "statusRunning": "연결됨",
+      "statusConnecting": "연결 중…",
+      "statusError": "오류",
+      "statusIdle": "유휴",
+      "moreActions": "더 보기",
+      "doubleClickHint": "더블클릭으로도 연결",
+      "emptyState": "호스트를 추가해 시작하세요",
+      "contextClone": "복제",
+      "contextConnectNewTab": "새 탭으로 연결"
+    },
+    "sharedHosts": {
+      "title": "공유받은 호스트",
+      "peersFound": "같은 네트워크에서 피어 {{count}}명 발견",
+      "addByAddress": "IP로 추가",
+      "emptyState": "발견된 공유 피어가 없습니다",
+      "paired": "페어링됨",
+      "unpaired": "미페어링",
+      "pair": "페어링",
+      "lastSync": "마지막 동기화 {{time}}",
+      "hostsSharedCount": "호스트 {{count}}개 공유 중",
+      "noHosts": "공유된 호스트가 없습니다",
+      "saveAsMyHost": "내 호스트로 저장",
+      "connectHint": "연결 시 자격증명은 직접 입력합니다",
+      "pairingRequired": "이 피어의 공유 호스트를 보려면 페어링이 필요합니다. 상대 화면에 표시된 PIN을 입력하세요.",
+      "importAsMyHost": "내 호스트로 가져오기",
+      "importedToast": "{{name}}을(를) 내 호스트로 가져왔습니다"
+    }
+  },
+  "sftp": {
+    "filePane": {
+      "upload": "업로드",
+      "download": "다운로드",
+      "confirmDelete": "{{name}} 삭제할까요?",
+      "local": "로컬",
+      "remote": "원격",
+      "thisComputer": "이 컴퓨터",
+      "colName": "이름",
+      "colSize": "크기",
+      "colModified": "수정",
+      "colPermissions": "권한",
+      "loading": "불러오는 중...",
+      "itemCount": "{{count}}개 항목",
+      "selectedCount": "{{count}}개 선택됨 ({{size}})"
+    },
+    "hostPicker": {
+      "back": "돌아가기"
+    },
+    "properties": {
+      "title": "속성",
+      "name": "이름",
+      "path": "경로",
+      "kind": "종류",
+      "size": "크기",
+      "permissions": "권한",
+      "modifiedAt": "수정 시각",
+      "directory": "디렉터리",
+      "file": "파일"
+    },
+    "gate": {
+      "notConnected": "원격에 연결되어 있지 않습니다",
+      "desc": "저장된 호스트에 연결하거나 새 호스트를 등록해 파일 관리를 시작하세요",
+      "registerHost": "새 호스트 등록",
+      "previousConnectFailed": "이전 연결 실패: {{error}}",
+      "disconnected": "연결이 끊어졌습니다"
+    },
+    "paneHeader": {
+      "disconnect": "연결 해제",
+      "parentFolder": "상위 폴더",
+      "home": "홈"
+    },
+    "errors": {
+      "deleteSourceFailed": "원본 삭제 실패: {{message}}"
+    }
+  },
+  "workspace": {
+    "confirmCloseConnecting": "연결 중인 세션을 닫을까요?"
+  },
+  "fileBrowser": {
+    "noSession": "세션이 없습니다",
+    "localSessionUnsupported": "로컬 세션에서는 파일 브라우저를 사용할 수 없습니다",
+    "changePermissions": "권한 변경",
+    "back": "뒤로",
+    "chmodPrompt": "{{name}}의 권한 (예: 755)"
+  },
+  "historyPanel": {
+    "title": "명령어 히스토리",
+    "scopeAll": "전체",
+    "scopeCurrent": "현재 호스트",
+    "filterPlaceholder": "명령어 필터…",
+    "copied": "복사됨",
+    "sendToFocusedWindow": "포커스된 창에 입력",
+    "clickToCopyHint": "클릭하면 클립보드에 복사됩니다"
+  },
+  "relativeTime": {
+    "justNow": "방금",
+    "minutesAgo_other": "{{count}}분 전",
+    "hoursAgo_other": "{{count}}시간 전",
+    "yesterday": "어제",
+    "daysAgo_other": "{{count}}일 전"
+  },
+  "hostSidebar": {
+    "searchPlaceholder": "호스트 검색",
+    "sortToggle": "정렬 방식 전환",
+    "sortRecent": "최근 연결 순",
+    "sortName": "이름순"
+  },
+  "sharePanel": {
+    "status": "공유 상태",
+    "enabled": "켜짐",
+    "disabled": "꺼짐",
+    "pairingPin": "페어링 PIN",
+    "pinHint": "연결 요청 시 상대에게 알려주세요",
+    "hostsToShare": "공유할 호스트 ({{total}}개 중 {{selected}}개 선택)",
+    "noHosts": "등록된 호스트가 없습니다",
+    "connectedPeers": "연결된 피어",
+    "noConnectedPeers": "아직 연결된 피어가 없습니다",
+    "revoke": "회수"
+  },
+  "tabBar": {
+    "localShell": "로컬 쉘",
+    "closeTab": "{{title}} 닫기",
+    "newTab": "새 탭",
+    "settings": "설정"
+  },
+  "statusBar": {
+    "stateConnecting": "연결 중"
+  },
+  "workspaceLayout": {
+    "splitRight": "오른쪽에 분할",
+    "splitDown": "아래에 분할",
+    "search": "검색",
+    "closeTitled": "{{title}} 닫기"
+  },
+  "transfer": {
+    "stateQueued": "대기 중…",
+    "stateRunning": "진행 중",
+    "stateDone": "완료",
+    "stateFailed": "실패",
+    "stateCanceled": "취소됨",
+    "completedToast": "{{label}} 완료: {{fileName}}",
+    "failedToast": "{{label}} 실패: {{fileName}}",
+    "failedToastWithError": "{{label}} 실패: {{fileName}} ({{error}})",
+    "canceledToast": "{{label}} 취소됨: {{fileName}}",
+    "badgeLabel": "전송 {{count}}"
+  },
+  "windowControls": {
+    "minimize": "최소화",
+    "restore": "이전 크기로 복원",
+    "maximize": "최대화"
+  },
+  "rightDock": {
+    "history": "히스토리",
+    "files": "파일"
+  },
+  "hostForm": {
+    "authPassword": "비밀번호",
+    "authKey": "SSH 키",
+    "authAgent": "Agent",
+    "cloneName": "{{name}} 복사본",
+    "errorNameRequired": "이름을 입력하세요",
+    "errorAddressRequired": "주소를 입력하세요",
+    "errorUsernameRequired": "사용자명을 입력하세요",
+    "errorPortRange": "1-65535 사이의 포트",
+    "errorKeyPathRequired": "키 파일을 선택하세요",
+    "titleEdit": "호스트 편집",
+    "titleNew": "새 호스트 등록",
+    "labelName": "이름*",
+    "labelAddress": "주소*",
+    "labelPort": "포트",
+    "labels": "라벨",
+    "labelDraftPlaceholder": "라벨 추가…",
+    "removeLabel": "{{label}} 제거",
+    "labelUsername": "사용자명*",
+    "auth": "인증",
+    "passwordPlaceholderKeepUnchanged": "변경하지 않으려면 비워두세요",
+    "showSecret": "표시",
+    "labelKeyFile": "키 파일*",
+    "browse": "찾아보기",
+    "labelPassphrase": "패스프레이즈",
+    "testSuccess": "연결 성공",
+    "testFailed": "실패 ({{stage}})",
+    "testFailedWithMessage": "실패 ({{stage}}): {{message}}",
+    "stageTcp": "주소 불가",
+    "stageHandshake": "호스트키 불일치",
+    "stageAuth": "인증 실패",
+    "testing": "테스트 중...",
+    "testConnection": "연결 테스트",
+    "confirmDelete": "\"{{name}}\" 호스트를 삭제할까요?"
+  },
+  "credentialDialog": {
+    "title": "{{name}}에 연결",
+    "username": "사용자명",
+    "connectFailed": "연결에 실패했습니다",
+    "saveAsHost": "내 호스트로 저장하며 연결"
+  },
+  "peerPairing": {
+    "addByAddressTitle": "IP로 피어 추가",
+    "addressLabel": "주소",
+    "waitingApproval": "상대방의 승인을 기다리는 중...",
+    "pinInvalidOrRejected": "PIN이 올바르지 않거나 요청이 거부되었습니다",
+    "enterPinHint": "상대 화면에 표시된 PIN을 입력하세요.",
+    "requestTitle": "페어링 요청",
+    "requestBody": "({{address}}) 이(가) 페어링을 요청했습니다. 상대 화면의 PIN과 일치하면 승인하세요.",
+    "reject": "거절",
+    "approve": "승인"
+  },
+  "shareErrors": {
+    "lockout": "잠시 후 다시 시도하세요 (60초)",
+    "certChanged": "피어의 인증서가 변경되었습니다. 다시 페어링하세요",
+    "rejected": "피어가 연결을 거부했습니다. 다시 페어링하세요",
+    "generic": "요청이 실패했습니다"
+  },
+  "zmodem": {
+    "detectedUpload": "원격에서 rz 대기 중 — 보낼 파일을 선택하세요",
+    "selectFiles": "파일 선택",
+    "sending": "전송 중",
+    "receiving": "수신 중",
+    "done": "전송 완료",
+    "failed": "전송 실패",
+    "canceled": "전송 취소됨"
+  },
+  "fileUpload": {
+    "filesLabel": "{{count}}개 파일을",
+    "uploadToCountdown": "로 업로드 ({{seconds}}s)",
+    "uploadNow": "지금 업로드"
+  },
+  "hostKeyPrompt": {
+    "title": "처음 연결하는 호스트입니다",
+    "body": " ({{algo}})의 신원을 확인할 수 없습니다. 아래 핑거프린트가 서버 관리자에게 받은 값과 일치하는지 확인하세요.",
+    "once": "이번만",
+    "trustAndConnect": "신뢰하고 연결"
+  },
+  "terminalSearch": {
+    "placeholder": "검색 (Enter: 다음, Shift+Enter: 이전)",
+    "closeSearch": "검색 닫기"
+  },
+  "session": {
+    "disconnected": "연결 끊김",
+    "disconnectedWithError": "연결 끊김: {{error}}",
+    "reconnect": "재연결",
+    "error": "세션 오류",
+    "errorWithMessage": "세션 오류: {{error}}",
+    "ended": "세션 종료",
+    "endedWithExitCode": "세션 종료 (exit {{exitCode}})"
+  },
+  "conflictDialog": {
+    "title": "같은 이름의 파일이 있습니다",
+    "body": "다음 {{count}}개 파일이 이미 존재합니다. 어떻게 처리할까요?",
+    "moreCount": "외 {{count}}개...",
+    "skip": "건너뛰기",
+    "overwrite": "덮어쓰기"
+  }
+}

@@ -3,7 +3,7 @@ import { useSettingsStore } from './store'
 import * as settingsApi from '../../../shared/api/settings'
 
 beforeEach(() => {
-  useSettingsStore.setState({ theme: 'dark', accent: 'pink', fontSize: 14, scrollback: 10000, loaded: false })
+  useSettingsStore.setState({ theme: 'dark', accent: 'pink', fontSize: 14, scrollback: 10000, language: 'system', loaded: false })
   vi.restoreAllMocks()
 })
 
@@ -13,9 +13,22 @@ afterEach(() => {
 
 describe('load', () => {
   it('merges the RPC result into state and sets loaded', async () => {
-    vi.spyOn(settingsApi, 'getAllSettings').mockResolvedValue({ theme: 'light', accent: 'blue', fontSize: 18, scrollback: 5000 })
+    vi.spyOn(settingsApi, 'getAllSettings').mockResolvedValue({
+      theme: 'light',
+      accent: 'blue',
+      fontSize: 18,
+      scrollback: 5000,
+      language: 'ja',
+    })
     await useSettingsStore.getState().load()
-    expect(useSettingsStore.getState()).toMatchObject({ theme: 'light', accent: 'blue', fontSize: 18, scrollback: 5000, loaded: true })
+    expect(useSettingsStore.getState()).toMatchObject({
+      theme: 'light',
+      accent: 'blue',
+      fontSize: 18,
+      scrollback: 5000,
+      language: 'ja',
+      loaded: true,
+    })
   })
 })
 
@@ -87,6 +100,21 @@ describe('setFontSize', () => {
 
     expect(setSetting).toHaveBeenCalledTimes(1)
     expect(setSetting).toHaveBeenCalledWith('terminal.fontSize', '17')
+  })
+})
+
+describe('setLanguage', () => {
+  it('applies optimistically and persists', async () => {
+    const setSetting = vi.spyOn(settingsApi, 'setSetting').mockResolvedValue(undefined)
+    await useSettingsStore.getState().setLanguage('ko')
+    expect(useSettingsStore.getState().language).toBe('ko')
+    expect(setSetting).toHaveBeenCalledWith('general.language', 'ko')
+  })
+
+  it('rolls back and rethrows on persist failure', async () => {
+    vi.spyOn(settingsApi, 'setSetting').mockRejectedValue(new Error('boom'))
+    await expect(useSettingsStore.getState().setLanguage('en')).rejects.toThrow('boom')
+    expect(useSettingsStore.getState().language).toBe('system')
   })
 })
 

@@ -1,0 +1,325 @@
+{
+  "common": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "close": "关闭",
+    "delete": "删除",
+    "save": "保存",
+    "edit": "编辑",
+    "retry": "重试",
+    "connect": "连接",
+    "connecting": "连接中...",
+    "refresh": "刷新",
+    "copy": "复制",
+    "move": "移动",
+    "paste": "粘贴",
+    "newFolder": "新建文件夹",
+    "rename": "重命名",
+    "addHost": "新建主机",
+    "upload": "上传",
+    "download": "下载",
+    "home": "主目录",
+    "loading": "正在加载..."
+  },
+  "settings": {
+    "tabs": {
+      "general": "常规",
+      "appearance": "外观",
+      "terminal": "终端",
+      "sharing": "共享",
+      "about": "关于"
+    },
+    "general": {
+      "title": "常规",
+      "language": "语言",
+      "languageDesc": "应用的显示语言，更改后立即生效。",
+      "languageSystem": "系统默认",
+      "languageChangeFailed": "语言更改失败"
+    },
+    "appearance": {
+      "title": "外观",
+      "themeDark": "深色",
+      "themeLight": "浅色",
+      "themeDesc": "选择应用于整个应用的主题。包括终端在内的所有区域都会一起切换。",
+      "accentLabel": "强调色",
+      "accentDesc": "选择应用于整个应用的强调色",
+      "themeChangeFailed": "主题更改失败",
+      "accentChangeFailed": "强调色更改失败"
+    },
+    "terminal": {
+      "title": "终端",
+      "fontSize": "字体大小",
+      "scrollback": "回滚行数",
+      "scrollbackRange": "1,000 ~ 100,000 行",
+      "scrollbackChangeFailed": "回滚行数设置更改失败"
+    },
+    "sharing": {
+      "title": "共享",
+      "deviceName": "设备名称",
+      "deviceNameDesc": "从下次 mDNS 广播和配对开始生效",
+      "deviceNameSaved": "设备名称已保存"
+    },
+    "about": {
+      "title": "关于"
+    }
+  },
+  "home": {
+    "savedHosts": {
+      "title": "我的主机",
+      "count": "{{count}} 个",
+      "searchPlaceholder": "按名称、地址、标签搜索",
+      "sortRecent": "最近连接",
+      "sortName": "按名称",
+      "statusRunning": "已连接",
+      "statusConnecting": "连接中…",
+      "statusError": "错误",
+      "statusIdle": "空闲",
+      "moreActions": "更多操作",
+      "doubleClickHint": "双击也可连接",
+      "emptyState": "添加主机以开始使用",
+      "contextClone": "克隆",
+      "contextConnectNewTab": "在新标签页中连接"
+    },
+    "sharedHosts": {
+      "title": "共享的主机",
+      "peersFound": "在同一网络中发现 {{count}} 个对等设备",
+      "addByAddress": "按 IP 添加",
+      "emptyState": "未发现共享的对等设备",
+      "paired": "已配对",
+      "unpaired": "未配对",
+      "pair": "配对",
+      "lastSync": "上次同步 {{time}}",
+      "hostsSharedCount": "正在共享 {{count}} 台主机",
+      "noHosts": "没有共享的主机",
+      "saveAsMyHost": "保存为我的主机",
+      "connectHint": "连接时需手动输入凭据",
+      "pairingRequired": "需要配对才能查看此对等设备共享的主机。请输入对方屏幕上显示的 PIN。",
+      "importAsMyHost": "导入为我的主机",
+      "importedToast": "已将 {{name}} 导入为我的主机"
+    }
+  },
+  "sftp": {
+    "filePane": {
+      "upload": "上传",
+      "download": "下载",
+      "confirmDelete": "确定删除 {{name}} 吗？",
+      "local": "本地",
+      "remote": "远程",
+      "thisComputer": "此计算机",
+      "colName": "名称",
+      "colSize": "大小",
+      "colModified": "修改时间",
+      "colPermissions": "权限",
+      "loading": "正在加载...",
+      "itemCount": "{{count}} 个项目",
+      "selectedCount": "已选择 {{count}} 个 ({{size}})"
+    },
+    "hostPicker": {
+      "back": "返回"
+    },
+    "properties": {
+      "title": "属性",
+      "name": "名称",
+      "path": "路径",
+      "kind": "类型",
+      "size": "大小",
+      "permissions": "权限",
+      "modifiedAt": "修改时间",
+      "directory": "目录",
+      "file": "文件"
+    },
+    "gate": {
+      "notConnected": "尚未连接到远程",
+      "desc": "连接已保存的主机或注册新主机以开始管理文件",
+      "registerHost": "注册新主机",
+      "previousConnectFailed": "上次连接失败：{{error}}",
+      "disconnected": "连接已断开"
+    },
+    "paneHeader": {
+      "disconnect": "断开连接",
+      "parentFolder": "上级文件夹",
+      "home": "主目录"
+    },
+    "errors": {
+      "deleteSourceFailed": "删除源文件失败：{{message}}"
+    }
+  },
+  "workspace": {
+    "confirmCloseConnecting": "要关闭正在连接的会话吗？"
+  },
+  "fileBrowser": {
+    "noSession": "没有会话",
+    "localSessionUnsupported": "本地会话不支持文件浏览器",
+    "changePermissions": "更改权限",
+    "back": "后退",
+    "chmodPrompt": "{{name}} 的权限（例如 755）"
+  },
+  "historyPanel": {
+    "title": "命令历史",
+    "scopeAll": "全部",
+    "scopeCurrent": "当前主机",
+    "filterPlaceholder": "筛选命令…",
+    "copied": "已复制",
+    "sendToFocusedWindow": "发送到聚焦窗口",
+    "clickToCopyHint": "点击可复制到剪贴板"
+  },
+  "relativeTime": {
+    "justNow": "刚刚",
+    "minutesAgo_other": "{{count}} 分钟前",
+    "hoursAgo_other": "{{count}} 小时前",
+    "yesterday": "昨天",
+    "daysAgo_other": "{{count}} 天前"
+  },
+  "hostSidebar": {
+    "searchPlaceholder": "搜索主机",
+    "sortToggle": "切换排序方式",
+    "sortRecent": "按最近连接",
+    "sortName": "按名称"
+  },
+  "sharePanel": {
+    "status": "共享状态",
+    "enabled": "已开启",
+    "disabled": "已关闭",
+    "pairingPin": "配对 PIN",
+    "pinHint": "对方请求连接时请告知此 PIN",
+    "hostsToShare": "要共享的主机（共 {{total}} 个，已选 {{selected}} 个）",
+    "noHosts": "尚未注册任何主机",
+    "connectedPeers": "已连接的对等设备",
+    "noConnectedPeers": "尚无已连接的对等设备",
+    "revoke": "撤销"
+  },
+  "tabBar": {
+    "localShell": "本地终端",
+    "closeTab": "关闭 {{title}}",
+    "newTab": "新标签页",
+    "settings": "设置"
+  },
+  "statusBar": {
+    "stateConnecting": "连接中"
+  },
+  "workspaceLayout": {
+    "splitRight": "向右拆分",
+    "splitDown": "向下拆分",
+    "search": "搜索",
+    "closeTitled": "关闭 {{title}}"
+  },
+  "transfer": {
+    "stateQueued": "等待中…",
+    "stateRunning": "进行中",
+    "stateDone": "已完成",
+    "stateFailed": "失败",
+    "stateCanceled": "已取消",
+    "completedToast": "{{label}}完成：{{fileName}}",
+    "failedToast": "{{label}}失败：{{fileName}}",
+    "failedToastWithError": "{{label}}失败：{{fileName}}（{{error}}）",
+    "canceledToast": "{{label}}已取消：{{fileName}}",
+    "badgeLabel": "传输 {{count}}"
+  },
+  "windowControls": {
+    "minimize": "最小化",
+    "restore": "还原",
+    "maximize": "最大化"
+  },
+  "rightDock": {
+    "history": "历史记录",
+    "files": "文件"
+  },
+  "hostForm": {
+    "authPassword": "密码",
+    "authKey": "SSH 密钥",
+    "authAgent": "Agent",
+    "cloneName": "{{name}} 副本",
+    "errorNameRequired": "请输入名称",
+    "errorAddressRequired": "请输入地址",
+    "errorUsernameRequired": "请输入用户名",
+    "errorPortRange": "端口需在 1-65535 之间",
+    "errorKeyPathRequired": "请选择密钥文件",
+    "titleEdit": "编辑主机",
+    "titleNew": "注册新主机",
+    "labelName": "名称*",
+    "labelAddress": "地址*",
+    "labelPort": "端口",
+    "labels": "标签",
+    "labelDraftPlaceholder": "添加标签…",
+    "removeLabel": "移除 {{label}}",
+    "labelUsername": "用户名*",
+    "auth": "认证",
+    "passwordPlaceholderKeepUnchanged": "留空以保持不变",
+    "showSecret": "显示",
+    "labelKeyFile": "密钥文件*",
+    "browse": "浏览",
+    "labelPassphrase": "密钥密码",
+    "testSuccess": "连接成功",
+    "testFailed": "失败（{{stage}}）",
+    "testFailedWithMessage": "失败（{{stage}}）：{{message}}",
+    "stageTcp": "地址不可达",
+    "stageHandshake": "主机密钥不匹配",
+    "stageAuth": "认证失败",
+    "testing": "测试中...",
+    "testConnection": "测试连接",
+    "confirmDelete": "要删除主机“{{name}}”吗？"
+  },
+  "credentialDialog": {
+    "title": "连接到 {{name}}",
+    "username": "用户名",
+    "connectFailed": "连接失败",
+    "saveAsHost": "保存为我的主机并连接"
+  },
+  "peerPairing": {
+    "addByAddressTitle": "按 IP 添加对等设备",
+    "addressLabel": "地址",
+    "waitingApproval": "正在等待对方批准...",
+    "pinInvalidOrRejected": "PIN 不正确或请求被拒绝",
+    "enterPinHint": "请输入对方屏幕上显示的 PIN。",
+    "requestTitle": "配对请求",
+    "requestBody": "（{{address}}）请求配对。如果与对方屏幕上的 PIN 一致，请批准。",
+    "reject": "拒绝",
+    "approve": "批准"
+  },
+  "shareErrors": {
+    "lockout": "请稍后重试（60秒）",
+    "certChanged": "对方的证书已更改，请重新配对",
+    "rejected": "对方拒绝了连接，请重新配对",
+    "generic": "请求失败"
+  },
+  "zmodem": {
+    "detectedUpload": "远程正在等待 rz — 请选择要发送的文件",
+    "selectFiles": "选择文件",
+    "sending": "发送中",
+    "receiving": "接收中",
+    "done": "传输完成",
+    "failed": "传输失败",
+    "canceled": "传输已取消"
+  },
+  "fileUpload": {
+    "filesLabel": "将 {{count}} 个文件上传到",
+    "uploadToCountdown": "（{{seconds}}秒）",
+    "uploadNow": "立即上传"
+  },
+  "hostKeyPrompt": {
+    "title": "首次连接此主机",
+    "body": "（{{algo}}）的身份无法验证。请确认下方指纹与您从服务器管理员处获得的值一致。",
+    "once": "仅此一次",
+    "trustAndConnect": "信任并连接"
+  },
+  "terminalSearch": {
+    "placeholder": "搜索（Enter：下一个，Shift+Enter：上一个）",
+    "closeSearch": "关闭搜索"
+  },
+  "session": {
+    "disconnected": "连接已断开",
+    "disconnectedWithError": "连接已断开：{{error}}",
+    "reconnect": "重新连接",
+    "error": "会话错误",
+    "errorWithMessage": "会话错误：{{error}}",
+    "ended": "会话已结束",
+    "endedWithExitCode": "会话已结束（退出码 {{exitCode}}）"
+  },
+  "conflictDialog": {
+    "title": "存在同名文件",
+    "body": "以下 {{count}} 个文件已存在。要如何处理？",
+    "moreCount": "还有 {{count}} 个...",
+    "skip": "跳过",
+    "overwrite": "覆盖"
+  }
+}

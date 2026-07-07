@@ -13,6 +13,7 @@ const (
 	KeyAccent     = "appearance.accent"
 	KeyFontSize   = "terminal.fontSize"
 	KeyScrollback = "terminal.scrollback"
+	KeyLanguage   = "general.language"
 )
 
 const (
@@ -30,6 +31,7 @@ var defaults = map[string]string{
 	KeyAccent:     "pink",
 	KeyFontSize:   "14",
 	KeyScrollback: "10000",
+	KeyLanguage:   "system",
 }
 
 var validAccents = map[string]bool{
@@ -37,6 +39,14 @@ var validAccents = map[string]bool{
 	"orange": true,
 	"purple": true,
 	"blue":   true,
+}
+
+var validLanguages = map[string]bool{
+	"system": true,
+	"ko":     true,
+	"en":     true,
+	"zh":     true,
+	"ja":     true,
 }
 
 // Service implements in.SettingsUseCase: key validation and default-merging
@@ -89,6 +99,10 @@ func validate(key, value string) error {
 		return validateIntRange(key, value, minFontSize, maxFontSize)
 	case KeyScrollback:
 		return validateIntRange(key, value, minScrollback, maxScrollback)
+	case KeyLanguage:
+		if !validLanguages[value] {
+			return fmt.Errorf("settings: invalid language %q", value)
+		}
 	default:
 		return fmt.Errorf("settings: unknown key %q", key)
 	}

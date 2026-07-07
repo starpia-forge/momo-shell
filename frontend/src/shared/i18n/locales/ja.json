@@ -1,0 +1,325 @@
+{
+  "common": {
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "delete": "削除",
+    "save": "保存",
+    "edit": "編集",
+    "retry": "再試行",
+    "connect": "接続",
+    "connecting": "接続中...",
+    "refresh": "更新",
+    "copy": "コピー",
+    "move": "移動",
+    "paste": "貼り付け",
+    "newFolder": "新しいフォルダ",
+    "rename": "名前を変更",
+    "addHost": "新しいホスト",
+    "upload": "アップロード",
+    "download": "ダウンロード",
+    "home": "ホーム",
+    "loading": "読み込み中..."
+  },
+  "settings": {
+    "tabs": {
+      "general": "一般",
+      "appearance": "外観",
+      "terminal": "ターミナル",
+      "sharing": "共有",
+      "about": "情報"
+    },
+    "general": {
+      "title": "一般",
+      "language": "言語",
+      "languageDesc": "アプリの表示言語です。変更するとすぐに反映されます。",
+      "languageSystem": "システム既定",
+      "languageChangeFailed": "言語の変更に失敗しました"
+    },
+    "appearance": {
+      "title": "外観",
+      "themeDark": "ダーク",
+      "themeLight": "ライト",
+      "themeDesc": "アプリ全体に適用されるテーマを選択します。ターミナルを含むすべての領域が一緒に切り替わります。",
+      "accentLabel": "アクセントカラー",
+      "accentDesc": "アプリ全体のアクセントカラーを選択します",
+      "themeChangeFailed": "テーマの変更に失敗しました",
+      "accentChangeFailed": "アクセントカラーの変更に失敗しました"
+    },
+    "terminal": {
+      "title": "ターミナル",
+      "fontSize": "フォントサイズ",
+      "scrollback": "スクロールバック",
+      "scrollbackRange": "1,000〜100,000行",
+      "scrollbackChangeFailed": "スクロールバック設定の変更に失敗しました"
+    },
+    "sharing": {
+      "title": "共有",
+      "deviceName": "デバイス名",
+      "deviceNameDesc": "次回の mDNS 広告・ペアリングから適用されます",
+      "deviceNameSaved": "デバイス名を保存しました"
+    },
+    "about": {
+      "title": "情報"
+    }
+  },
+  "home": {
+    "savedHosts": {
+      "title": "マイホスト",
+      "count": "{{count}}件",
+      "searchPlaceholder": "名前・アドレス・ラベルで検索",
+      "sortRecent": "最近接続した順",
+      "sortName": "名前順",
+      "statusRunning": "接続済み",
+      "statusConnecting": "接続中…",
+      "statusError": "エラー",
+      "statusIdle": "アイドル",
+      "moreActions": "その他の操作",
+      "doubleClickHint": "ダブルクリックでも接続できます",
+      "emptyState": "ホストを追加して始めましょう",
+      "contextClone": "複製",
+      "contextConnectNewTab": "新しいタブで接続"
+    },
+    "sharedHosts": {
+      "title": "共有されたホスト",
+      "peersFound": "同じネットワークで{{count}}件のピアを発見",
+      "addByAddress": "IPで追加",
+      "emptyState": "共有ピアが見つかりません",
+      "paired": "ペアリング済み",
+      "unpaired": "未ペアリング",
+      "pair": "ペアリング",
+      "lastSync": "最終同期 {{time}}",
+      "hostsSharedCount": "ホスト{{count}}件を共有中",
+      "noHosts": "共有されたホストがありません",
+      "saveAsMyHost": "マイホストとして保存",
+      "connectHint": "接続時は認証情報を直接入力します",
+      "pairingRequired": "このピアの共有ホストを表示するにはペアリングが必要です。相手の画面に表示されたPINを入力してください。",
+      "importAsMyHost": "マイホストとして取り込む",
+      "importedToast": "{{name}}をマイホストとして取り込みました"
+    }
+  },
+  "sftp": {
+    "filePane": {
+      "upload": "アップロード",
+      "download": "ダウンロード",
+      "confirmDelete": "{{name}}を削除しますか？",
+      "local": "ローカル",
+      "remote": "リモート",
+      "thisComputer": "このコンピューター",
+      "colName": "名前",
+      "colSize": "サイズ",
+      "colModified": "更新日時",
+      "colPermissions": "権限",
+      "loading": "読み込み中...",
+      "itemCount": "{{count}}件のアイテム",
+      "selectedCount": "{{count}}件選択中 ({{size}})"
+    },
+    "hostPicker": {
+      "back": "戻る"
+    },
+    "properties": {
+      "title": "プロパティ",
+      "name": "名前",
+      "path": "パス",
+      "kind": "種類",
+      "size": "サイズ",
+      "permissions": "権限",
+      "modifiedAt": "更新日時",
+      "directory": "ディレクトリ",
+      "file": "ファイル"
+    },
+    "gate": {
+      "notConnected": "リモートに接続されていません",
+      "desc": "保存済みのホストに接続するか、新しいホストを登録してファイル管理を始めましょう",
+      "registerHost": "新しいホストを登録",
+      "previousConnectFailed": "前回の接続に失敗しました: {{error}}",
+      "disconnected": "接続が切断されました"
+    },
+    "paneHeader": {
+      "disconnect": "切断",
+      "parentFolder": "上位フォルダ",
+      "home": "ホーム"
+    },
+    "errors": {
+      "deleteSourceFailed": "元ファイルの削除に失敗しました: {{message}}"
+    }
+  },
+  "workspace": {
+    "confirmCloseConnecting": "接続中のセッションを閉じますか？"
+  },
+  "fileBrowser": {
+    "noSession": "セッションがありません",
+    "localSessionUnsupported": "ローカルセッションではファイルブラウザーを使用できません",
+    "changePermissions": "権限を変更",
+    "back": "戻る",
+    "chmodPrompt": "{{name}}の権限（例: 755）"
+  },
+  "historyPanel": {
+    "title": "コマンド履歴",
+    "scopeAll": "すべて",
+    "scopeCurrent": "現在のホスト",
+    "filterPlaceholder": "コマンドを絞り込み…",
+    "copied": "コピーしました",
+    "sendToFocusedWindow": "フォーカス中のウィンドウに入力",
+    "clickToCopyHint": "クリックするとクリップボードにコピーされます"
+  },
+  "relativeTime": {
+    "justNow": "たった今",
+    "minutesAgo_other": "{{count}}分前",
+    "hoursAgo_other": "{{count}}時間前",
+    "yesterday": "昨日",
+    "daysAgo_other": "{{count}}日前"
+  },
+  "hostSidebar": {
+    "searchPlaceholder": "ホストを検索",
+    "sortToggle": "並び順を切り替え",
+    "sortRecent": "最近接続した順",
+    "sortName": "名前順"
+  },
+  "sharePanel": {
+    "status": "共有ステータス",
+    "enabled": "オン",
+    "disabled": "オフ",
+    "pairingPin": "ペアリングPIN",
+    "pinHint": "接続リクエスト時に相手に伝えてください",
+    "hostsToShare": "共有するホスト（{{total}}件中{{selected}}件選択）",
+    "noHosts": "登録されたホストがありません",
+    "connectedPeers": "接続中のピア",
+    "noConnectedPeers": "まだ接続中のピアがありません",
+    "revoke": "取り消す"
+  },
+  "tabBar": {
+    "localShell": "ローカルシェル",
+    "closeTab": "{{title}}を閉じる",
+    "newTab": "新しいタブ",
+    "settings": "設定"
+  },
+  "statusBar": {
+    "stateConnecting": "接続中"
+  },
+  "workspaceLayout": {
+    "splitRight": "右に分割",
+    "splitDown": "下に分割",
+    "search": "検索",
+    "closeTitled": "{{title}}を閉じる"
+  },
+  "transfer": {
+    "stateQueued": "待機中…",
+    "stateRunning": "実行中",
+    "stateDone": "完了",
+    "stateFailed": "失敗",
+    "stateCanceled": "キャンセル済み",
+    "completedToast": "{{label}}完了: {{fileName}}",
+    "failedToast": "{{label}}失敗: {{fileName}}",
+    "failedToastWithError": "{{label}}失敗: {{fileName}} ({{error}})",
+    "canceledToast": "{{label}}キャンセル: {{fileName}}",
+    "badgeLabel": "転送 {{count}}"
+  },
+  "windowControls": {
+    "minimize": "最小化",
+    "restore": "元のサイズに戻す",
+    "maximize": "最大化"
+  },
+  "rightDock": {
+    "history": "履歴",
+    "files": "ファイル"
+  },
+  "hostForm": {
+    "authPassword": "パスワード",
+    "authKey": "SSHキー",
+    "authAgent": "Agent",
+    "cloneName": "{{name}} のコピー",
+    "errorNameRequired": "名前を入力してください",
+    "errorAddressRequired": "アドレスを入力してください",
+    "errorUsernameRequired": "ユーザー名を入力してください",
+    "errorPortRange": "1〜65535の範囲のポート",
+    "errorKeyPathRequired": "キーファイルを選択してください",
+    "titleEdit": "ホストを編集",
+    "titleNew": "新しいホストを登録",
+    "labelName": "名前*",
+    "labelAddress": "アドレス*",
+    "labelPort": "ポート",
+    "labels": "ラベル",
+    "labelDraftPlaceholder": "ラベルを追加…",
+    "removeLabel": "{{label}}を削除",
+    "labelUsername": "ユーザー名*",
+    "auth": "認証",
+    "passwordPlaceholderKeepUnchanged": "変更しない場合は空欄のままにしてください",
+    "showSecret": "表示",
+    "labelKeyFile": "キーファイル*",
+    "browse": "参照",
+    "labelPassphrase": "パスフレーズ",
+    "testSuccess": "接続に成功しました",
+    "testFailed": "失敗 ({{stage}})",
+    "testFailedWithMessage": "失敗 ({{stage}}): {{message}}",
+    "stageTcp": "アドレスに到達できません",
+    "stageHandshake": "ホストキーが一致しません",
+    "stageAuth": "認証に失敗しました",
+    "testing": "テスト中...",
+    "testConnection": "接続テスト",
+    "confirmDelete": "ホスト「{{name}}」を削除しますか？"
+  },
+  "credentialDialog": {
+    "title": "{{name}}に接続",
+    "username": "ユーザー名",
+    "connectFailed": "接続に失敗しました",
+    "saveAsHost": "マイホストとして保存して接続"
+  },
+  "peerPairing": {
+    "addByAddressTitle": "IPでピアを追加",
+    "addressLabel": "アドレス",
+    "waitingApproval": "相手の承認を待っています...",
+    "pinInvalidOrRejected": "PINが正しくないか、リクエストが拒否されました",
+    "enterPinHint": "相手の画面に表示されたPINを入力してください。",
+    "requestTitle": "ペアリングリクエスト",
+    "requestBody": "（{{address}}）がペアリングをリクエストしました。相手の画面のPINと一致する場合は承認してください。",
+    "reject": "拒否",
+    "approve": "承認"
+  },
+  "shareErrors": {
+    "lockout": "しばらくしてから再試行してください (60秒)",
+    "certChanged": "ピアの証明書が変更されました。再度ペアリングしてください",
+    "rejected": "ピアが接続を拒否しました。再度ペアリングしてください",
+    "generic": "リクエストに失敗しました"
+  },
+  "zmodem": {
+    "detectedUpload": "リモートがrzを待機中 — 送信するファイルを選択してください",
+    "selectFiles": "ファイルを選択",
+    "sending": "送信中",
+    "receiving": "受信中",
+    "done": "転送完了",
+    "failed": "転送失敗",
+    "canceled": "転送をキャンセルしました"
+  },
+  "fileUpload": {
+    "filesLabel": "{{count}}件のファイルを",
+    "uploadToCountdown": "へアップロード ({{seconds}}秒)",
+    "uploadNow": "今すぐアップロード"
+  },
+  "hostKeyPrompt": {
+    "title": "初めて接続するホストです",
+    "body": " ({{algo}}) の識別情報を確認できません。以下のフィンガープリントがサーバー管理者から受け取った値と一致するか確認してください。",
+    "once": "今回のみ",
+    "trustAndConnect": "信頼して接続"
+  },
+  "terminalSearch": {
+    "placeholder": "検索 (Enter: 次へ, Shift+Enter: 前へ)",
+    "closeSearch": "検索を閉じる"
+  },
+  "session": {
+    "disconnected": "接続が切断されました",
+    "disconnectedWithError": "接続が切断されました: {{error}}",
+    "reconnect": "再接続",
+    "error": "セッションエラー",
+    "errorWithMessage": "セッションエラー: {{error}}",
+    "ended": "セッションが終了しました",
+    "endedWithExitCode": "セッションが終了しました (exit {{exitCode}})"
+  },
+  "conflictDialog": {
+    "title": "同じ名前のファイルがあります",
+    "body": "次の{{count}}件のファイルは既に存在します。どのように処理しますか？",
+    "moreCount": "他{{count}}件...",
+    "skip": "スキップ",
+    "overwrite": "上書き"
+  }
+}

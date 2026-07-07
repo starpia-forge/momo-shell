@@ -109,7 +109,7 @@
 }
 
 @theme {
-  --font-sans: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --font-sans: 'Noto Sans KR', 'Malgun Gothic', 'Microsoft YaHei', 'Yu Gothic', sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
 
   --radius-sm: 8px;

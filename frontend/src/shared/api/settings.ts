@@ -2,17 +2,20 @@ import { GetAll, Set, AppInfo } from '../../../wailsjs/go/wails/SettingsService'
 
 export type Theme = 'dark' | 'light'
 export type Accent = 'pink' | 'orange' | 'purple' | 'blue'
+export type Language = 'system' | 'ko' | 'en' | 'zh' | 'ja'
 
 const ACCENTS: Accent[] = ['pink', 'orange', 'purple', 'blue']
+const LANGUAGES: Language[] = ['system', 'ko', 'en', 'zh', 'ja']
 
 export interface AppSettings {
   theme: Theme
   accent: Accent
   fontSize: number
   scrollback: number
+  language: Language
 }
 
-const DEFAULTS: AppSettings = { theme: 'dark', accent: 'pink', fontSize: 14, scrollback: 10000 }
+const DEFAULTS: AppSettings = { theme: 'dark', accent: 'pink', fontSize: 14, scrollback: 10000, language: 'system' }
 
 // parseAppSettings tolerates a raw KV map missing keys or holding malformed
 // values (e.g. a hand-edited DB row) by falling back to defaults per field.
@@ -21,11 +24,15 @@ export function parseAppSettings(raw: Record<string, string>): AppSettings {
   const accent = ACCENTS.includes(raw['appearance.accent'] as Accent) ? (raw['appearance.accent'] as Accent) : DEFAULTS.accent
   const fontSize = Number(raw['terminal.fontSize'])
   const scrollback = Number(raw['terminal.scrollback'])
+  const language = LANGUAGES.includes(raw['general.language'] as Language)
+    ? (raw['general.language'] as Language)
+    : DEFAULTS.language
   return {
     theme,
     accent,
     fontSize: Number.isFinite(fontSize) ? fontSize : DEFAULTS.fontSize,
     scrollback: Number.isFinite(scrollback) ? scrollback : DEFAULTS.scrollback,
+    language,
   }
 }
 

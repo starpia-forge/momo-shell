@@ -1,0 +1,328 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "save": "Save",
+    "edit": "Edit",
+    "retry": "Retry",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "move": "Move",
+    "paste": "Paste",
+    "newFolder": "New Folder",
+    "rename": "Rename",
+    "addHost": "New Host",
+    "upload": "Upload",
+    "download": "Download",
+    "home": "Home",
+    "loading": "Loading..."
+  },
+  "settings": {
+    "tabs": {
+      "general": "General",
+      "appearance": "Appearance",
+      "terminal": "Terminal",
+      "sharing": "Sharing",
+      "about": "About"
+    },
+    "general": {
+      "title": "General",
+      "language": "Language",
+      "languageDesc": "The app's display language. Applies immediately.",
+      "languageSystem": "System default",
+      "languageChangeFailed": "Failed to change language"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "themeDark": "Dark",
+      "themeLight": "Light",
+      "themeDesc": "Choose the theme applied across the whole app. Every area, including the terminal, switches together.",
+      "accentLabel": "Accent color",
+      "accentDesc": "Choose the accent color used across the whole app",
+      "themeChangeFailed": "Failed to change theme",
+      "accentChangeFailed": "Failed to change accent color"
+    },
+    "terminal": {
+      "title": "Terminal",
+      "fontSize": "Font size",
+      "scrollback": "Scrollback",
+      "scrollbackRange": "1,000 - 100,000 lines",
+      "scrollbackChangeFailed": "Failed to change scrollback setting"
+    },
+    "sharing": {
+      "title": "Sharing",
+      "deviceName": "Device name",
+      "deviceNameDesc": "Applies to future mDNS advertisements and pairings",
+      "deviceNameSaved": "Device name saved"
+    },
+    "about": {
+      "title": "About"
+    }
+  },
+  "home": {
+    "savedHosts": {
+      "title": "My Hosts",
+      "count": "{{count}}",
+      "searchPlaceholder": "Search by name, address, label",
+      "sortRecent": "Recent",
+      "sortName": "Name",
+      "statusRunning": "Connected",
+      "statusConnecting": "Connecting…",
+      "statusError": "Error",
+      "statusIdle": "Idle",
+      "moreActions": "More actions",
+      "doubleClickHint": "Double-click to connect too",
+      "emptyState": "Add a host to get started",
+      "contextClone": "Clone",
+      "contextConnectNewTab": "Connect in new tab"
+    },
+    "sharedHosts": {
+      "title": "Shared Hosts",
+      "peersFound": "Found {{count}} peers on the same network",
+      "addByAddress": "Add by IP",
+      "emptyState": "No shared peers found",
+      "paired": "Paired",
+      "unpaired": "Not paired",
+      "pair": "Pair",
+      "lastSync": "Last synced {{time}}",
+      "hostsSharedCount": "Sharing {{count}} hosts",
+      "noHosts": "No shared hosts",
+      "saveAsMyHost": "Save as my host",
+      "connectHint": "Credentials are entered manually when connecting",
+      "pairingRequired": "Pairing is required to see this peer's shared hosts. Enter the PIN shown on their screen.",
+      "importAsMyHost": "Import as my host",
+      "importedToast": "Imported {{name}} as your host"
+    }
+  },
+  "sftp": {
+    "filePane": {
+      "upload": "Upload",
+      "download": "Download",
+      "confirmDelete": "Delete {{name}}?",
+      "local": "Local",
+      "remote": "Remote",
+      "thisComputer": "This computer",
+      "colName": "Name",
+      "colSize": "Size",
+      "colModified": "Modified",
+      "colPermissions": "Permissions",
+      "loading": "Loading...",
+      "itemCount": "{{count}} items",
+      "selectedCount": "{{count}} selected ({{size}})"
+    },
+    "hostPicker": {
+      "back": "Back"
+    },
+    "properties": {
+      "title": "Properties",
+      "name": "Name",
+      "path": "Path",
+      "kind": "Kind",
+      "size": "Size",
+      "permissions": "Permissions",
+      "modifiedAt": "Modified",
+      "directory": "Directory",
+      "file": "File"
+    },
+    "gate": {
+      "notConnected": "Not connected to a remote",
+      "desc": "Connect to a saved host or register a new one to start managing files",
+      "registerHost": "Register new host",
+      "previousConnectFailed": "Previous connection failed: {{error}}",
+      "disconnected": "Connection lost"
+    },
+    "paneHeader": {
+      "disconnect": "Disconnect",
+      "parentFolder": "Parent folder",
+      "home": "Home"
+    },
+    "errors": {
+      "deleteSourceFailed": "Failed to delete source: {{message}}"
+    }
+  },
+  "workspace": {
+    "confirmCloseConnecting": "Close the connecting session?"
+  },
+  "fileBrowser": {
+    "noSession": "No session",
+    "localSessionUnsupported": "The file browser is not available for local sessions",
+    "changePermissions": "Change permissions",
+    "back": "Back",
+    "chmodPrompt": "Permissions for {{name}} (e.g. 755)"
+  },
+  "historyPanel": {
+    "title": "Command History",
+    "scopeAll": "All",
+    "scopeCurrent": "Current host",
+    "filterPlaceholder": "Filter commands…",
+    "copied": "Copied",
+    "sendToFocusedWindow": "Send to focused window",
+    "clickToCopyHint": "Click to copy to clipboard"
+  },
+  "relativeTime": {
+    "justNow": "Just now",
+    "minutesAgo_one": "{{count}} minute ago",
+    "minutesAgo_other": "{{count}} minutes ago",
+    "hoursAgo_one": "{{count}} hour ago",
+    "hoursAgo_other": "{{count}} hours ago",
+    "yesterday": "Yesterday",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
+  },
+  "hostSidebar": {
+    "searchPlaceholder": "Search hosts",
+    "sortToggle": "Toggle sort order",
+    "sortRecent": "Recently connected",
+    "sortName": "Name"
+  },
+  "sharePanel": {
+    "status": "Sharing status",
+    "enabled": "On",
+    "disabled": "Off",
+    "pairingPin": "Pairing PIN",
+    "pinHint": "Share this with the other party when they request a connection",
+    "hostsToShare": "Hosts to share ({{selected}} of {{total}} selected)",
+    "noHosts": "No hosts registered",
+    "connectedPeers": "Connected peers",
+    "noConnectedPeers": "No peers connected yet",
+    "revoke": "Revoke"
+  },
+  "tabBar": {
+    "localShell": "Local Shell",
+    "closeTab": "Close {{title}}",
+    "newTab": "New tab",
+    "settings": "Settings"
+  },
+  "statusBar": {
+    "stateConnecting": "Connecting"
+  },
+  "workspaceLayout": {
+    "splitRight": "Split right",
+    "splitDown": "Split down",
+    "search": "Search",
+    "closeTitled": "Close {{title}}"
+  },
+  "transfer": {
+    "stateQueued": "Queued…",
+    "stateRunning": "In progress",
+    "stateDone": "Done",
+    "stateFailed": "Failed",
+    "stateCanceled": "Canceled",
+    "completedToast": "{{label}} complete: {{fileName}}",
+    "failedToast": "{{label}} failed: {{fileName}}",
+    "failedToastWithError": "{{label}} failed: {{fileName}} ({{error}})",
+    "canceledToast": "{{label}} canceled: {{fileName}}",
+    "badgeLabel": "Transfer {{count}}"
+  },
+  "windowControls": {
+    "minimize": "Minimize",
+    "restore": "Restore",
+    "maximize": "Maximize"
+  },
+  "rightDock": {
+    "history": "History",
+    "files": "Files"
+  },
+  "hostForm": {
+    "authPassword": "Password",
+    "authKey": "SSH Key",
+    "authAgent": "Agent",
+    "cloneName": "{{name}} copy",
+    "errorNameRequired": "Enter a name",
+    "errorAddressRequired": "Enter an address",
+    "errorUsernameRequired": "Enter a username",
+    "errorPortRange": "Port must be between 1-65535",
+    "errorKeyPathRequired": "Choose a key file",
+    "titleEdit": "Edit Host",
+    "titleNew": "Register New Host",
+    "labelName": "Name*",
+    "labelAddress": "Address*",
+    "labelPort": "Port",
+    "labels": "Labels",
+    "labelDraftPlaceholder": "Add a label…",
+    "removeLabel": "Remove {{label}}",
+    "labelUsername": "Username*",
+    "auth": "Authentication",
+    "passwordPlaceholderKeepUnchanged": "Leave blank to keep unchanged",
+    "showSecret": "Show",
+    "labelKeyFile": "Key File*",
+    "browse": "Browse",
+    "labelPassphrase": "Passphrase",
+    "testSuccess": "Connection succeeded",
+    "testFailed": "Failed ({{stage}})",
+    "testFailedWithMessage": "Failed ({{stage}}): {{message}}",
+    "stageTcp": "Address unreachable",
+    "stageHandshake": "Host key mismatch",
+    "stageAuth": "Authentication failed",
+    "testing": "Testing...",
+    "testConnection": "Test Connection",
+    "confirmDelete": "Delete host \"{{name}}\"?"
+  },
+  "credentialDialog": {
+    "title": "Connect to {{name}}",
+    "username": "Username",
+    "connectFailed": "Failed to connect",
+    "saveAsHost": "Save as my host and connect"
+  },
+  "peerPairing": {
+    "addByAddressTitle": "Add Peer by IP",
+    "addressLabel": "Address",
+    "waitingApproval": "Waiting for approval...",
+    "pinInvalidOrRejected": "The PIN is incorrect or the request was rejected",
+    "enterPinHint": "Enter the PIN shown on their screen.",
+    "requestTitle": "Pairing Request",
+    "requestBody": " ({{address}}) requested pairing. Approve it if it matches the PIN on their screen.",
+    "reject": "Reject",
+    "approve": "Approve"
+  },
+  "shareErrors": {
+    "lockout": "Try again in a moment (60s)",
+    "certChanged": "The peer's certificate has changed. Please pair again",
+    "rejected": "The peer rejected the connection. Please pair again",
+    "generic": "Request failed"
+  },
+  "zmodem": {
+    "detectedUpload": "Remote is waiting for rz — choose files to send",
+    "selectFiles": "Select Files",
+    "sending": "Sending",
+    "receiving": "Receiving",
+    "done": "Transfer complete",
+    "failed": "Transfer failed",
+    "canceled": "Transfer canceled"
+  },
+  "fileUpload": {
+    "filesLabel": "Upload {{count}} files to",
+    "uploadToCountdown": "({{seconds}}s)",
+    "uploadNow": "Upload now"
+  },
+  "hostKeyPrompt": {
+    "title": "First time connecting to this host",
+    "body": " ({{algo}})'s identity can't be verified. Check that the fingerprint below matches the value you got from the server administrator.",
+    "once": "Just once",
+    "trustAndConnect": "Trust and connect"
+  },
+  "terminalSearch": {
+    "placeholder": "Search (Enter: next, Shift+Enter: previous)",
+    "closeSearch": "Close search"
+  },
+  "session": {
+    "disconnected": "Disconnected",
+    "disconnectedWithError": "Disconnected: {{error}}",
+    "reconnect": "Reconnect",
+    "error": "Session error",
+    "errorWithMessage": "Session error: {{error}}",
+    "ended": "Session ended",
+    "endedWithExitCode": "Session ended (exit {{exitCode}})"
+  },
+  "conflictDialog": {
+    "title": "Files with the same name already exist",
+    "body": "{{count}} files below already exist. How should they be handled?",
+    "moreCount": "and {{count}} more...",
+    "skip": "Skip",
+    "overwrite": "Overwrite"
+  }
+}

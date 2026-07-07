@@ -34,7 +34,7 @@ func TestGetAll_DefaultsWhenEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAll() error = %v", err)
 	}
-	want := map[string]string{KeyTheme: "dark", KeyAccent: "pink", KeyFontSize: "14", KeyScrollback: "10000"}
+	want := map[string]string{KeyTheme: "dark", KeyAccent: "pink", KeyFontSize: "14", KeyScrollback: "10000", KeyLanguage: "system"}
 	for k, v := range want {
 		if all[k] != v {
 			t.Fatalf("GetAll()[%s] = %q, want %q", k, all[k], v)
@@ -120,6 +120,22 @@ func TestSet_FontSizeBoundaries(t *testing.T) {
 	}
 	if err := svc.Set(KeyFontSize, "33"); err == nil {
 		t.Fatal("expected error for fontSize above maximum")
+	}
+}
+
+func TestSet_LanguageRejectsInvalidValue(t *testing.T) {
+	svc := New(newFakeRepo())
+	if err := svc.Set(KeyLanguage, "fr"); err == nil {
+		t.Fatal("expected error for invalid language")
+	}
+}
+
+func TestSet_LanguageAcceptsValidValues(t *testing.T) {
+	svc := New(newFakeRepo())
+	for _, v := range []string{"system", "ko", "en", "zh", "ja"} {
+		if err := svc.Set(KeyLanguage, v); err != nil {
+			t.Fatalf("Set(language, %q) error = %v", v, err)
+		}
 	}
 }
 
