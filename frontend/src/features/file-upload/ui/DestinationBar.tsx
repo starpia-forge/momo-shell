@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { detectUploadConflicts, uploadFiles, type ConflictPolicy } from '../../../shared/api'
 import { Button, ConflictDialog } from '../../../shared/ui'
 import { useFileUploadStore } from '../model/store'
@@ -12,6 +13,7 @@ function cancel() {
 /** Confirms (or lets the user redirect) the destination of a pane file
  * drop, auto-proceeding after 3s so a quick drop-and-forget still works. */
 export function DestinationBar() {
+  const { t } = useTranslation()
   const pending = useFileUploadStore((s) => s.pending)
   const [cwd, setCwd] = useState('')
   const [remainingMs, setRemainingMs] = useState(AUTO_PROCEED_MS)
@@ -65,7 +67,7 @@ export function DestinationBar() {
     <>
       {pending && (
         <div className="fixed left-1/2 bottom-6 -translate-x-1/2 z-100 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-surface2 border border-line shadow-menu text-fg text-[12.5px]">
-          <span className="whitespace-nowrap text-fg2">{pending.paths.length}개 파일을</span>
+          <span className="whitespace-nowrap text-fg2">{t('fileUpload.filesLabel', { count: pending.paths.length })}</span>
           <input
             className="min-w-55 px-2.5 py-1.5 rounded-md border border-line bg-inputbg text-fg font-mono text-[12px] focus:outline-none focus:border-accent"
             value={cwd}
@@ -76,12 +78,14 @@ export function DestinationBar() {
               if (e.key === 'Escape') cancel()
             }}
           />
-          <span className="whitespace-nowrap text-fg2">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
+          <span className="whitespace-nowrap text-fg2">
+            {t('fileUpload.uploadToCountdown', { seconds: Math.ceil(remainingMs / 1000) })}
+          </span>
           <Button variant="primary" size="sm" onClick={() => void commit(pending.sessionId, pending.paths, cwd)}>
-            지금 업로드
+            {t('fileUpload.uploadNow')}
           </Button>
           <Button size="sm" onClick={cancel}>
-            취소
+            {t('common.cancel')}
           </Button>
         </div>
       )}

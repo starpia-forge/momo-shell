@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clearSearchSession, focusSession, searchSession } from '../../../entities/session'
 
 interface SearchOverlayProps {
@@ -7,6 +8,7 @@ interface SearchOverlayProps {
 }
 
 export function SearchOverlay({ sessionId, onClose }: SearchOverlayProps) {
+  const { t } = useTranslation()
   const [term, setTerm] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -38,12 +40,12 @@ export function SearchOverlay({ sessionId, onClose }: SearchOverlayProps) {
         value={term}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setTerm(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="검색 (Enter: 다음, Shift+Enter: 이전)"
+        placeholder={t('terminalSearch.placeholder')}
       />
       <button
         className="border-none bg-transparent text-fg3 cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
         onClick={handleClose}
-        aria-label="검색 닫기"
+        aria-label={t('terminalSearch.closeSearch')}
       >
         ×
       </button>

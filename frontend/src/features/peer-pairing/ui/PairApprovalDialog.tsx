@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, Button } from '../../../shared/ui'
 import { respondPairing } from '../../../shared/api/share'
 import {
@@ -13,6 +14,7 @@ import { usePairRequestStore } from '../model/pairRequests'
 // HostKeyPrompt -- concurrent pairing requests are rare enough that
 // queuing them isn't worth the extra state.
 export function PairApprovalDialog() {
+  const { t } = useTranslation()
   useEffect(() => {
     return subscribe<SharePairRequestPayload>(topics.sharePairRequest(), (payload) => {
       usePairRequestStore.getState().setRequest(payload.requestId, payload)
@@ -43,16 +45,16 @@ export function PairApprovalDialog() {
   }
 
   return (
-    <Dialog open onClose={() => respond(false)} title="페어링 요청">
+    <Dialog open onClose={() => respond(false)} title={t('peerPairing.requestTitle')}>
       <div className="flex flex-col gap-4 w-100">
         <p className="m-0 text-[13px] text-fg2 leading-relaxed">
-          <strong className="text-fg">{payload.clientName}</strong>({payload.remoteAddr}) 이(가) 페어링을 요청했습니다. 상대 화면의 PIN과
-          일치하면 승인하세요.
+          <strong className="text-fg">{payload.clientName}</strong>
+          {t('peerPairing.requestBody', { address: payload.remoteAddr })}
         </p>
         <div className="flex justify-end gap-2.5">
-          <Button onClick={() => respond(false)}>거절</Button>
+          <Button onClick={() => respond(false)}>{t('peerPairing.reject')}</Button>
           <Button variant="primary" onClick={() => respond(true)}>
-            승인
+            {t('peerPairing.approve')}
           </Button>
         </div>
       </div>

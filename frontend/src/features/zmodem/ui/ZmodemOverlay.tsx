@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   browseForUploadFiles,
   cancelZmodem,
@@ -19,6 +20,7 @@ interface ZmodemOverlayProps {
  * -- the backend already blocks keystrokes during this; this is the visual
  * half (detection prompt, progress, cancel). */
 export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
+  const { t } = useTranslation()
   const [state, setState] = useState<TransferZmodemPayload | null>(null)
   const [progress, setProgress] = useState<TransferProgressPayload | null>(null)
 
@@ -60,23 +62,23 @@ export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
       {state.phase === 'detected' && state.direction === 'upload' && (
         <div className="flex items-center gap-2.5">
           <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-            원격에서 rz 대기 중 — 보낼 파일을 선택하세요
+            {t('zmodem.detectedUpload')}
           </span>
           <Button variant="primary" size="sm" onClick={handlePickFiles}>
-            파일 선택
+            {t('zmodem.selectFiles')}
           </Button>
           <Button size="sm" onClick={handleCancel}>
-            취소
+            {t('common.cancel')}
           </Button>
         </div>
       )}
       {state.phase === 'active' && (
         <>
           <div className="flex items-center gap-2.5">
-            <span className="font-bold text-accent-text">{state.direction === 'upload' ? '전송 중' : '수신 중'}</span>
+            <span className="font-bold text-accent-text">{state.direction === 'upload' ? t('zmodem.sending') : t('zmodem.receiving')}</span>
             {progress && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-fg2">{progress.file}</span>}
             <Button size="sm" onClick={handleCancel}>
-              취소
+              {t('common.cancel')}
             </Button>
           </div>
           <ProgressBar value={percent ?? 0} direction={direction} />
@@ -90,9 +92,9 @@ export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
           )}
         </>
       )}
-      {state.phase === 'done' && <span>전송 완료</span>}
-      {state.phase === 'failed' && <span className="text-red">전송 실패</span>}
-      {state.phase === 'canceled' && <span>전송 취소됨</span>}
+      {state.phase === 'done' && <span>{t('zmodem.done')}</span>}
+      {state.phase === 'failed' && <span className="text-red">{t('zmodem.failed')}</span>}
+      {state.phase === 'canceled' && <span>{t('zmodem.canceled')}</span>}
     </div>
   )
 }

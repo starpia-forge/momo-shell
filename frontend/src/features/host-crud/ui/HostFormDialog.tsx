@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../../shared/lib/cn'
 import { Dialog, Button, Chip, SegmentedControl, TextInput } from '../../../shared/ui'
 import { setHostSecret, testConnection, browseForKeyFile, type AuthType, type Host, type TestResult } from '../../../shared/api/host'
 import { useHostStore } from '../../../entities/host'
-
-const AUTH_OPTIONS: { value: AuthType; label: string }[] = [
-  { value: 'password', label: '비밀번호' },
-  { value: 'privateKey', label: 'SSH 키' },
-  { value: 'agent', label: 'Agent' },
-]
 
 interface HostFormDialogProps {
   open: boolean
@@ -69,6 +64,12 @@ function formFromHost(h: Host): FormState {
 }
 
 export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: HostFormDialogProps) {
+  const { t } = useTranslation()
+  const AUTH_OPTIONS: { value: AuthType; label: string }[] = [
+    { value: 'password', label: t('hostForm.authPassword') },
+    { value: 'privateKey', label: t('hostForm.authKey') },
+    { value: 'agent', label: t('hostForm.authAgent') },
+  ]
   const existing = useHostStore((s) => (hostId ? s.hosts[hostId] : undefined))
   const save = useHostStore((s) => s.save)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -84,7 +85,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
     if (existing) {
       setForm(formFromHost(existing))
     } else if (cloneFrom) {
-      setForm({ ...formFromHost(cloneFrom), name: `${cloneFrom.name} 복사본` })
+      setForm({ ...formFromHost(cloneFrom), name: t('hostForm.cloneName', { name: cloneFrom.name }) })
     } else {
       setForm(emptyForm())
     }
@@ -94,11 +95,11 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
 
   const port = Number(form.port)
   const errors = {
-    name: form.name.trim() === '' ? '이름을 입력하세요' : undefined,
-    address: form.address.trim() === '' ? '주소를 입력하세요' : undefined,
-    username: form.username.trim() === '' ? '사용자명을 입력하세요' : undefined,
-    port: !Number.isInteger(port) || port < 1 || port > 65535 ? '1-65535 사이의 포트' : undefined,
-    keyPath: form.authType === 'privateKey' && form.keyPath.trim() === '' ? '키 파일을 선택하세요' : undefined,
+    name: form.name.trim() === '' ? t('hostForm.errorNameRequired') : undefined,
+    address: form.address.trim() === '' ? t('hostForm.errorAddressRequired') : undefined,
+    username: form.username.trim() === '' ? t('hostForm.errorUsernameRequired') : undefined,
+    port: !Number.isInteger(port) || port < 1 || port > 65535 ? t('hostForm.errorPortRange') : undefined,
+    keyPath: form.authType === 'privateKey' && form.keyPath.trim() === '' ? t('hostForm.errorKeyPathRequired') : undefined,
   }
   const isValid = Object.values(errors).every((e) => !e)
 
@@ -163,24 +164,24 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={hostId ? '호스트 편집' : '새 호스트 등록'}>
+    <Dialog open={open} onClose={onClose} title={hostId ? t('hostForm.titleEdit') : t('hostForm.titleNew')}>
       <div className="host-form flex flex-col gap-4.5 w-120">
         <TextInput
-          label="이름*"
+          label={t('hostForm.labelName')}
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           error={errors.name}
         />
         <div className="flex gap-3 items-start *:flex-1">
           <TextInput
-            label="주소*"
+            label={t('hostForm.labelAddress')}
             className="font-mono"
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
             error={errors.address}
           />
           <TextInput
-            label="포트"
+            label={t('hostForm.labelPort')}
             className="font-mono"
             value={form.port}
             onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
@@ -189,7 +190,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         </div>
 
         <div className="flex flex-col gap-1.75">
-          <span className="text-[12.5px] font-medium text-fg2">라벨</span>
+          <span className="text-[12.5px] font-medium text-fg2">{t('hostForm.labels')}</span>
           <div className="flex flex-wrap gap-1.5 items-center px-3 py-2 rounded-md bg-inputbg border border-line">
             {form.labels.map((label) => (
               <Chip key={label}>
@@ -198,7 +199,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
                   type="button"
                   className="border-none bg-transparent text-fg2 cursor-pointer text-[12px] leading-none ml-1"
                   onClick={() => removeLabel(label)}
-                  aria-label={`${label} 제거`}
+                  aria-label={t('hostForm.removeLabel', { label })}
                 >
                   ×
                 </button>
@@ -207,7 +208,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
             <input
               className="flex-1 min-w-20 border-none bg-transparent text-fg text-[12px] outline-none"
               value={form.labelDraft}
-              placeholder="라벨 추가…"
+              placeholder={t('hostForm.labelDraftPlaceholder')}
               onChange={(e) => setForm((f) => ({ ...f, labelDraft: e.target.value }))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -221,25 +222,25 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         </div>
 
         <TextInput
-          label="사용자명*"
+          label={t('hostForm.labelUsername')}
           value={form.username}
           onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
           error={errors.username}
         />
 
         <div className="flex flex-col gap-1.75">
-          <span className="text-[12.5px] font-medium text-fg2">인증</span>
+          <span className="text-[12.5px] font-medium text-fg2">{t('hostForm.auth')}</span>
           <SegmentedControl value={form.authType} onChange={(v) => setForm((f) => ({ ...f, authType: v }))} options={AUTH_OPTIONS} />
         </div>
 
         {form.authType === 'password' && (
           <div className="flex gap-2 items-end">
             <TextInput
-              label="비밀번호"
+              label={t('hostForm.authPassword')}
               type={form.showSecret ? 'text' : 'password'}
               value={form.secret}
               onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value, secretTouched: true }))}
-              placeholder={hostId ? '변경하지 않으려면 비워두세요' : ''}
+              placeholder={hostId ? t('hostForm.passwordPlaceholderKeepUnchanged') : ''}
             />
             <label className="flex items-center gap-1 text-[12px] whitespace-nowrap">
               <input
@@ -247,7 +248,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
                 checked={form.showSecret}
                 onChange={(e) => setForm((f) => ({ ...f, showSecret: e.target.checked }))}
               />
-              표시
+              {t('hostForm.showSecret')}
             </label>
           </div>
         )}
@@ -255,17 +256,17 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         {form.authType === 'privateKey' && (
           <>
             <div className="flex gap-2 items-end">
-              <TextInput label="키 파일*" value={form.keyPath} readOnly error={errors.keyPath} />
+              <TextInput label={t('hostForm.labelKeyFile')} value={form.keyPath} readOnly error={errors.keyPath} />
               <Button type="button" onClick={handleBrowseKeyFile}>
-                찾아보기
+                {t('hostForm.browse')}
               </Button>
             </div>
             <TextInput
-              label="패스프레이즈"
+              label={t('hostForm.labelPassphrase')}
               type={form.showSecret ? 'text' : 'password'}
               value={form.secret}
               onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value, secretTouched: true }))}
-              placeholder={hostId ? '변경하지 않으려면 비워두세요' : ''}
+              placeholder={hostId ? t('hostForm.passwordPlaceholderKeepUnchanged') : ''}
             />
           </>
         )}
@@ -273,23 +274,31 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         {testResult && (
           <div className={cn('text-[12px] px-3.5 py-2.5 rounded-md', testResult.ok ? 'bg-green/15 text-green' : 'bg-red/15 text-red')}>
             {testResult.ok
-              ? '연결 성공'
-              : `실패 (${testResult.stage === 'tcp' ? '주소 불가' : testResult.stage === 'handshake' ? '호스트키 불일치' : '인증 실패'})${
-                  testResult.message ? `: ${testResult.message}` : ''
-                }`}
+              ? t('hostForm.testSuccess')
+              : (() => {
+                  const stage =
+                    testResult.stage === 'tcp'
+                      ? t('hostForm.stageTcp')
+                      : testResult.stage === 'handshake'
+                        ? t('hostForm.stageHandshake')
+                        : t('hostForm.stageAuth')
+                  return testResult.message
+                    ? t('hostForm.testFailedWithMessage', { stage, message: testResult.message })
+                    : t('hostForm.testFailed', { stage })
+                })()}
           </div>
         )}
 
         <div className="flex justify-between items-center mt-2">
           <Button type="button" onClick={handleTestConnection} disabled={!isValid || testing}>
-            {testing ? '테스트 중...' : '연결 테스트'}
+            {testing ? t('hostForm.testing') : t('hostForm.testConnection')}
           </Button>
           <div className="flex gap-2">
             <Button type="button" onClick={onClose}>
-              취소
+              {t('common.cancel')}
             </Button>
             <Button type="button" variant="primary" onClick={handleSave} disabled={!isValid || saving}>
-              저장
+              {t('common.save')}
             </Button>
           </div>
         </div>
