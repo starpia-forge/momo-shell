@@ -153,11 +153,11 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
       <PaneHeader path={path} ops={ops} onNavigate={(p) => void refresh(p)} onNewFolder={() => setMkdirOpen(true)} onDisconnect={onDisconnect} />
 
       {pane.loading && (
-        <div className="flex items-center gap-1.5 p-2 text-muted text-[12px]">
+        <div className="flex items-center gap-1.5 p-2 text-fg2 text-[12px]">
           <Spinner size={12} /> 불러오는 중...
         </div>
       )}
-      {pane.error && <div className="p-2 text-danger text-[12px]">{pane.error}</div>}
+      {pane.error && <div className="p-2 text-red text-[12px]">{pane.error}</div>}
 
       {!pane.loading && !pane.error && (
         <div className="flex-1 overflow-y-auto">
@@ -178,8 +178,8 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
               <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.name}>
                 {entry.name}
               </span>
-              <span className="flex-none w-14 text-right text-[11px] text-muted">{entry.isDir ? '—' : formatSize(entry.size)}</span>
-              <span className="flex-none w-17 text-right text-[11px] text-muted">{formatModTime(entry.modTime)}</span>
+              <span className="flex-none w-14 text-right text-[11px] text-fg2">{entry.isDir ? '—' : formatSize(entry.size)}</span>
+              <span className="flex-none w-17 text-right text-[11px] text-fg2">{formatModTime(entry.modTime)}</span>
             </div>
           ))}
         </div>

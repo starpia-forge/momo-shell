@@ -1,36 +1,83 @@
+@import '@fontsource/noto-sans-kr/400.css';
+@import '@fontsource/noto-sans-kr/500.css';
+@import '@fontsource/noto-sans-kr/700.css';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/700.css';
 @import 'tailwindcss';
 
 /* ── 계층 1: 테마 팔레트 (런타임 변수) ─────────────── */
 :root {
-  --theme-canvas: #1b2636;
-  --theme-surface: #22314a;
-  --theme-line: #34486b;
-  --theme-fg: #e8edf5;
-  --theme-muted: #9aa9c2;
-  --theme-accent: #4f8cff;
-  --theme-on-accent: #ffffff;
-  --theme-danger: #ef5b5b;
-  --theme-success: #4caf7d;
-  --theme-warning: #e0c341;
+  --theme-canvas: #17181c;
+  --theme-surface: #1e2026;
+  --theme-surface2: #262a32;
+  --theme-inputbg: #14151a;
+  --theme-line: #2e323b;
+  --theme-fg: #ebe9e4;
+  --theme-fg2: #a3a19a;
+  --theme-fg3: #6b6a64;
+  --theme-accent: #febecb;
+  --theme-accent-text: var(--theme-accent);
+  --theme-on-accent: #42131e;
+  --theme-green: #7dc98a;
+  --theme-amber: #e2b45f;
+  --theme-red: #e06c6c;
+  --theme-blue: #8fb4e8;
+  --theme-purple: #c9a0ff;
+  --theme-termbg: #101116;
+  --theme-termtext: #d5d3cc;
+  --theme-termdim: #6b6a64;
+  --theme-termline: rgba(255, 255, 255, 0.05);
+  --theme-track: rgba(255, 255, 255, 0.08);
+  --theme-hl: #fbe4e9;
   --theme-overlay: rgba(0, 0, 0, 0.5);
-  --theme-shadow: rgba(0, 0, 0, 0.3);
+  --theme-shadow: rgba(0, 0, 0, 0.45);
 }
 
 [data-theme='light'] {
-  --theme-canvas: #f5f7fa;
+  --theme-canvas: #f2f0ec;
   --theme-surface: #ffffff;
-  --theme-line: #d4dce8;
-  --theme-fg: #1f2a3a;
-  --theme-muted: #5c6b82;
-  --theme-accent: #2f6fe4;
-  --theme-on-accent: #ffffff;
-  --theme-danger: #d64545;
-  --theme-success: #2e9e64;
-  --theme-warning: #a8860d;
+  --theme-surface2: #eceae4;
+  --theme-inputbg: #f7f5f1;
+  --theme-line: #e0dcd4;
+  --theme-fg: #2a2925;
+  --theme-fg2: #6f6d66;
+  --theme-fg3: #a09e96;
+  --theme-accent-text: #b85a72;
+  --theme-on-accent: #42131e;
+  --theme-green: #3f9e57;
+  --theme-amber: #c08a28;
+  --theme-red: #cc4f4f;
+  --theme-blue: #3d6fb4;
+  --theme-purple: #8a5fd0;
+  --theme-termbg: #fdfcfb;
+  --theme-termtext: #3b3a36;
+  --theme-termdim: #a09e96;
+  --theme-termline: rgba(0, 0, 0, 0.07);
+  --theme-track: rgba(0, 0, 0, 0.09);
+  --theme-hl: #7a2032;
   --theme-overlay: rgba(0, 0, 0, 0.35);
-  --theme-shadow: rgba(0, 0, 0, 0.15);
+  --theme-shadow: rgba(0, 0, 0, 0.2);
+}
+
+/* ── 포인트 컬러 (accent) 전환 ─────────────── */
+[data-accent='orange'] {
+  --theme-accent: #f0a05a;
+}
+[data-accent='purple'] {
+  --theme-accent: #c9a0ff;
+}
+[data-accent='blue'] {
+  --theme-accent: #8fb4e8;
+}
+
+[data-theme='light'][data-accent='orange'] {
+  --theme-accent-text: #b06a1e;
+}
+[data-theme='light'][data-accent='purple'] {
+  --theme-accent-text: #7d4fc0;
+}
+[data-theme='light'][data-accent='blue'] {
+  --theme-accent-text: #3d6fb4;
 }
 
 /* ── 계층 2: Tailwind 시맨틱 토큰 (@theme inline) ───── */
@@ -38,25 +85,59 @@
   --color-*: initial;
   --color-canvas: var(--theme-canvas);
   --color-surface: var(--theme-surface);
+  --color-surface2: var(--theme-surface2);
+  --color-inputbg: var(--theme-inputbg);
   --color-line: var(--theme-line);
   --color-fg: var(--theme-fg);
-  --color-muted: var(--theme-muted);
+  --color-fg2: var(--theme-fg2);
+  --color-fg3: var(--theme-fg3);
   --color-accent: var(--theme-accent);
+  --color-accent-text: var(--theme-accent-text);
   --color-on-accent: var(--theme-on-accent);
-  --color-danger: var(--theme-danger);
-  --color-success: var(--theme-success);
-  --color-warning: var(--theme-warning);
+  --color-green: var(--theme-green);
+  --color-amber: var(--theme-amber);
+  --color-red: var(--theme-red);
+  --color-blue: var(--theme-blue);
+  --color-purple: var(--theme-purple);
+  --color-termbg: var(--theme-termbg);
+  --color-termtext: var(--theme-termtext);
+  --color-termdim: var(--theme-termdim);
+  --color-termline: var(--theme-termline);
+  --color-track: var(--theme-track);
+  --color-hl: var(--theme-hl);
   --color-overlay: var(--theme-overlay);
 }
 
 @theme {
+  --font-sans: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
-  --shadow-float: 0 4px 12px var(--theme-shadow);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+
+  --shadow-float: 0 10px 28px var(--theme-shadow);
+  --shadow-menu: 0 16px 40px var(--theme-shadow);
+  --shadow-modal: 0 24px 56px var(--theme-shadow);
+
   --animate-pulse-dot: pulse-dot 1s ease-in-out infinite;
   --animate-spin: spin 0.6s linear infinite;
+  --animate-blink: blink 1.2s infinite;
   @keyframes pulse-dot {
     50% {
       opacity: 0.3;
+    }
+  }
+  @keyframes blink {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
     }
   }
 }
@@ -68,7 +149,7 @@
     height: 100%;
   }
   body {
-    @apply bg-canvas text-fg font-mono antialiased;
+    @apply bg-canvas text-fg font-sans antialiased;
     line-height: normal;
   }
 }

@@ -10,7 +10,7 @@ interface PropertiesDialogProps {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4 py-1.5 border-b border-line last:border-b-0">
-      <span className="text-muted">{label}</span>
+      <span className="text-fg2">{label}</span>
       <span className="text-right break-all">{value}</span>
     </div>
   )

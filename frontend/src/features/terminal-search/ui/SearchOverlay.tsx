@@ -41,7 +41,7 @@ export function SearchOverlay({ sessionId, onClose }: SearchOverlayProps) {
         placeholder="검색 (Enter: 다음, Shift+Enter: 이전)"
       />
       <button
-        className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
+        className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
         onClick={handleClose}
         aria-label="검색 닫기"
       >

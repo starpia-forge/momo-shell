@@ -76,7 +76,7 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
 
   return (
     <div className="flex-none border-t border-line max-h-60 flex flex-col">
-      <div className="flex items-center justify-between px-2 py-1 text-muted text-[12px]">
+      <div className="flex items-center justify-between px-2 py-1 text-fg2 text-[12px]">
         <span>공유 호스트</span>
         <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setAddingByAddress(true)}>
           IP로 추가
@@ -89,7 +89,7 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
               <div
                 className={cn(
                   'flex items-center gap-1.5 px-2 py-1.5 cursor-pointer bg-accent/6 hover:bg-canvas',
-                  !peer.online && 'text-muted opacity-60',
+                  !peer.online && 'text-fg2 opacity-60',
                 )}
                 onClick={() => peer.paired && toggle(peer.id)}
                 onContextMenu={(e) => peer.paired && openPeerMenu(e, peer)}
@@ -100,7 +100,7 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
                   {peer.paired ? ` (${peer.hosts.length})` : ''}
                 </span>
                 {!peer.online && peer.lastSyncAt && (
-                  <span className="flex-none text-[10px] text-muted">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
+                  <span className="flex-none text-[10px] text-fg2">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
                 )}
                 {!peer.paired && (
                   <button
@@ -116,11 +116,11 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
               </div>
               {peer.paired && expanded[peer.id] && (
                 <ul className="m-0 py-0 pr-2 pb-1 pl-6 flex flex-col gap-0.5">
-                  {peer.hosts.length === 0 && <li className="text-[11px] text-muted py-1">공유된 호스트가 없습니다</li>}
+                  {peer.hosts.length === 0 && <li className="text-[11px] text-fg2 py-1">공유된 호스트가 없습니다</li>}
                   {peer.hosts.map((h, index) => (
                     <li
                       key={`${h.address}:${h.port}`}
-                      className="flex items-center gap-1.5 text-[12px] text-muted"
+                      className="flex items-center gap-1.5 text-[12px] text-fg2"
                       onDoubleClick={() => setConnecting(h)}
                       onContextMenu={(e) => openHostMenu(e, peer.id, index, h)}
                     >

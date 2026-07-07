@@ -27,7 +27,7 @@ export function SettingsPage() {
               key={t.id}
               className={cn(
                 'text-[13px] text-left px-3 py-2 rounded border-none cursor-pointer',
-                tab === t.id ? 'bg-canvas text-fg' : 'text-muted bg-transparent',
+                tab === t.id ? 'bg-canvas text-fg' : 'text-fg2 bg-transparent',
               )}
               onClick={() => setTab(t.id)}
             >

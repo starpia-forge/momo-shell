@@ -55,14 +55,14 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
           void submit()
         }}
       >
-        <p className="m-0 text-muted font-mono text-[12px]">
+        <p className="m-0 text-fg2 font-mono text-[12px]">
           {sharedHost.address}:{sharedHost.port}
         </p>
 
         <TextInput label="사용자명" value={username} onChange={(e) => setUsername(e.target.value)} />
 
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">인증 방식</span>
+          <span className="text-[11px] text-fg2">인증 방식</span>
           <div className="flex gap-3">
             {(['password', 'privateKey', 'agent'] as const).map((type) => (
               <label key={type} className="flex items-center gap-1 cursor-pointer">
@@ -94,7 +94,7 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
           내 호스트로 저장하며 연결
         </label>
 
-        {error && <div className="text-danger text-[12px]">{error}</div>}
+        {error && <div className="text-red text-[12px]">{error}</div>}
 
         <div className="flex justify-end gap-2">
           <Button type="submit" variant="primary" disabled={!isValid || connecting}>

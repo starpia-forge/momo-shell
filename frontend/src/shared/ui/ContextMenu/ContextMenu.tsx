@@ -43,7 +43,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
           key={item.label}
           className={cn(
             'rounded-sm px-2.5 py-1.5 text-left text-[13px] cursor-pointer hover:bg-canvas',
-            item.danger ? 'text-danger' : 'text-fg',
+            item.danger ? 'text-red' : 'text-fg',
           )}
           onClick={() => {
             item.onClick()

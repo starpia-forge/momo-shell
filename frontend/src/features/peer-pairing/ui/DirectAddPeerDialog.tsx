@@ -55,7 +55,7 @@ export function DirectAddPeerDialog({ onClose }: DirectAddPeerDialogProps) {
           inputMode="numeric"
           error={error}
         />
-        {pending && <p className="m-0 text-[12px] text-muted">상대방의 승인을 기다리는 중...</p>}
+        {pending && <p className="m-0 text-[12px] text-fg2">상대방의 승인을 기다리는 중...</p>}
         <div className="flex justify-end gap-2">
           <Button type="submit" variant="primary" disabled={!isValid || pending}>
             연결

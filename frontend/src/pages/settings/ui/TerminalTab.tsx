@@ -41,7 +41,7 @@ export function TerminalTab() {
       <div className="flex items-center justify-between py-2.5 border-b border-line">
         <div>
           <div className="text-[13px]">스크롤백</div>
-          <div className="text-[11px] text-muted">1,000 ~ 100,000줄</div>
+          <div className="text-[11px] text-fg2">1,000 ~ 100,000줄</div>
         </div>
         <TextInput
           className="w-25 text-right"

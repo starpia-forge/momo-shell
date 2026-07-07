@@ -196,10 +196,10 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
       >
         <div className="flex items-baseline gap-1.5 min-w-0 overflow-hidden">
           <span className="text-[11px] text-fg whitespace-nowrap overflow-hidden text-ellipsis">{title}</span>
-          {subtitle && <span className="text-[10px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{subtitle}</span>}
+          {subtitle && <span className="text-[10px] text-fg2 whitespace-nowrap overflow-hidden text-ellipsis">{subtitle}</span>}
         </div>
         <button
-          className="flex-shrink-0 border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none pl-1.5 hover:text-fg"
+          className="flex-shrink-0 border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none pl-1.5 hover:text-fg"
           onClick={handleClose}
           aria-label={`${title} 닫기`}
         >

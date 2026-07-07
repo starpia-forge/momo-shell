@@ -181,7 +181,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[12px] text-muted">라벨</span>
+          <span className="text-[12px] text-fg2">라벨</span>
           <div className="flex flex-wrap gap-1.5 items-center">
             {form.labels.map((label) => (
               <span
@@ -191,7 +191,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
                 {label}
                 <button
                   type="button"
-                  className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none"
+                  className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none"
                   onClick={() => removeLabel(label)}
                   aria-label={`${label} 제거`}
                 >
@@ -223,7 +223,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         />
 
         <div className="flex flex-col gap-1">
-          <span className="text-[12px] text-muted">인증 방식</span>
+          <span className="text-[12px] text-fg2">인증 방식</span>
           <div className="flex gap-3">
             {(['password', 'privateKey', 'agent'] as const).map((type) => (
               <label key={type} className="flex items-center gap-1 text-[13px]">
@@ -278,7 +278,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         )}
 
         {testResult && (
-          <div className={cn('text-[12px] px-2 py-1.5 rounded', testResult.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger')}>
+          <div className={cn('text-[12px] px-2 py-1.5 rounded', testResult.ok ? 'bg-green/15 text-green' : 'bg-red/15 text-red')}>
             {testResult.ok
               ? '연결 성공'
               : `실패 (${testResult.stage === 'tcp' ? '주소 불가' : testResult.stage === 'handshake' ? '호스트키 불일치' : '인증 실패'})${

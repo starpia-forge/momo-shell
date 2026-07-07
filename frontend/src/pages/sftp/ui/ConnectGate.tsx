@@ -24,7 +24,7 @@ export function ConnectGate() {
 
   if (connecting) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted text-[13px]">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-fg2 text-[13px]">
         <Spinner size={20} />
         연결 중...
       </div>
@@ -38,8 +38,8 @@ export function ConnectGate() {
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4">
           <div className="text-[13px] font-semibold">연결이 필요합니다</div>
-          <div className="text-[12px] text-muted text-center">저장된 호스트에 연결하거나 새 호스트를 등록하세요.</div>
-          {gateError && <div className="text-[12px] text-danger">{gateError}</div>}
+          <div className="text-[12px] text-fg2 text-center">저장된 호스트에 연결하거나 새 호스트를 등록하세요.</div>
+          {gateError && <div className="text-[12px] text-red">{gateError}</div>}
           <button
             className="px-4 py-1.5 rounded border border-accent bg-accent/10 text-accent cursor-pointer text-[12px] hover:bg-accent/20"
             onClick={() => setView('picker')}
@@ -47,7 +47,7 @@ export function ConnectGate() {
             연결
           </button>
           <button
-            className="px-3 py-1.5 rounded border border-dashed border-line bg-transparent text-muted cursor-pointer text-[12px] hover:border-accent hover:text-fg"
+            className="px-3 py-1.5 rounded border border-dashed border-line bg-transparent text-fg2 cursor-pointer text-[12px] hover:border-accent hover:text-fg"
             onClick={() => setDialogOpen(true)}
           >
             + 새 호스트 등록

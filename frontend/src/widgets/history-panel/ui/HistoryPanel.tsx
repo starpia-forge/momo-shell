@@ -104,13 +104,13 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
             className="group flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-canvas"
             onClick={() => handleCopy(entry.command)}
           >
-            <span className="flex-none text-[10px] text-muted w-10">{formatRelativeTime(entry.executedAt)}</span>
+            <span className="flex-none text-[10px] text-fg2 w-10">{formatRelativeTime(entry.executedAt)}</span>
             <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.command}>
               {entry.command}
             </span>
             <div className="invisible flex-none flex gap-0.5 group-hover:visible">
               <button
-                className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
+                className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleSend(entry.command)
@@ -121,7 +121,7 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
                 ↵
               </button>
               <button
-                className="border-none bg-transparent text-muted cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-danger"
+                className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-red"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleDelete(entry.id)

@@ -22,7 +22,7 @@ export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockPro
       <div className="flex flex-none border-b border-line">
         <button
           className={cn(
-            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-muted bg-transparent border-none cursor-pointer',
+            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-fg2 bg-transparent border-none cursor-pointer',
             active === 'history' && 'bg-canvas text-fg',
           )}
           onClick={() => useRightDockStore.getState().show('history')}
@@ -31,7 +31,7 @@ export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockPro
         </button>
         <button
           className={cn(
-            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-muted bg-transparent border-none cursor-pointer',
+            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-fg2 bg-transparent border-none cursor-pointer',
             active === 'files' && 'bg-canvas text-fg',
           )}
           onClick={() => useRightDockStore.getState().show('files')}
@@ -40,7 +40,7 @@ export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockPro
         </button>
         <button
           className={cn(
-            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-muted bg-transparent border-none cursor-pointer',
+            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-fg2 bg-transparent border-none cursor-pointer',
             active === 'share' && 'bg-canvas text-fg',
           )}
           onClick={() => useRightDockStore.getState().show('share')}

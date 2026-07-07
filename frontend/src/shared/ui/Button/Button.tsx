@@ -8,7 +8,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANT: Record<NonNullable<ButtonProps['variant']>, string> = {
   default: 'bg-surface border-line text-fg',
   primary: 'bg-accent border-accent text-on-accent',
-  danger: 'bg-danger border-danger text-on-accent',
+  danger: 'bg-red border-red text-on-accent',
 }
 
 export function Button({ variant = 'default', className, ...rest }: ButtonProps) {

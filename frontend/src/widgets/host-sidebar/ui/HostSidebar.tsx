@@ -18,9 +18,9 @@ type SortMode = 'recent' | 'name'
 type DotStatus = 'running' | 'connecting' | 'error' | 'idle'
 
 const DOT: Record<DotStatus, string> = {
-  running: 'bg-success',
-  connecting: 'bg-warning animate-pulse-dot',
-  error: 'bg-danger',
+  running: 'bg-green',
+  connecting: 'bg-amber animate-pulse-dot',
+  error: 'bg-red',
   idle: 'bg-line',
 }
 
@@ -92,7 +92,7 @@ export function HostSidebar({ onConnect, onConnectShared }: HostSidebarProps) {
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <div className="flex justify-between items-center px-2 py-1 text-muted text-[12px]">
+      <div className="flex justify-between items-center px-2 py-1 text-fg2 text-[12px]">
         <span>내 호스트 ({filtered.length})</span>
         <button
           className="border-none bg-transparent text-accent cursor-pointer text-[12px]"
@@ -116,13 +116,13 @@ export function HostSidebar({ onConnect, onConnectShared }: HostSidebarProps) {
             <span className={cn('flex-shrink-0 w-2 h-2 rounded-full', DOT[statusFor(host.id)])} />
             <div className="min-w-0">
               <div className="overflow-hidden text-ellipsis whitespace-nowrap">{host.name}</div>
-              <div className="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
+              <div className="text-[11px] text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
             </div>
           </div>
         ))}
       </div>
       <button
-        className="m-2 px-1.5 py-1.5 rounded border border-dashed border-line bg-transparent text-muted cursor-pointer text-[12px] hover:border-accent hover:text-fg"
+        className="m-2 px-1.5 py-1.5 rounded border border-dashed border-line bg-transparent text-fg2 cursor-pointer text-[12px] hover:border-accent hover:text-fg"
         onClick={() => setDialog({})}
       >
         + 호스트 추가

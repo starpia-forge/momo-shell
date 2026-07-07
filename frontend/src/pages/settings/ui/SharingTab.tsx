@@ -25,7 +25,7 @@ export function SharingTab() {
       <div className="flex items-center justify-between py-2.5 border-b border-line">
         <div>
           <div className="text-[13px]">장치 이름</div>
-          <div className="text-[11px] text-muted">다음 mDNS 광고·페어링부터 적용됩니다</div>
+          <div className="text-[11px] text-fg2">다음 mDNS 광고·페어링부터 적용됩니다</div>
         </div>
         <TextInput className="w-50" value={name} onChange={(e) => setName(e.target.value)} onBlur={commit} onKeyDown={handleKeyDown} />
       </div>

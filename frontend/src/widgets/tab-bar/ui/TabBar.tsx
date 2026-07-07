@@ -9,9 +9,9 @@ import { createLocalTab, createSSHTab } from '../lib/createTab'
 const HOVER_ACTIVATE_MS = 500
 
 const DOT: Record<SessionState | 'idle', string> = {
-  running: 'bg-success',
-  connecting: 'bg-warning animate-pulse-dot',
-  error: 'bg-danger',
+  running: 'bg-green',
+  connecting: 'bg-amber animate-pulse-dot',
+  error: 'bg-red',
   starting: 'bg-line',
   closed: 'bg-line',
   idle: 'bg-line',
@@ -117,7 +117,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
     <div className="tab-bar flex-none flex items-stretch h-9 bg-surface border-b border-line" onDragOver={handleBarDragOver} onDrop={handleBarDrop}>
       <button
         className={cn(
-          'flex-none flex items-center justify-center w-9 border-none border-r border-line bg-transparent text-muted cursor-pointer hover:text-fg',
+          'flex-none flex items-center justify-center w-9 border-none border-r border-line bg-transparent text-fg2 cursor-pointer hover:text-fg',
           screen === 'home' && 'text-fg bg-canvas',
         )}
         onClick={showHome}
@@ -130,7 +130,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
       </button>
       <button
         className={cn(
-          'flex-none px-3 border-none border-r border-line bg-transparent text-muted text-[12px] font-semibold cursor-pointer hover:text-fg',
+          'flex-none px-3 border-none border-r border-line bg-transparent text-fg2 text-[12px] font-semibold cursor-pointer hover:text-fg',
           screen === 'sftp' && 'text-fg bg-canvas',
         )}
         onClick={showSftp}
@@ -145,7 +145,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
             <div
               key={tab.id}
               className={cn(
-                'flex items-center gap-1.5 min-w-30 max-w-45 px-2 py-1 border-r border-line cursor-pointer text-muted',
+                'flex items-center gap-1.5 min-w-30 max-w-45 px-2 py-1 border-r border-line cursor-pointer text-fg2',
                 tab.id === activeId && 'bg-canvas text-fg',
               )}
               draggable
@@ -182,7 +182,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
           absolutely-positioned dropdown anchored inside it. */}
       <div className="relative flex-none">
         <button
-          className="w-9 h-full border-none border-r border-line bg-transparent text-muted text-[16px] cursor-pointer hover:text-fg"
+          className="w-9 h-full border-none border-r border-line bg-transparent text-fg2 text-[16px] cursor-pointer hover:text-fg"
           onClick={openPopover}
           aria-label="새 탭"
         >
@@ -214,7 +214,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
 
       <button
         className={cn(
-          'flex-none flex items-center justify-center w-9 ml-auto border-none border-l border-line bg-transparent text-muted cursor-pointer hover:text-fg',
+          'flex-none flex items-center justify-center w-9 ml-auto border-none border-l border-line bg-transparent text-fg2 cursor-pointer hover:text-fg',
           screen === 'settings' && 'text-fg bg-canvas',
         )}
         onClick={showSettings}

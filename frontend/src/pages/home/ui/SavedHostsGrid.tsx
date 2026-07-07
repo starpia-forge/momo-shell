@@ -14,9 +14,9 @@ type SortMode = 'recent' | 'name'
 type DotStatus = 'running' | 'connecting' | 'error' | 'idle'
 
 const DOT: Record<DotStatus, string> = {
-  running: 'bg-success',
-  connecting: 'bg-warning',
-  error: 'bg-danger',
+  running: 'bg-green',
+  connecting: 'bg-amber',
+  error: 'bg-red',
   idle: 'bg-line',
 }
 
@@ -111,7 +111,7 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
               <span className={cn('flex-shrink-0 w-2 h-2 rounded-full', DOT[statusFor(host.id)])} />
               <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">{host.name}</span>
             </div>
-            <div className="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
+            <div className="text-[11px] text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
             <button
               className="self-start border border-line bg-canvas text-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
               onClick={() => void handleConnect(host)}
@@ -122,14 +122,14 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
         ))}
 
         <button
-          className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-muted text-[13px] hover:text-fg"
+          className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-fg2 text-[13px] hover:text-fg"
           onClick={() => setDialog({})}
         >
           + 새 호스트
         </button>
       </div>
 
-      {filtered.length === 0 && <div className="text-muted text-[12px] py-2">호스트를 추가해 시작하세요</div>}
+      {filtered.length === 0 && <div className="text-fg2 text-[12px] py-2">호스트를 추가해 시작하세요</div>}
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextMenuItems(menu.host)} onClose={() => setMenu(null)} />}
       {dialog && <HostFormDialog open hostId={dialog.hostId} cloneFrom={dialog.cloneFrom} onClose={() => setDialog(null)} />}

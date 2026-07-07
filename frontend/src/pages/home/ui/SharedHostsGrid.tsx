@@ -79,12 +79,12 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
         </div>
       </div>
 
-      {peers.length === 0 && <div className="text-muted text-[12px] py-2">발견된 공유 피어가 없습니다</div>}
+      {peers.length === 0 && <div className="text-fg2 text-[12px] py-2">발견된 공유 피어가 없습니다</div>}
 
       {peers.map((peer) => (
         <div key={peer.id} className="mb-3.5">
           <div
-            className={cn('flex items-center gap-2 py-1.5', !peer.online && 'text-muted opacity-60')}
+            className={cn('flex items-center gap-2 py-1.5', !peer.online && 'text-fg2 opacity-60')}
             onContextMenu={(e) => peer.paired && openPeerMenu(e, peer)}
           >
             <span>📡</span>
@@ -93,7 +93,7 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
               {peer.paired ? ` (${peer.hosts.length})` : ''}
             </span>
             {!peer.online && peer.lastSyncAt && (
-              <span className="text-[10px] text-muted">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
+              <span className="text-[10px] text-fg2">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
             )}
             {!peer.paired && (
               <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setPairing({ id: peer.id, name: peer.name })}>
@@ -104,7 +104,7 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
 
           {peer.paired && (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
-              {peer.hosts.length === 0 && <div className="text-muted text-[12px] py-2">공유된 호스트가 없습니다</div>}
+              {peer.hosts.length === 0 && <div className="text-fg2 text-[12px] py-2">공유된 호스트가 없습니다</div>}
               {peer.hosts.map((h, index) => (
                 <div
                   key={`${h.address}:${h.port}`}
@@ -116,7 +116,7 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
                     <span className="text-accent">⇢</span>
                     <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">{h.name}</span>
                   </div>
-                  <div className="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap">{h.address}</div>
+                  <div className="text-[11px] text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">{h.address}</div>
                   <button
                     className="self-start border border-line bg-canvas text-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
                     onClick={() => setConnecting(h)}

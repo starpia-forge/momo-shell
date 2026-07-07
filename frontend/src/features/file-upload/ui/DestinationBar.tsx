@@ -65,7 +65,7 @@ export function DestinationBar() {
     <>
       {pending && (
         <div className="fixed left-1/2 bottom-6 -translate-x-1/2 z-100 flex items-center gap-2 px-3 py-2 rounded-lg bg-surface border border-line shadow-[0_4px_16px_rgba(0,0,0,0.35)] text-fg text-[12px]">
-          <span className="whitespace-nowrap text-muted">{pending.paths.length}개 파일을</span>
+          <span className="whitespace-nowrap text-fg2">{pending.paths.length}개 파일을</span>
           <input
             className="min-w-55 px-2 py-1 rounded border border-line bg-canvas text-fg text-[12px]"
             value={cwd}
@@ -76,7 +76,7 @@ export function DestinationBar() {
               if (e.key === 'Escape') cancel()
             }}
           />
-          <span className="whitespace-nowrap text-muted">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
+          <span className="whitespace-nowrap text-fg2">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
           <button
             className="border border-line bg-accent text-on-accent rounded px-2.5 py-1 text-[12px] cursor-pointer"
             onClick={() => void commit(pending.sessionId, pending.paths, cwd)}

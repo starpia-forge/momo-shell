@@ -98,7 +98,7 @@ export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
       )}
       {state.phase === 'done' && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">전송 완료</span>}
       {state.phase === 'failed' && (
-        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-danger">전송 실패</span>
+        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-red">전송 실패</span>
       )}
       {state.phase === 'canceled' && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">전송 취소됨</span>}
     </div>

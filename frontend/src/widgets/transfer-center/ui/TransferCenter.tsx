@@ -45,14 +45,14 @@ export function TransferCenter() {
                   <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-fg">
                     {task.currentFile || task.src}
                   </span>
-                  <span className="flex-none text-muted">{STATE_LABEL[task.state] ?? task.state}</span>
+                  <span className="flex-none text-fg2">{STATE_LABEL[task.state] ?? task.state}</span>
                 </div>
                 {isActiveTask(task) && (
                   <div className="flex items-center gap-1.5">
                     <div className="flex-1 h-1 rounded-full bg-line overflow-hidden">
                       <div className="h-full bg-accent" style={{ width: `${percent ?? 0}%` }} />
                     </div>
-                    <span className="flex-none text-muted text-[11px]">
+                    <span className="flex-none text-fg2 text-[11px]">
                       {formatBytes(task.bytes)}
                       {percent !== null && ` / ${percent}%`}
                     </span>
@@ -64,14 +64,14 @@ export function TransferCenter() {
                     </button>
                   </div>
                 )}
-                {task.state === 'failed' && task.error && <span className="text-danger text-[11px]">{task.error}</span>}
+                {task.state === 'failed' && task.error && <span className="text-red text-[11px]">{task.error}</span>}
               </div>
             )
           })}
         </div>
       )}
       <button
-        className="border-none bg-transparent text-muted text-[12px] cursor-pointer px-1 hover:text-fg"
+        className="border-none bg-transparent text-fg2 text-[12px] cursor-pointer px-1 hover:text-fg"
         onClick={() => useTransferCenterStore.getState().toggleOpen()}
       >
         전송 {activeCount > 0 ? activeCount : list.length}

@@ -105,11 +105,11 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
   }, [sessionId])
 
   if (!sessionId) {
-    return <div className="flex-1 flex items-center justify-center p-4 text-center text-muted text-[12px]">세션이 없습니다</div>
+    return <div className="flex-1 flex items-center justify-center p-4 text-center text-fg2 text-[12px]">세션이 없습니다</div>
   }
   if (!isSSH) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4 text-center text-muted text-[12px]">
+      <div className="flex-1 flex items-center justify-center p-4 text-center text-fg2 text-[12px]">
         로컬 세션에서는 파일 브라우저를 사용할 수 없습니다
       </div>
     )
@@ -287,11 +287,11 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
       </div>
 
       {state.loading && (
-        <div className="flex items-center gap-1.5 p-2 text-muted text-[12px]">
+        <div className="flex items-center gap-1.5 p-2 text-fg2 text-[12px]">
           <Spinner size={12} /> 불러오는 중...
         </div>
       )}
-      {state.error && <div className="p-2 text-danger text-[12px]">{state.error}</div>}
+      {state.error && <div className="p-2 text-red text-[12px]">{state.error}</div>}
 
       {!state.loading && !state.error && (
         <div className="flex-1 overflow-y-auto">
@@ -306,9 +306,9 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
               <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.name}>
                 {entry.name}
               </span>
-              <span className="flex-none w-14 text-right text-[11px] text-muted">{entry.isDir ? '—' : formatSize(entry.size)}</span>
-              <span className="flex-none w-17 text-right text-[11px] text-muted">{formatModTime(entry.modTime)}</span>
-              <span className="flex-none w-19 text-right text-[10px] text-muted font-mono">{entry.modeText}</span>
+              <span className="flex-none w-14 text-right text-[11px] text-fg2">{entry.isDir ? '—' : formatSize(entry.size)}</span>
+              <span className="flex-none w-17 text-right text-[11px] text-fg2">{formatModTime(entry.modTime)}</span>
+              <span className="flex-none w-19 text-right text-[10px] text-fg2 font-mono">{entry.modeText}</span>
             </div>
           ))}
         </div>

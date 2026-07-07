@@ -26,7 +26,7 @@ export function ConflictDialog({ open, conflicts, onChoice, onClose }: ConflictD
     <Dialog open={open} onClose={onClose} title="이름 충돌">
       <div className="conflict-dialog flex flex-col gap-3 min-w-70 max-w-90">
         <p className="m-0 text-[13px]">다음 {conflicts.length}개 파일이 이미 존재합니다:</p>
-        <ul className="m-0 max-h-35 list-disc overflow-y-auto pl-[18px] text-[12px] text-muted">
+        <ul className="m-0 max-h-35 list-disc overflow-y-auto pl-[18px] text-[12px] text-fg2">
           {conflicts.slice(0, VISIBLE_LIMIT).map((name) => (
             <li key={name}>{name}</li>
           ))}
