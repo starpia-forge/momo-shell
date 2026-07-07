@@ -171,7 +171,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           error={errors.name}
         />
-        <div className="flex gap-3 items-end *:flex-1">
+        <div className="flex gap-3 items-start *:flex-1">
           <TextInput
             label="주소*"
             className="font-mono"
