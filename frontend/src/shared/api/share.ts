@@ -15,6 +15,7 @@ import {
   DeviceName,
   SetDeviceName,
 } from '../../../wailsjs/go/wails/ShareService'
+import i18n from '../i18n'
 import { asHost, type Host } from './host'
 
 export interface ShareStatus {
@@ -127,14 +128,14 @@ export async function setDeviceName(name: string): Promise<void> {
 }
 
 // describeShareError translates a backend error's message (Go errors cross
-// the Wails boundary as plain strings) into Korean UI copy. Matched by
+// the Wails boundary as plain strings) into localized UI copy. Matched by
 // substring against known sentinel messages -- share.ErrLockedOut,
 // out.ErrPeerCertMismatch, out.ErrPeerUnauthorized -- since Wails doesn't
 // carry a structured error code, only err.Error().
 export function describeShareError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err)
-  if (message.includes('too many failed')) return '잠시 후 다시 시도하세요 (60초)'
-  if (message.includes('certificate fingerprint changed')) return '피어의 인증서가 변경되었습니다. 다시 페어링하세요'
-  if (message.includes('peer rejected our token')) return '피어가 연결을 거부했습니다. 다시 페어링하세요'
-  return '요청이 실패했습니다'
+  if (message.includes('too many failed')) return i18n.t('shareErrors.lockout')
+  if (message.includes('certificate fingerprint changed')) return i18n.t('shareErrors.certChanged')
+  if (message.includes('peer rejected our token')) return i18n.t('shareErrors.rejected')
+  return i18n.t('shareErrors.generic')
 }

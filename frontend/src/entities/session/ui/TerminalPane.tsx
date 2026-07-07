@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../../shared/lib/cn'
 import { Button } from '../../../shared/ui'
 import { attach, detach, fitSession } from '../lib/terminal-registry'
@@ -13,6 +14,7 @@ interface TerminalPaneProps {
 // Attach/detach only -- the Terminal instance itself lives in the registry
 // for the session's lifetime, independent of this component's mount state.
 export function TerminalPane({ sessionId, onReconnect }: TerminalPaneProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const session = useSessionStore((s) => s.sessions[sessionId])
 
@@ -50,17 +52,19 @@ export function TerminalPane({ sessionId, onReconnect }: TerminalPaneProps) {
           <div className="flex flex-col items-center gap-3 rounded-xl px-6 py-5 bg-surface2 border border-line shadow-menu text-fg text-[13px] pointer-events-auto">
             {isSSH ? (
               <>
-                <div>연결 끊김{session?.error ? `: ${session.error}` : ''}</div>
+                <div>{session?.error ? t('session.disconnectedWithError', { error: session.error }) : t('session.disconnected')}</div>
                 {onReconnect && (
                   <Button variant="primary" onClick={onReconnect}>
-                    재연결
+                    {t('session.reconnect')}
                   </Button>
                 )}
               </>
             ) : session?.state === 'error' ? (
-              `세션 오류${session.error ? `: ${session.error}` : ''}`
+              session.error ? t('session.errorWithMessage', { error: session.error }) : t('session.error')
+            ) : session?.exitCode !== undefined ? (
+              t('session.endedWithExitCode', { exitCode: session.exitCode })
             ) : (
-              `세션 종료${session?.exitCode !== undefined ? ` (exit ${session.exitCode})` : ''}`
+              t('session.ended')
             )}
           </div>
         </div>
