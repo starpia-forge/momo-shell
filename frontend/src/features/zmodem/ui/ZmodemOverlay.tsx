@@ -8,7 +8,7 @@ import {
   type TransferProgressPayload,
   type TransferZmodemPayload,
 } from '../../../shared/api'
-import { Spinner } from '../../../shared/ui'
+import { Button, ProgressBar } from '../../../shared/ui'
 
 interface ZmodemOverlayProps {
   sessionId: string
@@ -59,48 +59,46 @@ export function ZmodemOverlay({ sessionId }: ZmodemOverlayProps) {
   }
 
   const percent = progress && progress.total > 0 ? Math.round((progress.bytes / progress.total) * 100) : null
+  const direction = state.direction === 'upload' ? 'up' : 'down'
 
   return (
-    <div className="absolute left-2 right-2 bottom-2 z-10 flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface border border-line shadow-[0_2px_8px_rgba(0,0,0,0.3)] text-fg text-[12px]">
+    <div className="absolute left-2.5 right-2.5 bottom-2.5 z-10 max-w-130 flex flex-col gap-2 px-4 py-3 rounded-md bg-accent/8 border border-accent/35 font-sans text-fg text-[12px]">
       {state.phase === 'detected' && state.direction === 'upload' && (
-        <>
+        <div className="flex items-center gap-2.5">
           <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-            원격에서 rz 대기 중 -- 보낼 파일을 선택하세요
+            원격에서 rz 대기 중 — 보낼 파일을 선택하세요
           </span>
-          <button
-            className="flex-none border border-line bg-accent text-on-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
-            onClick={handlePickFiles}
-          >
+          <Button variant="primary" size="sm" onClick={handlePickFiles}>
             파일 선택
-          </button>
-          <button
-            className="flex-none border border-line bg-canvas text-fg rounded px-2 py-[3px] text-[11px] cursor-pointer"
-            onClick={handleCancel}
-          >
+          </Button>
+          <Button size="sm" onClick={handleCancel}>
             취소
-          </button>
-        </>
+          </Button>
+        </div>
       )}
       {state.phase === 'active' && (
         <>
-          <Spinner size={12} />
-          <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-            {state.direction === 'upload' ? '전송 중' : '수신 중'}
-            {progress && `: ${progress.file} (${formatBytes(progress.bytes)}${percent !== null ? ` / ${percent}%` : ''})`}
-          </span>
-          <button
-            className="flex-none border border-line bg-canvas text-fg rounded px-2 py-[3px] text-[11px] cursor-pointer"
-            onClick={handleCancel}
-          >
-            취소
-          </button>
+          <div className="flex items-center gap-2.5">
+            <span className="font-bold text-accent-text">{state.direction === 'upload' ? '전송 중' : '수신 중'}</span>
+            {progress && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-fg2">{progress.file}</span>}
+            <Button size="sm" onClick={handleCancel}>
+              취소
+            </Button>
+          </div>
+          <ProgressBar value={percent ?? 0} direction={direction} />
+          {progress && (
+            <div className="flex font-mono text-[11px] text-fg3">
+              <span>
+                {percent !== null ? `${percent}% · ` : ''}
+                {formatBytes(progress.bytes)}
+              </span>
+            </div>
+          )}
         </>
       )}
-      {state.phase === 'done' && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">전송 완료</span>}
-      {state.phase === 'failed' && (
-        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-red">전송 실패</span>
-      )}
-      {state.phase === 'canceled' && <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">전송 취소됨</span>}
+      {state.phase === 'done' && <span>전송 완료</span>}
+      {state.phase === 'failed' && <span className="text-red">전송 실패</span>}
+      {state.phase === 'canceled' && <span>전송 취소됨</span>}
     </div>
   )
 }

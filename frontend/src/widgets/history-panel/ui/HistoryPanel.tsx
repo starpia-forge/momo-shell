@@ -9,7 +9,7 @@ import {
   type HistoryAppendedPayload,
   type HistoryEntry,
 } from '../../../shared/api'
-import { Toast } from '../../../shared/ui'
+import { SearchInput, SegmentedControl, Toast } from '../../../shared/ui'
 import { formatRelativeTime } from '../lib/formatRelativeTime'
 import { useHistoryPanelStore, type HistoryScopeMode } from '../model/store'
 
@@ -80,35 +80,38 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 text-[13px]">
-      <div className="flex gap-1.5 mt-2 px-2 pb-2">
-        <input
-          className="flex-1 min-w-0 px-2 py-1.5 rounded border border-line bg-canvas text-fg text-[12px]"
-          placeholder="필터"
-          value={filter}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
-        />
-        <select
-          className="flex-none px-1.5 py-1.5 rounded border border-line bg-canvas text-fg text-[11px]"
-          value={scopeMode}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => setScopeMode(e.target.value as HistoryScopeMode)}
-        >
-          <option value="all">전체</option>
-          <option value="current">현재 호스트</option>
-        </select>
-      </div>
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex flex-col flex-1 min-h-0 text-[13px] p-3.5 gap-3">
+      <span className="text-[13.5px] font-bold">명령어 히스토리</span>
+      <SegmentedControl
+        value={scopeMode}
+        onChange={(v) => setScopeMode(v as HistoryScopeMode)}
+        options={[
+          { value: 'all', label: '전체' },
+          { value: 'current', label: '현재 호스트' },
+        ]}
+      />
+      <SearchInput
+        containerClassName="h-8"
+        placeholder="명령어 필터…"
+        value={filter}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
+      />
+      <div className="flex-1 -mx-3.5 overflow-y-auto">
         {visible.map((entry) => (
           <div
             key={entry.id}
-            className="group flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-canvas"
+            className="group flex items-center gap-2 mx-2.25 px-2.5 py-2.25 rounded-md cursor-pointer hover:bg-surface2"
             onClick={() => handleCopy(entry.command)}
           >
-            <span className="flex-none text-[10px] text-fg2 w-10">{formatRelativeTime(entry.executedAt)}</span>
-            <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.command}>
+            <span
+              className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[12px]"
+              title={entry.command}
+            >
               {entry.command}
             </span>
-            <div className="invisible flex-none flex gap-0.5 group-hover:visible">
+            <span className="flex-none text-[10.5px] text-fg3 group-hover:hidden">{formatRelativeTime(entry.executedAt)}</span>
+            <div className="hidden flex-none items-center gap-1.5 group-hover:flex">
+              <span className="text-[11px] text-accent-text">복사</span>
               <button
                 className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
                 onClick={(e) => {
@@ -135,6 +138,7 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
           </div>
         ))}
       </div>
+      <div className="text-[11px] text-fg3">클릭하면 클립보드에 복사됩니다</div>
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   )

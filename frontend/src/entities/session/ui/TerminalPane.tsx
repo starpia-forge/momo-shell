@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import { cn } from '../../../shared/lib/cn'
+import { Button } from '../../../shared/ui'
 import { attach, detach, fitSession } from '../lib/terminal-registry'
 import { useSessionStore } from '../model/store'
 
@@ -46,17 +47,14 @@ export function TerminalPane({ sessionId, onReconnect }: TerminalPaneProps) {
       <div ref={containerRef} className={cn('w-full h-full', ended && 'opacity-40')} />
       {ended && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-2 rounded px-4 py-2 bg-surface border border-line text-fg text-[13px] pointer-events-auto">
+          <div className="flex flex-col items-center gap-3 rounded-xl px-6 py-5 bg-surface2 border border-line shadow-menu text-fg text-[13px] pointer-events-auto">
             {isSSH ? (
               <>
                 <div>연결 끊김{session?.error ? `: ${session.error}` : ''}</div>
                 {onReconnect && (
-                  <button
-                    className="rounded px-3 py-1 border border-accent bg-accent text-on-accent text-[12px] cursor-pointer hover:opacity-90"
-                    onClick={onReconnect}
-                  >
+                  <Button variant="primary" onClick={onReconnect}>
                     재연결
-                  </button>
+                  </Button>
                 )}
               </>
             ) : session?.state === 'error' ? (

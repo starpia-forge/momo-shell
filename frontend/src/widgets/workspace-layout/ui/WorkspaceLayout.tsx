@@ -8,7 +8,7 @@ import { ZmodemOverlay } from '../../../features/zmodem'
 import { decodePaneDrag, isFileDrag, isPaneDrag, type DropZone } from '../../../shared/lib/paneDnd'
 import { markDropTargetHovered } from '../../../shared/lib/fileDropTarget'
 import { cn } from '../../../shared/lib/cn'
-import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
+import { ContextMenu, IconButton, type ContextMenuItem } from '../../../shared/ui'
 import { closeLeafOrEscalate } from '../lib/closeLeaf'
 import { splitFocused } from '../lib/splitFocused'
 import { useWorkspaceLayoutStore } from '../model/store'
@@ -179,9 +179,9 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   return (
     <div
       className={cn(
-        'pane-view [--wails-drop-target:drop] relative flex flex-col w-full h-full min-h-0 outline-[1px] outline-transparent outline-offset-[-1px]',
-        isFocused && 'outline-accent',
-        fileDragOver && 'outline-accent bg-accent/8',
+        'pane-view [--wails-drop-target:drop] relative flex flex-col w-full h-full min-h-0 rounded-lg bg-termbg border overflow-hidden',
+        isFocused ? 'border-[1.5px] border-accent' : 'border-line',
+        fileDragOver && 'border-accent bg-accent/8',
       )}
       data-session-id={leaf.sessionId}
       onClick={focusThis}
@@ -190,21 +190,28 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
       onDrop={handleDrop}
     >
       <div
-        className="flex-none flex items-center justify-between h-[22px] px-1.5 bg-surface border-b border-line"
+        className="flex-none flex items-center justify-between gap-2.5 h-7.5 px-3 border-b border-termline"
         onContextMenu={openContextMenu}
         {...dragSourceProps(dragPayload)}
       >
-        <div className="flex items-baseline gap-1.5 min-w-0 overflow-hidden">
-          <span className="text-[11px] text-fg whitespace-nowrap overflow-hidden text-ellipsis">{title}</span>
-          {subtitle && <span className="text-[10px] text-fg2 whitespace-nowrap overflow-hidden text-ellipsis">{subtitle}</span>}
+        <div className="flex items-baseline gap-2 min-w-0 overflow-hidden">
+          <span className="text-[11px] font-mono text-fg2 whitespace-nowrap overflow-hidden text-ellipsis">{title}</span>
+          {subtitle && <span className="text-[11px] font-mono text-fg2 whitespace-nowrap overflow-hidden text-ellipsis">: {subtitle}</span>}
         </div>
-        <button
-          className="flex-shrink-0 border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none pl-1.5 hover:text-fg"
-          onClick={handleClose}
-          aria-label={`${title} 닫기`}
-        >
-          ×
-        </button>
+        <div className="flex-none flex items-center gap-1">
+          <IconButton size={22} className="text-[12px]" onClick={() => useTerminalSearchStore.getState().openFor(leaf.id)} aria-label="검색">
+            ⌕
+          </IconButton>
+          <IconButton size={22} className="text-[12px]" onClick={() => void splitFocused(tabId, 'row')} aria-label="오른쪽에 분할">
+            ◫
+          </IconButton>
+          <IconButton size={22} className="text-[12px]" onClick={() => void splitFocused(tabId, 'column')} aria-label="아래에 분할">
+            ⬒
+          </IconButton>
+          <IconButton size={22} className="text-[12px]" onClick={handleClose} aria-label={`${title} 닫기`}>
+            ×
+          </IconButton>
+        </div>
       </div>
       <div className="relative flex-1 min-h-0 p-1 overflow-hidden">
         <TerminalPane key={leaf.sessionId} sessionId={leaf.sessionId} onReconnect={isSSH ? () => void handleReconnect() : undefined} />

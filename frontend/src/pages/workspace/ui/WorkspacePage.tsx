@@ -147,8 +147,12 @@ export function WorkspacePage() {
           <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
         ) : (
           <>
-            <div className="flex-none w-55">
-              <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
+            <div className="flex-none w-59">
+              <HostSidebar
+                onConnect={handleHostConnect}
+                onConnectShared={handleSharedConnect}
+                activeHostId={activeTab?.kind === 'ssh' ? activeTab.hostId : undefined}
+              />
             </div>
             <div className="flex-1 min-w-0 min-h-0 p-1 overflow-hidden">
               {activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />}

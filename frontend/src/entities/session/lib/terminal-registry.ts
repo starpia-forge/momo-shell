@@ -28,7 +28,7 @@ import { b64ToBytes } from '../../../shared/lib/base64'
 import { useSessionStore } from '../model/store'
 import { useHostKeyPromptStore } from '../model/hostKeyPrompts'
 import { parseOsc7Path } from './osc7'
-import { readTerminalTheme } from './terminal-theme'
+import { hexToRgba, readAccentColor, readTerminalFontFamily, readTerminalTheme } from './terminal-theme'
 
 // The xterm.js instance is owned here, outside React, in a detached host
 // div. TerminalPane only ever attaches/detaches that div -- it never
@@ -77,7 +77,7 @@ function createTerminalEntry(id: string): void {
   const term = new Terminal({
     scrollback: currentScrollback,
     allowProposedApi: true,
-    fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+    fontFamily: readTerminalFontFamily(),
     fontSize: currentFontSize,
     theme: readTerminalTheme(),
   })
@@ -232,22 +232,29 @@ export function fitSession(id: string): void {
   if (entry) fitNow(entry)
 }
 
-const SEARCH_DECORATIONS: ISearchOptions = {
-  decorations: {
-    matchBackground: '#3a4d6e',
-    matchOverviewRuler: '#3a4d6e',
-    activeMatchBackground: '#5b7fb5',
-    activeMatchColorOverviewRuler: '#5b7fb5',
-  },
+/** Search-match highlight colors come from --theme-accent, not a fixed hex --
+ * xterm's decorations option only accepts solid colors, so this is computed
+ * per-call rather than read once (accent can change at runtime). */
+function searchDecorations(): ISearchOptions {
+  const accent = readAccentColor()
+  const match = hexToRgba(accent, 0.3)
+  const active = hexToRgba(accent, 0.55)
+  return {
+    decorations: {
+      matchBackground: match,
+      matchOverviewRuler: match,
+      activeMatchBackground: active,
+      activeMatchColorOverviewRuler: active,
+    },
+  }
 }
 
 /** Returns whether a match was found. Highlights every match, not just the current one. */
 export function searchSession(id: string, term: string, direction: 'next' | 'prev'): boolean {
   const entry = registry.get(id)
   if (!entry || !term) return false
-  return direction === 'next'
-    ? entry.search.findNext(term, SEARCH_DECORATIONS)
-    : entry.search.findPrevious(term, SEARCH_DECORATIONS)
+  const decorations = searchDecorations()
+  return direction === 'next' ? entry.search.findNext(term, decorations) : entry.search.findPrevious(term, decorations)
 }
 
 export function clearSearchSession(id: string): void {

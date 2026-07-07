@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { useRightDockStore } from '../model/store'
+import { useRightDockStore, type RightDockTab } from '../model/store'
 import { cn } from '../../../shared/lib/cn'
+import { IconButton } from '../../../shared/ui'
 
 interface RightDockProps {
   historyPanel: ReactNode
@@ -8,47 +9,43 @@ interface RightDockProps {
   sharePanel: ReactNode
 }
 
-/** Hosts HISTORY, FILES, and SHARE as mutually-exclusive tabs in the
- * fixed-width right rail -- neither panel widget manages its own
- * visibility anymore. */
+const RAIL: { tab: RightDockTab; glyph: string; label: string }[] = [
+  { tab: 'history', glyph: '≡', label: '히스토리' },
+  { tab: 'files', glyph: '▤', label: '파일' },
+  { tab: 'share', glyph: '⇡', label: '공유' },
+]
+
+/** Hosts HISTORY, FILES, and SHARE as mutually-exclusive panels behind a
+ * always-visible icon rail -- the rail stays put (46px) whether or not the
+ * 300px panel is open, so it never fights the terminal for who owns that
+ * strip of the window. */
 export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockProps) {
   const open = useRightDockStore((s) => s.open)
   const active = useRightDockStore((s) => s.active)
 
-  if (!open) return null
-
   return (
-    <div className="flex flex-col w-70 flex-none h-full bg-surface border-l border-line text-fg">
-      <div className="flex flex-none border-b border-line">
-        <button
-          className={cn(
-            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-fg2 bg-transparent border-none cursor-pointer',
-            active === 'history' && 'bg-canvas text-fg',
-          )}
-          onClick={() => useRightDockStore.getState().show('history')}
-        >
-          히스토리
-        </button>
-        <button
-          className={cn(
-            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-fg2 bg-transparent border-none cursor-pointer',
-            active === 'files' && 'bg-canvas text-fg',
-          )}
-          onClick={() => useRightDockStore.getState().show('files')}
-        >
-          파일
-        </button>
-        <button
-          className={cn(
-            'flex-1 p-2 text-[11px] font-semibold tracking-wider text-fg2 bg-transparent border-none cursor-pointer',
-            active === 'share' && 'bg-canvas text-fg',
-          )}
-          onClick={() => useRightDockStore.getState().show('share')}
-        >
-          공유
-        </button>
+    <div className="flex-none flex h-full border-l border-line">
+      {open && (
+        <div className="w-75 flex-none flex flex-col bg-surface border-r border-line text-fg min-h-0">
+          {active === 'history' ? historyPanel : active === 'files' ? filesPanel : sharePanel}
+        </div>
+      )}
+      <div className="w-11.5 flex-none flex flex-col items-center pt-3.5 gap-2 bg-surface">
+        {RAIL.map((r) => (
+          <IconButton
+            key={r.tab}
+            size={34}
+            className={cn(
+              'text-[14px] font-mono',
+              open && active === r.tab && 'bg-accent/16 border border-accent text-accent-text',
+            )}
+            onClick={() => useRightDockStore.getState().toggle(r.tab)}
+            aria-label={r.label}
+          >
+            {r.glyph}
+          </IconButton>
+        ))}
       </div>
-      <div className="flex-1 min-h-0 flex flex-col">{active === 'history' ? historyPanel : active === 'files' ? filesPanel : sharePanel}</div>
     </div>
   )
 }

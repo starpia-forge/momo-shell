@@ -21,7 +21,7 @@ import {
 import { markDropTargetHovered, resolveDropTarget } from '../../../shared/lib/fileDropTarget'
 import { isFileDrag } from '../../../shared/lib/paneDnd'
 import { cn } from '../../../shared/lib/cn'
-import { ConflictDialog, ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
+import { ConflictDialog, ContextMenu, IconButton, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
 import { formatModTime, formatSize, joinRemotePath, parentRemotePath } from '../lib/format'
 import { EMPTY_BROWSE_STATE, sessionBrowseState, useFileBrowserStore } from '../model/store'
 import { NamePromptDialog } from './NamePromptDialog'
@@ -234,81 +234,68 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
         setFileDragOver(false)
       }}
     >
-      <div className="flex items-center gap-1 p-2">
-        <button
-          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer disabled:opacity-40 disabled:cursor-default"
+      <div className="flex items-center gap-1.5 p-3.5">
+        <IconButton
+          size={26}
+          className="text-[12px]"
           onClick={() => void refresh(parentRemotePath(currentPath))}
           disabled={currentPath === '/'}
           aria-label="뒤로"
           title="뒤로"
         >
           ←
-        </button>
-        <button
-          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
-          onClick={() => void homeDir(sessionId).then(refresh)}
-          aria-label="홈"
-          title="홈"
-        >
+        </IconButton>
+        <IconButton size={26} className="text-[12px]" onClick={() => void homeDir(sessionId).then(refresh)} aria-label="홈" title="홈">
           ~
-        </button>
+        </IconButton>
         <input
-          className="flex-1 min-w-0 px-1.5 py-1 rounded border border-line bg-canvas text-fg text-[12px]"
+          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border border-line bg-inputbg text-fg font-mono text-[12px] focus:outline-none focus:border-accent"
           value={pathInput}
           onChange={(e) => setPathInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void refresh(pathInput)
           }}
         />
-        <button
-          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
-          onClick={() => void refresh(currentPath)}
-          aria-label="새로고침"
-          title="새로고침"
-        >
+        <IconButton size={26} className="text-[12px]" onClick={() => void refresh(currentPath)} aria-label="새로고침" title="새로고침">
           ⟳
-        </button>
-        <button
-          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
-          onClick={handleUpload}
-          aria-label="업로드"
-          title="업로드"
-        >
+        </IconButton>
+        <IconButton size={26} className="text-[12px]" onClick={handleUpload} aria-label="업로드" title="업로드">
           ⬆
-        </button>
-        <button
-          className="flex-none w-6 h-6 rounded border border-line bg-canvas text-fg text-[12px] leading-none cursor-pointer"
-          onClick={() => setMkdirOpen(true)}
-          aria-label="새 폴더"
-          title="새 폴더"
-        >
+        </IconButton>
+        <IconButton size={26} className="text-[16px]" onClick={() => setMkdirOpen(true)} aria-label="새 폴더" title="새 폴더">
           +
-        </button>
+        </IconButton>
       </div>
 
       {state.loading && (
-        <div className="flex items-center gap-1.5 p-2 text-fg2 text-[12px]">
+        <div className="flex items-center gap-1.5 px-3.5 pb-2 text-fg2 text-[12px]">
           <Spinner size={12} /> 불러오는 중...
         </div>
       )}
-      {state.error && <div className="p-2 text-red text-[12px]">{state.error}</div>}
+      {state.error && <div className="px-3.5 pb-2 text-red text-[12px]">{state.error}</div>}
 
       {!state.loading && !state.error && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-2">
           {state.entries.map((entry) => (
             <div
               key={entry.path}
-              className="flex items-center gap-1.5 px-2 py-1 cursor-default hover:bg-canvas"
+              className="flex items-center gap-2 px-2.5 py-1.75 rounded-md cursor-default hover:bg-surface2"
               onDoubleClick={() => handleEntryDoubleClick(entry)}
               onContextMenu={(e) => openMenu(e, entry)}
             >
-              <span className="flex-none text-[12px]">{entry.isDir ? '📁' : '📄'}</span>
-              <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.name}>
+              <span className={cn('flex-none w-2.5 h-2.5 rounded-[3px]', entry.isDir ? 'bg-blue' : 'bg-surface2')} />
+              <span
+                className={cn(
+                  'flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px]',
+                  entry.isDir && 'font-medium',
+                )}
+                title={entry.name}
+              >
                 {entry.name}
               </span>
-              <span className="flex-none w-14 text-right text-[11px] text-fg2">{entry.isDir ? '—' : formatSize(entry.size)}</span>
-              <span className="flex-none w-17 text-right text-[11px] text-fg2">{formatModTime(entry.modTime)}</span>
-              <span className="flex-none w-19 text-right text-[10px] text-fg2 font-mono">{entry.modeText}</span>
+              <span className="flex-none w-14 text-right text-[11px] text-fg3">{entry.isDir ? '—' : formatSize(entry.size)}</span>
+              <span className="flex-none w-17 text-right text-[11px] text-fg3">{formatModTime(entry.modTime)}</span>
+              <span className="flex-none w-19 text-right text-[10px] text-fg3 font-mono">{entry.modeText}</span>
             </div>
           ))}
         </div>
