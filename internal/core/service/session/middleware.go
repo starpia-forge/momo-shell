@@ -20,9 +20,19 @@ type OutputMiddleware interface {
 	Detach(sessionID string)
 }
 
-// SetMiddleware installs the output middleware. Must be called before any
-// session is created (i.e. during composition-root wiring, before
-// wails.Run) -- it is not safe to swap concurrently with live sessions.
+// SetMiddleware installs m as the sole output middleware, replacing any
+// previously registered middlewares. Must be called before any session is
+// created (i.e. during composition-root wiring, before wails.Run) -- it is
+// not safe to mutate concurrently with live sessions.
 func (s *Service) SetMiddleware(m OutputMiddleware) {
-	s.middleware = m
+	s.middlewares = []OutputMiddleware{m}
+}
+
+// AddMiddleware appends m to the output middleware chain, run in
+// registration order -- each middleware receives the previous one's pass
+// output, and a middleware returning nil/empty short-circuits the rest of
+// the chain (see pump.go). Same call-time constraint as SetMiddleware:
+// composition-root wiring only, before any session is created.
+func (s *Service) AddMiddleware(m OutputMiddleware) {
+	s.middlewares = append(s.middlewares, m)
 }

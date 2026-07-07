@@ -60,11 +60,11 @@ func (s *Service) pump(id string, live *liveSession) {
 			live.closeFileSystem()
 			_ = live.getStream().Close()
 			s.remove(id)
-			if s.tap != nil {
-				s.tap.Detach(id)
+			for _, t := range s.taps {
+				t.Detach(id)
 			}
-			if s.middleware != nil {
-				s.middleware.Detach(id)
+			for _, m := range s.middlewares {
+				m.Detach(id)
 			}
 			_ = live.session.TransitionTo(domain.StateError)
 			s.pub.Publish(out.TopicSessionState(id), StatePayload{State: string(domain.StateError), Error: fmt.Sprint(r)})
@@ -90,14 +90,19 @@ loop:
 			if !ok {
 				break loop
 			}
-			if s.middleware != nil {
-				chunk = s.middleware.OnOutput(id, chunk)
+			suppressed := false
+			for _, m := range s.middlewares {
+				chunk = m.OnOutput(id, chunk)
 				if len(chunk) == 0 {
-					continue
+					suppressed = true
+					break
 				}
 			}
-			if s.tap != nil {
-				s.tap.OnOutput(id, chunk)
+			if suppressed {
+				continue
+			}
+			for _, t := range s.taps {
+				t.OnOutput(id, chunk)
 			}
 			acc = append(acc, chunk...)
 			if len(acc) >= flushThreshold {
@@ -113,11 +118,11 @@ loop:
 	live.closeFileSystem()
 	_ = live.getStream().Close()
 	s.remove(id)
-	if s.tap != nil {
-		s.tap.Detach(id)
+	for _, t := range s.taps {
+		t.Detach(id)
 	}
-	if s.middleware != nil {
-		s.middleware.Detach(id)
+	for _, m := range s.middlewares {
+		m.Detach(id)
 	}
 	_ = live.session.TransitionTo(domain.StateClosed)
 

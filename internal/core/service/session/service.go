@@ -51,8 +51,8 @@ type Service struct {
 	secrets     out.SecretStore
 	knownHosts  out.KnownHostsRepository
 	pub         out.EventPublisher
-	tap         CommandTap
-	middleware  OutputMiddleware
+	taps        []CommandTap
+	middlewares []OutputMiddleware
 	wg          sync.WaitGroup
 }
 
@@ -131,7 +131,7 @@ func (live *liveSession) closeFileSystem() {
 var _ in.SessionUseCase = (*Service)(nil)
 
 func New(deps Deps) *Service {
-	return &Service{
+	s := &Service{
 		sessions:    make(map[string]*liveSession),
 		localOpener: deps.LocalOpener,
 		sshOpener:   deps.SSHOpener,
@@ -139,8 +139,11 @@ func New(deps Deps) *Service {
 		secrets:     deps.Secrets,
 		knownHosts:  deps.KnownHosts,
 		pub:         deps.Publisher,
-		tap:         deps.Tap,
 	}
+	if deps.Tap != nil {
+		s.taps = append(s.taps, deps.Tap)
+	}
+	return s
 }
 
 func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
@@ -163,11 +166,11 @@ func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
 	s.sessions[id] = live
 	s.mu.Unlock()
 
-	if s.tap != nil {
-		s.tap.Attach(id, "")
+	for _, t := range s.taps {
+		t.Attach(id, "")
 	}
-	if s.middleware != nil {
-		s.middleware.Attach(id, domain.KindLocal)
+	for _, m := range s.middlewares {
+		m.Attach(id, domain.KindLocal)
 	}
 
 	s.wg.Add(2)
@@ -192,8 +195,10 @@ func (s *Service) Write(id string, data []byte) error {
 		return ErrSessionConnecting
 	}
 	_, err := stream.Write(data)
-	if err == nil && s.tap != nil {
-		s.tap.OnInput(id, data)
+	if err == nil {
+		for _, t := range s.taps {
+			t.OnInput(id, data)
+		}
 	}
 	return err
 }

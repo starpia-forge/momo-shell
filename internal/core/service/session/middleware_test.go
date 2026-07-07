@@ -136,6 +136,61 @@ func TestMiddleware_RewrittenChunkIsWhatFrontendSees(t *testing.T) {
 	}
 }
 
+func TestMiddleware_ChainRunsInRegistrationOrder(t *testing.T) {
+	stream := newFakeStream()
+	svc, pub := newTestService(stream)
+	svc.SetMiddleware(&fakeMiddleware{
+		transform: func(sessionID string, chunk []byte) []byte {
+			return bytes.ToUpper(chunk)
+		},
+	})
+	svc.AddMiddleware(&fakeMiddleware{
+		transform: func(sessionID string, chunk []byte) []byte {
+			return append(chunk, '!')
+		},
+	})
+
+	info, err := svc.CreateLocal(in.LocalOpts{})
+	if err != nil {
+		t.Fatalf("CreateLocal failed: %v", err)
+	}
+
+	stream.push([]byte("hi"))
+	waitFor(t, oneSecond, func() bool { return len(dataEventsFor(pub.all(), info.ID)) > 0 })
+
+	events := dataEventsFor(pub.all(), info.ID)
+	if !bytes.Equal(events[0], []byte("HI!")) {
+		t.Fatalf("expected chained transforms applied in registration order, got %q", events[0])
+	}
+}
+
+func TestMiddleware_ChainShortCircuitsOnSuppression(t *testing.T) {
+	stream := newFakeStream()
+	pub := &recordingPublisher{}
+	tap := &recordingTap{}
+	svc := New(Deps{LocalOpener: &fakeOpener{stream: stream}, Publisher: pub, Tap: tap})
+
+	first := &fakeMiddleware{transform: func(sessionID string, chunk []byte) []byte { return nil }}
+	second := &fakeMiddleware{}
+	svc.SetMiddleware(first)
+	svc.AddMiddleware(second)
+
+	info, err := svc.CreateLocal(in.LocalOpts{})
+	if err != nil {
+		t.Fatalf("CreateLocal failed: %v", err)
+	}
+
+	stream.push([]byte("secret protocol bytes"))
+	waitFor(t, oneSecond, func() bool { return first.outputCallCount() > 0 })
+
+	if got := second.outputCallCount(); got != 0 {
+		t.Fatalf("expected chain to short-circuit before the second middleware, got %d calls", got)
+	}
+	if got := tap.outputsFor(info.ID); len(got) != 0 {
+		t.Fatalf("expected tap not to see output suppressed earlier in the chain, got %v", got)
+	}
+}
+
 func TestWriteRaw_BypassesTapAndInputBlock(t *testing.T) {
 	stream := newFakeStream()
 	tap := &recordingTap{}

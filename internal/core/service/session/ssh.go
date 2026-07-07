@@ -128,11 +128,11 @@ func (s *Service) connectSSH(id string, host domain.Host, secret string, live *l
 	_ = live.session.TransitionTo(domain.StateRunning)
 	_ = s.hostRepo.TouchConnected(host.ID)
 
-	if s.tap != nil {
-		s.tap.Attach(id, host.ID)
+	for _, t := range s.taps {
+		t.Attach(id, host.ID)
 	}
-	if s.middleware != nil {
-		s.middleware.Attach(id, domain.KindSSH)
+	for _, m := range s.middlewares {
+		m.Attach(id, domain.KindSSH)
 	}
 
 	s.wg.Add(2)
