@@ -7,6 +7,7 @@ import { decodePaneDrag, isPaneDrag, type PaneDragPayload } from '../../../share
 import { IconButton, StatusDot, type DotStatus } from '../../../shared/ui'
 import { createLocalTab, createSSHTab } from '../lib/createTab'
 import { WindowControls } from './WindowControls'
+import { WindowToggleMaximise } from '../../../../wailsjs/runtime/runtime'
 
 const HOVER_ACTIVATE_MS = 500
 
@@ -117,11 +118,18 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
     if (payload) onPaneDrop(payload, null)
   }
 
+  function handleBarDoubleClick(e: ReactMouseEvent) {
+    const dragValue = getComputedStyle(e.target as HTMLElement).getPropertyValue('--wails-draggable').trim()
+    if (dragValue === 'no-drag') return
+    WindowToggleMaximise()
+  }
+
   return (
     <div
       className="tab-bar flex-none flex items-center h-14 gap-2 px-4 bg-surface border-b border-line [--wails-draggable:drag]"
       onDragOver={handleBarDragOver}
       onDrop={handleBarDrop}
+      onDoubleClick={handleBarDoubleClick}
     >
       <div className="flex-none w-7.5 h-7.5 mr-1.5 rounded-md bg-accent flex items-center justify-center text-on-accent font-bold text-[15px] font-mono">
         m
