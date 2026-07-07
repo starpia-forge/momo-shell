@@ -121,6 +121,7 @@ func main() {
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-shell",
+		Frameless: true,
 		Width:     1024,
 		Height:    768,
 		MinWidth:  640,

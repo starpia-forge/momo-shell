@@ -6,6 +6,7 @@ import { cn } from '../../../shared/lib/cn'
 import { decodePaneDrag, isPaneDrag, type PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { IconButton, StatusDot, type DotStatus } from '../../../shared/ui'
 import { createLocalTab, createSSHTab } from '../lib/createTab'
+import { WindowControls } from './WindowControls'
 
 const HOVER_ACTIVATE_MS = 500
 
@@ -118,7 +119,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
 
   return (
     <div
-      className="tab-bar flex-none flex items-center h-14 gap-2 px-4 bg-surface border-b border-line"
+      className="tab-bar flex-none flex items-center h-14 gap-2 px-4 bg-surface border-b border-line [--wails-draggable:drag]"
       onDragOver={handleBarDragOver}
       onDrop={handleBarDrop}
     >
@@ -126,7 +127,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
         m
       </div>
 
-      <IconButton active={screen === 'home'} onClick={showHome} aria-label="홈">
+      <IconButton active={screen === 'home'} onClick={showHome} aria-label="홈" className="[--wails-draggable:no-drag]">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 11 12 3l9 8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round" />
@@ -134,7 +135,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
       </IconButton>
       <button
         className={cn(
-          'flex-none px-4 py-2 rounded-md bg-transparent text-fg2 text-[13px] font-medium cursor-pointer hover:text-fg',
+          'flex-none px-4 py-2 rounded-md bg-transparent text-fg2 text-[13px] font-medium cursor-pointer hover:text-fg [--wails-draggable:no-drag]',
           screen === 'sftp' && 'bg-surface2 text-fg font-bold',
         )}
         onClick={showSftp}
@@ -145,7 +146,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
 
       <div className="flex-none w-px h-6 bg-line mx-1" />
 
-      <div className="flex items-stretch gap-2 min-w-0 overflow-x-auto">
+      <div className="flex items-stretch gap-2 min-w-0 overflow-x-auto [--wails-draggable:no-drag]">
         {tabs.map((tab, index) => {
           const state = sessions[tab.sessionId]?.state ?? 'idle'
           const active = tab.id === activeId
@@ -192,7 +193,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
           clipped -- overflow-x:auto on an ancestor forces its overflow-y to
           a non-visible value too, per spec, which would hide an
           absolutely-positioned dropdown anchored inside it. */}
-      <div className="relative flex-none">
+      <div className="relative flex-none [--wails-draggable:no-drag]">
         <IconButton onClick={openPopover} aria-label="새 탭" className="text-[18px]">
           +
         </IconButton>
@@ -222,18 +223,22 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
 
       <div className="flex-1" />
 
-      {trailing}
+      <div className="flex items-center gap-2 [--wails-draggable:no-drag]">
+        {trailing}
 
-      <IconButton active={screen === 'settings'} onClick={showSettings} aria-label="설정">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </IconButton>
+        <IconButton active={screen === 'settings'} onClick={showSettings} aria-label="설정">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </IconButton>
+
+        <WindowControls />
+      </div>
     </div>
   )
 }
