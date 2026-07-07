@@ -43,16 +43,17 @@ export function PairApprovalDialog() {
   }
 
   return (
-    <Dialog open onClose={() => respond(false)} title="공유 연결 요청">
-      <div className="flex flex-col gap-2.5 w-80 text-[13px]">
-        <p>
-          <strong>{payload.clientName}</strong>({payload.remoteAddr})에서 호스트 공유 연결을 요청했습니다.
+    <Dialog open onClose={() => respond(false)} title="페어링 요청">
+      <div className="flex flex-col gap-4 w-100">
+        <p className="m-0 text-[13px] text-fg2 leading-relaxed">
+          <strong className="text-fg">{payload.clientName}</strong>({payload.remoteAddr}) 이(가) 페어링을 요청했습니다. 상대 화면의 PIN과
+          일치하면 승인하세요.
         </p>
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2.5">
+          <Button onClick={() => respond(false)}>거절</Button>
           <Button variant="primary" onClick={() => respond(true)}>
-            허용
+            승인
           </Button>
-          <Button onClick={() => respond(false)}>거부</Button>
         </div>
       </div>
     </Dialog>

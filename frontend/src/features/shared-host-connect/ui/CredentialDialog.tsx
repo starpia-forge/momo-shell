@@ -1,8 +1,14 @@
 import { useState } from 'react'
-import { Dialog, Button, TextInput } from '../../../shared/ui'
+import { Dialog, Button, SegmentedControl, TextInput } from '../../../shared/ui'
 import { browseForKeyFile, type AuthType, type Host } from '../../../shared/api/host'
 import type { SharedHost } from '../../../shared/api/share'
 import { connectSharedHost } from '../lib/connectSharedHost'
+
+const AUTH_OPTIONS: { value: AuthType; label: string }[] = [
+  { value: 'password', label: '비밀번호' },
+  { value: 'privateKey', label: 'SSH 키' },
+  { value: 'agent', label: 'Agent' },
+]
 
 interface CredentialDialogProps {
   sharedHost: SharedHost
@@ -49,7 +55,7 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
   return (
     <Dialog open onClose={onClose} title={`${sharedHost.name}에 연결`}>
       <form
-        className="flex flex-col gap-3 w-75 text-[13px]"
+        className="flex flex-col gap-4 w-90 text-[13px]"
         onSubmit={(e) => {
           e.preventDefault()
           void submit()
@@ -61,16 +67,9 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
 
         <TextInput label="사용자명" value={username} onChange={(e) => setUsername(e.target.value)} />
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] text-fg2">인증 방식</span>
-          <div className="flex gap-3">
-            {(['password', 'privateKey', 'agent'] as const).map((type) => (
-              <label key={type} className="flex items-center gap-1 cursor-pointer">
-                <input type="radio" name="authType" checked={authType === type} onChange={() => setAuthType(type)} />
-                {type === 'password' ? '비밀번호' : type === 'privateKey' ? 'SSH 키' : 'Agent'}
-              </label>
-            ))}
-          </div>
+        <div className="flex flex-col gap-1.75">
+          <span className="text-[12.5px] font-medium text-fg2">인증</span>
+          <SegmentedControl value={authType} onChange={setAuthType} options={AUTH_OPTIONS} />
         </div>
 
         {authType === 'password' && (
@@ -96,12 +95,12 @@ export function CredentialDialog({ sharedHost, onClose, onConnected }: Credentia
 
         {error && <div className="text-red text-[12px]">{error}</div>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="submit" variant="primary" disabled={!isValid || connecting}>
-            {connecting ? '연결 중...' : '연결'}
-          </Button>
+        <div className="flex justify-end gap-2.5">
           <Button type="button" onClick={onClose}>
             취소
+          </Button>
+          <Button type="submit" variant="primary" disabled={!isValid || connecting}>
+            {connecting ? '연결 중...' : '연결'}
           </Button>
         </div>
       </form>

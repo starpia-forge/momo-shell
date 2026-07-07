@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Dialog, Button, TextInput } from '../../../shared/ui'
+import { Dialog, Button, PinInput, TextInput } from '../../../shared/ui'
 import { addPeerByAddress, describeShareError } from '../../../shared/api/share'
 import { loadPeers } from '../../../entities/peer'
 
@@ -37,31 +37,24 @@ export function DirectAddPeerDialog({ onClose }: DirectAddPeerDialogProps) {
   return (
     <Dialog open onClose={onClose} title="IP로 피어 추가">
       <form
-        className="flex flex-col gap-3 w-70"
+        className="flex flex-col gap-4 w-100"
         onSubmit={(e) => {
           e.preventDefault()
           void submit()
         }}
       >
-        <div className="flex gap-2 [&>*:first-child]:flex-2 [&>*:last-child]:flex-1">
+        <div className="flex gap-3 [&>*:first-child]:flex-2 [&>*:last-child]:flex-1">
           <TextInput label="주소" value={address} onChange={(e) => setAddress(e.target.value)} autoFocus placeholder="10.0.1.5" />
-          <TextInput label="포트" value={port} onChange={(e) => setPort(e.target.value)} />
+          <TextInput label="포트" className="font-mono" value={port} onChange={(e) => setPort(e.target.value)} />
         </div>
-        <TextInput
-          label="PIN"
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          maxLength={6}
-          inputMode="numeric"
-          error={error}
-        />
-        {pending && <p className="m-0 text-[12px] text-fg2">상대방의 승인을 기다리는 중...</p>}
-        <div className="flex justify-end gap-2">
-          <Button type="submit" variant="primary" disabled={!isValid || pending}>
-            연결
-          </Button>
+        <PinInput value={pin} onChange={setPin} error={error} />
+        {pending && <p className="m-0 text-[12px] text-fg2 text-center">상대방의 승인을 기다리는 중...</p>}
+        <div className="flex justify-end gap-2.5">
           <Button type="button" onClick={onClose}>
             취소
+          </Button>
+          <Button type="submit" variant="primary" disabled={!isValid || pending}>
+            연결
           </Button>
         </div>
       </form>

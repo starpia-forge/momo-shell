@@ -19,21 +19,23 @@ export function HostKeyPrompt() {
   }
 
   return (
-    <Dialog open onClose={() => respond('cancel')} title="호스트 키 확인">
-      <div className="flex flex-col gap-2.5 w-80 text-[13px]">
-        <p>
-          <strong>
+    <Dialog open onClose={() => respond('cancel')} title="처음 연결하는 호스트입니다">
+      <div className="flex flex-col gap-4 w-110">
+        <p className="m-0 text-[13px] text-fg2 leading-relaxed">
+          <strong className="text-fg">
             {payload.address}:{payload.port}
           </strong>{' '}
-          ({payload.algo})의 키가 등록되어 있지 않습니다.
+          ({payload.algo})의 신원을 확인할 수 없습니다. 아래 핑거프린트가 서버 관리자에게 받은 값과 일치하는지 확인하세요.
         </p>
-        <p className="font-mono text-[12px] px-2 py-1.5 bg-canvas rounded break-all">{payload.fingerprint}</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="primary" onClick={() => respond('trust')}>
-            신뢰하고 저장
-          </Button>
-          <Button onClick={() => respond('once')}>이번만</Button>
+        <p className="m-0 font-mono text-[12px] px-4 py-3.5 bg-inputbg border border-line rounded-md break-all text-fg2 leading-relaxed">
+          {payload.fingerprint}
+        </p>
+        <div className="flex justify-end gap-2.5">
           <Button onClick={() => respond('cancel')}>취소</Button>
+          <Button onClick={() => respond('once')}>이번만</Button>
+          <Button variant="primary" onClick={() => respond('trust')}>
+            신뢰하고 연결
+          </Button>
         </div>
       </div>
     </Dialog>

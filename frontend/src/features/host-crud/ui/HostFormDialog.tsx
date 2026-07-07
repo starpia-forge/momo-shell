@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { cn } from '../../../shared/lib/cn'
-import { Dialog, Button, TextInput } from '../../../shared/ui'
+import { Dialog, Button, Chip, SegmentedControl, TextInput } from '../../../shared/ui'
 import { setHostSecret, testConnection, browseForKeyFile, type AuthType, type Host, type TestResult } from '../../../shared/api/host'
 import { useHostStore } from '../../../entities/host'
+
+const AUTH_OPTIONS: { value: AuthType; label: string }[] = [
+  { value: 'password', label: '비밀번호' },
+  { value: 'privateKey', label: 'SSH 키' },
+  { value: 'agent', label: 'Agent' },
+]
 
 interface HostFormDialogProps {
   open: boolean
@@ -157,52 +163,51 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={hostId ? '호스트 편집' : '호스트 추가'}>
-      <div className="host-form flex flex-col gap-3 w-90">
+    <Dialog open={open} onClose={onClose} title={hostId ? '호스트 편집' : '새 호스트 등록'}>
+      <div className="host-form flex flex-col gap-4.5 w-120">
         <TextInput
           label="이름*"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           error={errors.name}
         />
-        <div className="flex gap-2 items-end *:flex-1">
+        <div className="flex gap-3 items-end *:flex-1">
           <TextInput
             label="주소*"
+            className="font-mono"
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
             error={errors.address}
           />
           <TextInput
             label="포트"
+            className="font-mono"
             value={form.port}
             onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
             error={errors.port}
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[12px] text-fg2">라벨</span>
-          <div className="flex flex-wrap gap-1.5 items-center">
+        <div className="flex flex-col gap-1.75">
+          <span className="text-[12.5px] font-medium text-fg2">라벨</span>
+          <div className="flex flex-wrap gap-1.5 items-center px-3 py-2 rounded-md bg-inputbg border border-line">
             {form.labels.map((label) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-canvas border border-line text-[12px]"
-              >
+              <Chip key={label}>
                 {label}
                 <button
                   type="button"
-                  className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none"
+                  className="border-none bg-transparent text-fg2 cursor-pointer text-[12px] leading-none ml-1"
                   onClick={() => removeLabel(label)}
                   aria-label={`${label} 제거`}
                 >
                   ×
                 </button>
-              </span>
+              </Chip>
             ))}
             <input
               className="flex-1 min-w-20 border-none bg-transparent text-fg text-[12px] outline-none"
               value={form.labelDraft}
-              placeholder="+ 추가"
+              placeholder="라벨 추가…"
               onChange={(e) => setForm((f) => ({ ...f, labelDraft: e.target.value }))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -222,21 +227,9 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
           error={errors.username}
         />
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[12px] text-fg2">인증 방식</span>
-          <div className="flex gap-3">
-            {(['password', 'privateKey', 'agent'] as const).map((type) => (
-              <label key={type} className="flex items-center gap-1 text-[13px]">
-                <input
-                  type="radio"
-                  name="authType"
-                  checked={form.authType === type}
-                  onChange={() => setForm((f) => ({ ...f, authType: type }))}
-                />
-                {type === 'password' ? '비밀번호' : type === 'privateKey' ? 'SSH 키' : 'Agent'}
-              </label>
-            ))}
-          </div>
+        <div className="flex flex-col gap-1.75">
+          <span className="text-[12.5px] font-medium text-fg2">인증</span>
+          <SegmentedControl value={form.authType} onChange={(v) => setForm((f) => ({ ...f, authType: v }))} options={AUTH_OPTIONS} />
         </div>
 
         {form.authType === 'password' && (
@@ -278,7 +271,7 @@ export function HostFormDialog({ open, onClose, hostId, cloneFrom, onSaved }: Ho
         )}
 
         {testResult && (
-          <div className={cn('text-[12px] px-2 py-1.5 rounded', testResult.ok ? 'bg-green/15 text-green' : 'bg-red/15 text-red')}>
+          <div className={cn('text-[12px] px-3.5 py-2.5 rounded-md', testResult.ok ? 'bg-green/15 text-green' : 'bg-red/15 text-red')}>
             {testResult.ok
               ? '연결 성공'
               : `실패 (${testResult.stage === 'tcp' ? '주소 불가' : testResult.stage === 'handshake' ? '호스트키 불일치' : '인증 실패'})${
