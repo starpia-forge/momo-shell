@@ -1,4 +1,5 @@
 import { useLayoutEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
 import { DestinationBar } from '../../../features/file-upload'
@@ -19,6 +20,7 @@ import { TransferCenter, TransferBadge } from '../../../widgets/transfer-center'
 import { WorkspaceLayout, findLeaf, leaves, useWorkspaceLayoutStore } from '../../../widgets/workspace-layout'
 
 export function WorkspacePage() {
+  const { t } = useTranslation()
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
   const screen = useTabStore((s) => s.screen)
@@ -93,7 +95,7 @@ export function WorkspacePage() {
     const tree = useWorkspaceLayoutStore.getState().trees[tab.id]
     const sessionIds = tree ? leaves(tree).map((l) => l.sessionId) : [tab.sessionId]
     const anyConnecting = sessionIds.some((id) => useSessionStore.getState().sessions[id]?.state === 'connecting')
-    if (anyConnecting && !window.confirm('연결 중인 세션을 닫을까요?')) return
+    if (anyConnecting && !window.confirm(t('workspace.confirmCloseConnecting'))) return
     sessionIds.forEach(disposeSession)
     useWorkspaceLayoutStore.getState().removeTree(tab.id)
     useTabStore.getState().removeTab(tab.id)
@@ -129,7 +131,7 @@ export function WorkspacePage() {
       kind: session?.kind === 'ssh' ? 'ssh' : 'local',
       hostId: session?.hostId,
       sessionId: payload.sessionId,
-      title: session?.kind === 'ssh' ? (host?.name ?? '연결 중...') : '로컬 쉘',
+      title: session?.kind === 'ssh' ? (host?.name ?? t('common.connecting')) : t('tabBar.localShell'),
       subtitle: session?.kind === 'ssh' ? (host?.address ?? '') : (session?.shell ?? ''),
     })
     if (removed.becameEmpty) useTabStore.getState().removeTab(payload.tabId)

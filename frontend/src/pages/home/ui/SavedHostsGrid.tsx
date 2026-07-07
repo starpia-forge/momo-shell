@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useHostStore, type Host } from '../../../entities/host'
 import { useSessionStore } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
@@ -11,13 +12,6 @@ interface SavedHostsGridProps {
 
 type SortMode = 'recent' | 'name'
 
-const STATUS_LABEL: Record<DotStatus, string> = {
-  running: '연결됨',
-  connecting: '연결 중…',
-  error: '오류',
-  idle: '유휴',
-}
-
 const STATUS_TEXT: Record<DotStatus, string> = {
   running: 'text-green',
   connecting: 'text-amber',
@@ -26,6 +20,13 @@ const STATUS_TEXT: Record<DotStatus, string> = {
 }
 
 export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
+  const { t } = useTranslation()
+  const STATUS_LABEL: Record<DotStatus, string> = {
+    running: t('home.savedHosts.statusRunning'),
+    connecting: t('home.savedHosts.statusConnecting'),
+    error: t('home.savedHosts.statusError'),
+    idle: t('home.savedHosts.statusIdle'),
+  }
   const hosts = useHostStore((s) => s.hosts)
   const load = useHostStore((s) => s.load)
   const sessions = useSessionStore((s) => s.sessions)
@@ -76,22 +77,22 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
 
   function contextMenuItems(host: Host): ContextMenuItem[] {
     return [
-      { label: '편집', onClick: () => setDialog({ hostId: host.id }) },
-      { label: '복제', onClick: () => setDialog({ cloneFrom: host }) },
-      { label: '새 탭으로 연결', onClick: () => void handleConnect(host) },
-      { label: '삭제', danger: true, divider: true, onClick: () => void confirmAndDeleteHost(host) },
+      { label: t('common.edit'), onClick: () => setDialog({ hostId: host.id }) },
+      { label: t('home.savedHosts.contextClone'), onClick: () => setDialog({ cloneFrom: host }) },
+      { label: t('home.savedHosts.contextConnectNewTab'), onClick: () => void handleConnect(host) },
+      { label: t('common.delete'), danger: true, divider: true, onClick: () => void confirmAndDeleteHost(host) },
     ]
   }
 
   return (
     <section className="flex flex-col gap-5">
       <div className="flex items-center gap-4">
-        <span className="text-[19px] font-bold">내 호스트</span>
-        <span className="text-[13px] text-fg3">{filtered.length}개</span>
+        <span className="text-[19px] font-bold">{t('home.savedHosts.title')}</span>
+        <span className="text-[13px] text-fg3">{t('home.savedHosts.count', { count: filtered.length })}</span>
         <div className="flex-1" />
         <SearchInput
           containerClassName="w-70 h-9.5"
-          placeholder="이름, 주소, 라벨 검색"
+          placeholder={t('home.savedHosts.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -99,12 +100,12 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
           value={sortMode}
           onChange={setSortMode}
           options={[
-            { value: 'recent', label: '최근 연결' },
-            { value: 'name', label: '이름순' },
+            { value: 'recent', label: t('home.savedHosts.sortRecent') },
+            { value: 'name', label: t('home.savedHosts.sortName') },
           ]}
         />
         <Button variant="primary" className="h-9.5" onClick={() => setDialog({})}>
-          ＋ 새 호스트
+          ＋ {t('common.addHost')}
         </Button>
       </div>
 
@@ -133,12 +134,12 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
 
               <div className="hidden group-hover:flex items-center gap-2">
                 <Button variant="primary" size="sm" onClick={() => void handleConnect(host)}>
-                  연결
+                  {t('common.connect')}
                 </Button>
-                <IconButton size={30} onClick={(e) => openContextMenu(e, host)} aria-label="더 보기">
+                <IconButton size={30} onClick={(e) => openContextMenu(e, host)} aria-label={t('home.savedHosts.moreActions')}>
                   ⋯
                 </IconButton>
-                <span className="text-[11.5px] text-fg3">더블클릭으로도 연결</span>
+                <span className="text-[11.5px] text-fg3">{t('home.savedHosts.doubleClickHint')}</span>
               </div>
               <div className="flex group-hover:hidden gap-1.5">
                 {status === 'error' && error ? (
@@ -159,11 +160,11 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
           className="flex flex-col gap-1.5 px-5.5 py-5 rounded-xl border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-fg2 text-[13px] hover:text-fg"
           onClick={() => setDialog({})}
         >
-          ＋ 새 호스트
+          ＋ {t('common.addHost')}
         </button>
       </div>
 
-      {filtered.length === 0 && <div className="text-fg2 text-[12px] py-2">호스트를 추가해 시작하세요</div>}
+      {filtered.length === 0 && <div className="text-fg2 text-[12px] py-2">{t('home.savedHosts.emptyState')}</div>}
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextMenuItems(menu.host)} onClose={() => setMenu(null)} />}
       {dialog && <HostFormDialog open hostId={dialog.hostId} cloneFrom={dialog.cloneFrom} onClose={() => setDialog(null)} />}

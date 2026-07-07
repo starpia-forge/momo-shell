@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { formatModTime, formatSize } from '../../../widgets/file-browser'
 import { Dialog } from '../../../shared/ui'
 import type { RemoteEntry } from '../../../shared/api/transfer'
@@ -19,16 +20,17 @@ function Row({ label, value }: { label: string; value: string }) {
 /** Shared by both SFTP panes -- takes a plain RemoteEntry, agnostic to which
  * side (local/remote) it came from. */
 export function PropertiesDialog({ entry, onClose }: PropertiesDialogProps) {
+  const { t } = useTranslation()
   return (
-    <Dialog open={entry !== null} onClose={onClose} title="속성">
+    <Dialog open={entry !== null} onClose={onClose} title={t('sftp.properties.title')}>
       {entry && (
         <div className="flex flex-col min-w-70 text-[13px]">
-          <Row label="이름" value={entry.name} />
-          <Row label="경로" value={entry.path} />
-          <Row label="종류" value={entry.isDir ? '디렉터리' : '파일'} />
-          <Row label="크기" value={entry.isDir ? '—' : formatSize(entry.size)} />
-          <Row label="권한" value={`${entry.modeText} (${(entry.mode & 0o777).toString(8)})`} />
-          <Row label="수정 시각" value={formatModTime(entry.modTime)} />
+          <Row label={t('sftp.properties.name')} value={entry.name} />
+          <Row label={t('sftp.properties.path')} value={entry.path} />
+          <Row label={t('sftp.properties.kind')} value={entry.isDir ? t('sftp.properties.directory') : t('sftp.properties.file')} />
+          <Row label={t('sftp.properties.size')} value={entry.isDir ? '—' : formatSize(entry.size)} />
+          <Row label={t('sftp.properties.permissions')} value={`${entry.modeText} (${(entry.mode & 0o777).toString(8)})`} />
+          <Row label={t('sftp.properties.modifiedAt')} value={formatModTime(entry.modTime)} />
         </div>
       )}
     </Dialog>

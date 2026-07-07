@@ -1,4 +1,5 @@
 import { useState, type DragEvent, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../../shared/lib/cn'
 import { isFileDrag } from '../../../shared/lib/paneDnd'
 import { formatModTime, formatSize, NamePromptDialog } from '../../../widgets/file-browser'
@@ -27,11 +28,14 @@ interface MenuState {
   entry: RemoteEntry
 }
 
-const TRANSFER_LABEL: Record<'local' | 'remote', string> = { local: '업로드', remote: '다운로드' }
-
 /** One SFTP pane (local or remote), driven entirely through PaneOps so the
  * same component serves both sides -- see model/paneOps.ts's rationale. */
 export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneProps) {
+  const { t } = useTranslation()
+  const TRANSFER_LABEL: Record<'local' | 'remote', string> = {
+    local: t('sftp.filePane.upload'),
+    remote: t('sftp.filePane.download'),
+  }
   const pane = useSftpStore((s) => s[side]) as PaneState
   const hostLabel = useSftpStore((s) => s.hostLabel)
   const refresh = useSftpStore((s) => (side === 'local' ? s.refreshLocal : s.refreshRemote))
@@ -74,7 +78,7 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
   }
 
   function handleDelete(entry: RemoteEntry) {
-    if (!window.confirm(`${entry.name} 삭제할까요?`)) return
+    if (!window.confirm(t('sftp.filePane.confirmDelete', { name: entry.name }))) return
     void ops
       .remove(entry.path)
       .then(() => refresh(path))
@@ -96,19 +100,19 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
   const menuItems: ContextMenuItem[] = menu
     ? [
         { label: TRANSFER_LABEL[side], onClick: () => void transferSelection(side, [menu.entry.path]) },
-        { label: '복사', onClick: () => setClipboard({ side, op: 'copy', paths: [menu.entry.path] }) },
-        { label: '이동', onClick: () => setClipboard({ side, op: 'move', paths: [menu.entry.path] }) },
-        ...(clipboard ? [{ label: '붙여넣기', onClick: () => void paste(side) }] : []),
-        { label: '이름 변경', onClick: () => setRenameTarget(menu.entry) },
-        { label: '속성', onClick: () => setPropsEntry(menu.entry) },
-        { label: '삭제', danger: true, divider: true, onClick: () => handleDelete(menu.entry) },
+        { label: t('common.copy'), onClick: () => setClipboard({ side, op: 'copy', paths: [menu.entry.path] }) },
+        { label: t('common.move'), onClick: () => setClipboard({ side, op: 'move', paths: [menu.entry.path] }) },
+        ...(clipboard ? [{ label: t('common.paste'), onClick: () => void paste(side) }] : []),
+        { label: t('common.rename'), onClick: () => setRenameTarget(menu.entry) },
+        { label: t('sftp.properties.title'), onClick: () => setPropsEntry(menu.entry) },
+        { label: t('common.delete'), danger: true, divider: true, onClick: () => handleDelete(menu.entry) },
       ]
     : []
 
   const emptyMenuItems: ContextMenuItem[] = emptyMenu
     ? [
-        ...(clipboard ? [{ label: '붙여넣기', onClick: () => void paste(side) }] : []),
-        { label: '새 폴더', onClick: () => setMkdirOpen(true) },
+        ...(clipboard ? [{ label: t('common.paste'), onClick: () => void paste(side) }] : []),
+        { label: t('common.newFolder'), onClick: () => setMkdirOpen(true) },
       ]
     : []
 
@@ -154,10 +158,10 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
       onDrop={handlePaneDrop}
     >
       <PaneHeader
-        title={side === 'local' ? '로컬' : '원격'}
+        title={side === 'local' ? t('sftp.filePane.local') : t('sftp.filePane.remote')}
         subtitle={
           side === 'local' ? (
-            <span className="text-[11.5px] text-fg3">이 컴퓨터</span>
+            <span className="text-[11.5px] text-fg3">{t('sftp.filePane.thisComputer')}</span>
           ) : (
             <span className="flex items-center gap-1.5 text-[11.5px] text-green">
               <StatusDot status="running" />
@@ -173,15 +177,15 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
       />
 
       <div className="flex px-4 pt-2 pb-1.5 text-[11px] text-fg3 gap-3">
-        <span className="flex-1">이름</span>
-        <span className="w-19 text-right">크기</span>
-        <span className="w-24 text-right">수정</span>
-        <span className="w-20.5 text-right font-mono">권한</span>
+        <span className="flex-1">{t('sftp.filePane.colName')}</span>
+        <span className="w-19 text-right">{t('sftp.filePane.colSize')}</span>
+        <span className="w-24 text-right">{t('sftp.filePane.colModified')}</span>
+        <span className="w-20.5 text-right font-mono">{t('sftp.filePane.colPermissions')}</span>
       </div>
 
       {pane.loading && (
         <div className="flex items-center gap-1.5 px-4 pb-2 text-fg2 text-[12px]">
-          <Spinner size={12} /> 불러오는 중...
+          <Spinner size={12} /> {t('sftp.filePane.loading')}
         </div>
       )}
       {pane.error && <div className="px-4 pb-2 text-red text-[12px]">{pane.error}</div>}
@@ -217,16 +221,19 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
       )}
 
       <div className="flex-none h-8.5 flex items-center px-4 border-t border-line text-[11.5px] text-fg3">
-        {pane.entries.length}개 항목
-        {selectedCount > 0 && selectedEntry && !selectedEntry.isDir && ` · ${selectedCount}개 선택됨 (${formatSize(selectedEntry.size)})`}
+        {t('sftp.filePane.itemCount', { count: pane.entries.length })}
+        {selectedCount > 0 &&
+          selectedEntry &&
+          !selectedEntry.isDir &&
+          ` · ${t('sftp.filePane.selectedCount', { count: selectedCount, size: formatSize(selectedEntry.size) })}`}
       </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
       {emptyMenu && <ContextMenu x={emptyMenu.x} y={emptyMenu.y} items={emptyMenuItems} onClose={() => setEmptyMenu(null)} />}
-      <NamePromptDialog open={mkdirOpen} title="새 폴더" onConfirm={handleNewFolder} onClose={() => setMkdirOpen(false)} />
+      <NamePromptDialog open={mkdirOpen} title={t('common.newFolder')} onConfirm={handleNewFolder} onClose={() => setMkdirOpen(false)} />
       <NamePromptDialog
         open={renameTarget !== null}
-        title="이름 변경"
+        title={t('common.rename')}
         initialValue={renameTarget?.name}
         onConfirm={handleRenameConfirm}
         onClose={() => setRenameTarget(null)}

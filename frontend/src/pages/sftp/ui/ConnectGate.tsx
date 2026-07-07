@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Host } from '../../../entities/host'
 import { HostFormDialog } from '../../../features/host-crud'
 import { Button, Spinner } from '../../../shared/ui'
@@ -11,6 +12,7 @@ import { HostPickerGrid } from './HostPickerGrid'
  * navigation state, not store state -- a successful connect unmounts this
  * component entirely, so the next disconnect naturally restarts at idle. */
 export function ConnectGate() {
+  const { t } = useTranslation()
   const connecting = useSftpStore((s) => s.connecting)
   const gateError = useSftpStore((s) => s.gateError)
   const connect = useSftpStore((s) => s.connect)
@@ -26,7 +28,7 @@ export function ConnectGate() {
     return (
       <div className="flex-1 basis-0 min-w-0 rounded-xl bg-surface border border-line flex flex-col items-center justify-center gap-2 text-fg2 text-[13px]">
         <Spinner size={20} />
-        연결 중...
+        {t('common.connecting')}
       </div>
     )
   }
@@ -39,20 +41,16 @@ export function ConnectGate() {
         <div className="flex-1 flex flex-col items-center justify-center gap-4.5 p-8">
           <div className="w-14 h-14 rounded-2xl bg-surface2 flex items-center justify-center text-[22px] font-mono text-fg3">⇅</div>
           <div className="flex flex-col items-center gap-1.5">
-            <div className="text-[15.5px] font-bold">원격에 연결되어 있지 않습니다</div>
-            <div className="text-[12.5px] text-fg2 text-center leading-relaxed">
-              저장된 호스트에 연결하거나 새 호스트를 등록해
-              <br />
-              파일 관리를 시작하세요
-            </div>
+            <div className="text-[15.5px] font-bold">{t('sftp.gate.notConnected')}</div>
+            <div className="text-[12.5px] text-fg2 text-center leading-relaxed">{t('sftp.gate.desc')}</div>
           </div>
           <div className="flex gap-2.5">
             <Button variant="primary" onClick={() => setView('picker')}>
-              연결
+              {t('common.connect')}
             </Button>
-            <Button onClick={() => setDialogOpen(true)}>새 호스트 등록</Button>
+            <Button onClick={() => setDialogOpen(true)}>{t('sftp.gate.registerHost')}</Button>
           </div>
-          {gateError && <div className="text-[11.5px] text-red">이전 연결 실패: {gateError}</div>}
+          {gateError && <div className="text-[11.5px] text-red">{t('sftp.gate.previousConnectFailed', { error: gateError })}</div>}
         </div>
       )}
       {dialogOpen && <HostFormDialog open onClose={() => setDialogOpen(false)} onSaved={handleSaved} />}

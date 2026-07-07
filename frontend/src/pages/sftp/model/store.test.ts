@@ -1,5 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Host } from '../../../entities/host'
+import i18n from '../../../shared/i18n'
+
+beforeAll(async () => {
+  await i18n.changeLanguage('en')
+})
 
 const paneOpsMocks = vi.hoisted(() => ({
   localOps: {
@@ -160,7 +165,7 @@ describe('session loss', () => {
     expect(state.sessionId).toBeNull()
     expect(state.remoteOps).toBeNull()
     expect(state.remote.path).toBeNull()
-    expect(state.gateError).toBe('연결이 끊어졌습니다')
+    expect(state.gateError).toBe('Connection lost')
     expect(unsub).toHaveBeenCalled()
   })
 })

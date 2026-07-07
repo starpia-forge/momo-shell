@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button, IconButton } from '../../../shared/ui'
 import type { PaneOps } from '../model/paneOps'
 
@@ -16,6 +17,7 @@ interface PaneHeaderProps {
 /** R4: identity + action row, then a path bar, at the top of each SFTP pane.
  * Shared by both sides via PaneOps. */
 export function PaneHeader({ title, subtitle, path, ops, onNavigate, onNewFolder, onDisconnect }: PaneHeaderProps) {
+  const { t } = useTranslation()
   const [pathInput, setPathInput] = useState(path)
 
   useEffect(() => {
@@ -31,16 +33,23 @@ export function PaneHeader({ title, subtitle, path, ops, onNavigate, onNewFolder
         {subtitle}
         <div className="flex-1" />
         <Button size="sm" onClick={onNewFolder}>
-          새 폴더
+          {t('common.newFolder')}
         </Button>
         {onDisconnect && (
           <Button size="sm" onClick={onDisconnect}>
-            연결 해제
+            {t('sftp.paneHeader.disconnect')}
           </Button>
         )}
       </div>
       <div className="flex items-center gap-2.5 h-10 px-3 border-t border-line">
-        <IconButton size={28} className="text-[13px]" onClick={() => parent !== null && onNavigate(parent)} disabled={parent === null} aria-label="상위 폴더" title="상위 폴더">
+        <IconButton
+          size={28}
+          className="text-[13px]"
+          onClick={() => parent !== null && onNavigate(parent)}
+          disabled={parent === null}
+          aria-label={t('sftp.paneHeader.parentFolder')}
+          title={t('sftp.paneHeader.parentFolder')}
+        >
           ↑
         </IconButton>
         <input
@@ -51,10 +60,10 @@ export function PaneHeader({ title, subtitle, path, ops, onNavigate, onNewFolder
             if (e.key === 'Enter') onNavigate(pathInput)
           }}
         />
-        <IconButton size={28} className="text-[12px]" onClick={() => onNavigate(path)} aria-label="새로고침" title="새로고침">
+        <IconButton size={28} className="text-[12px]" onClick={() => onNavigate(path)} aria-label={t('common.refresh')} title={t('common.refresh')}>
           ⟳
         </IconButton>
-        <IconButton size={28} className="text-[12px]" onClick={() => void ops.homeDir().then(onNavigate)} aria-label="홈" title="홈">
+        <IconButton size={28} className="text-[12px]" onClick={() => void ops.homeDir().then(onNavigate)} aria-label={t('sftp.paneHeader.home')} title={t('sftp.paneHeader.home')}>
           ~
         </IconButton>
       </div>

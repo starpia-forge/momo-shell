@@ -1,8 +1,10 @@
 import { useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../../entities/settings'
 import { IconButton, TextInput, useToastStore } from '../../../shared/ui'
 
 export function TerminalTab() {
+  const { t } = useTranslation()
   const fontSize = useSettingsStore((s) => s.fontSize)
   const scrollback = useSettingsStore((s) => s.scrollback)
   const [scrollbackDraft, setScrollbackDraft] = useState(String(scrollback))
@@ -18,7 +20,7 @@ export function TerminalTab() {
       .setScrollback(value)
       .then(() => setScrollbackDraft(String(useSettingsStore.getState().scrollback)))
       .catch(() => {
-        useToastStore.getState().push('스크롤백 설정 변경에 실패했습니다', 'error')
+        useToastStore.getState().push(t('settings.terminal.scrollbackChangeFailed'), 'error')
         setScrollbackDraft(String(scrollback))
       })
   }
@@ -29,9 +31,9 @@ export function TerminalTab() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-[20px] font-bold mb-1">터미널</h2>
+      <h2 className="text-[20px] font-bold mb-1">{t('settings.terminal.title')}</h2>
       <div className="flex items-center justify-between py-3.5 border-b border-line">
-        <span className="text-[14px] font-medium">폰트 크기</span>
+        <span className="text-[14px] font-medium">{t('settings.terminal.fontSize')}</span>
         <div className="flex items-center gap-0.5 p-0.75 rounded-md bg-inputbg border border-line">
           <IconButton size={30} className="text-[15px]" onClick={() => { const s = useSettingsStore.getState(); s.setFontSize(s.fontSize - 1) }}>
             −
@@ -44,8 +46,8 @@ export function TerminalTab() {
       </div>
       <div className="flex items-center justify-between py-3.5 border-b border-line">
         <div className="flex flex-col gap-1">
-          <span className="text-[14px] font-medium">스크롤백</span>
-          <span className="text-[12px] text-fg3">1,000 ~ 100,000줄</span>
+          <span className="text-[14px] font-medium">{t('settings.terminal.scrollback')}</span>
+          <span className="text-[12px] text-fg3">{t('settings.terminal.scrollbackRange')}</span>
         </div>
         <TextInput
           className="w-25 text-right font-mono"

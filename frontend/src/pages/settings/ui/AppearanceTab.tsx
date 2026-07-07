@@ -1,11 +1,7 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../../shared/lib/cn'
 import { useSettingsStore, type Accent, type Theme } from '../../../entities/settings'
 import { useToastStore } from '../../../shared/ui'
-
-const THEME_OPTIONS: { value: Theme; label: string }[] = [
-  { value: 'dark', label: '다크' },
-  { value: 'light', label: '라이트' },
-]
 
 const ACCENT_OPTIONS: { value: Accent; hex: string }[] = [
   { value: 'pink', hex: '#febecb' },
@@ -15,28 +11,34 @@ const ACCENT_OPTIONS: { value: Accent; hex: string }[] = [
 ]
 
 export function AppearanceTab() {
+  const { t } = useTranslation()
   const theme = useSettingsStore((s) => s.theme)
   const accent = useSettingsStore((s) => s.accent)
+
+  const THEME_OPTIONS: { value: Theme; label: string }[] = [
+    { value: 'dark', label: t('settings.appearance.themeDark') },
+    { value: 'light', label: t('settings.appearance.themeLight') },
+  ]
 
   function handleThemeChange(value: Theme) {
     useSettingsStore
       .getState()
       .setTheme(value)
-      .catch(() => useToastStore.getState().push('테마 변경에 실패했습니다', 'error'))
+      .catch(() => useToastStore.getState().push(t('settings.appearance.themeChangeFailed'), 'error'))
   }
 
   function handleAccentChange(value: Accent) {
     useSettingsStore
       .getState()
       .setAccent(value)
-      .catch(() => useToastStore.getState().push('포인트 컬러 변경에 실패했습니다', 'error'))
+      .catch(() => useToastStore.getState().push(t('settings.appearance.accentChangeFailed'), 'error'))
   }
 
   return (
     <section className="flex flex-col gap-9">
       <div className="flex flex-col gap-2">
-        <h2 className="text-[20px] font-bold">모양</h2>
-        <p className="text-[13px] text-fg2">앱 전체에 적용되는 테마를 선택합니다. 터미널을 포함한 모든 영역이 함께 전환됩니다.</p>
+        <h2 className="text-[20px] font-bold">{t('settings.appearance.title')}</h2>
+        <p className="text-[13px] text-fg2">{t('settings.appearance.themeDesc')}</p>
       </div>
 
       <div className="flex gap-5">
@@ -90,8 +92,8 @@ export function AppearanceTab() {
 
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-[14px] font-medium">포인트 컬러</span>
-          <span className="text-[12px] text-fg3">앱 전체의 강조 색상을 선택합니다</span>
+          <span className="text-[14px] font-medium">{t('settings.appearance.accentLabel')}</span>
+          <span className="text-[12px] text-fg3">{t('settings.appearance.accentDesc')}</span>
         </div>
         <div className="flex items-center gap-3">
           {ACCENT_OPTIONS.map((opt) => {

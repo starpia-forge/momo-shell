@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Host } from '../../../entities/host'
 import { disposeSession } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
+import i18n from '../../../shared/i18n'
 import { copyLocal, detectLocalConflicts } from '../../../shared/api/localfs'
 import { subscribe, topics, type SessionStatePayload, type TransferTaskPayload } from '../../../shared/api/events'
 import { detectUploadConflicts, downloadFiles, uploadFiles, type ConflictPolicy, type RemoteEntry } from '../../../shared/api/transfer'
@@ -107,7 +108,9 @@ export function initTransferWatcher(): void {
         pendingMoveDeletes.delete(task.id)
         const ops = side === 'local' ? localOps : useSftpStore.getState().remoteOps
         ops?.remove(task.src).catch((err) => {
-          useSftpStore.setState((s) => ({ [side]: { ...s[side], error: `원본 삭제 실패: ${errorMessage(err)}` } }))
+          useSftpStore.setState((s) => ({
+            [side]: { ...s[side], error: i18n.t('sftp.errors.deleteSourceFailed', { message: errorMessage(err) }) },
+          }))
         })
       }
     } else if (task.state === 'failed' || task.state === 'canceled') {
@@ -196,7 +199,7 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
       unsubSessionState = subscribe<SessionStatePayload>(topics.sessionState(sessionId), (p) => {
         if (p.state === 'closed' || p.state === 'error') {
           stopWatchingSession()
-          set({ sessionId: null, remoteOps: null, remote: EMPTY_PANE, gateError: p.error ?? '연결이 끊어졌습니다' })
+          set({ sessionId: null, remoteOps: null, remote: EMPTY_PANE, gateError: p.error ?? i18n.t('sftp.gate.disconnected') })
         }
       })
       const ops = makeRemoteOps(sessionId)

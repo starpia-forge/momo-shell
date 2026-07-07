@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useHostStore, type Host } from '../../../entities/host'
 import { useSessionStore } from '../../../entities/session'
 import { Button, SearchInput, SegmentedControl, StatusDot, type DotStatus } from '../../../shared/ui'
@@ -16,6 +17,7 @@ type SortMode = 'recent' | 'name'
  * the SFTP store's own session (not connectHost()+onConnect), and omits the
  * edit/clone/delete context menu since this picker is connect-only. */
 export function HostPickerGrid({ onBack, onRegister }: HostPickerGridProps) {
+  const { t } = useTranslation()
   const hosts = useHostStore((s) => s.hosts)
   const load = useHostStore((s) => s.load)
   const sessions = useSessionStore((s) => s.sessions)
@@ -62,18 +64,23 @@ export function HostPickerGrid({ onBack, onRegister }: HostPickerGridProps) {
     <div className="flex-1 min-w-0 overflow-y-auto p-5">
       <div className="flex items-center gap-4 mb-4">
         <button className="border-none bg-transparent text-fg2 cursor-pointer text-[12.5px] hover:text-fg" onClick={onBack}>
-          ← 돌아가기
+          ← {t('sftp.hostPicker.back')}
         </button>
-        <span className="text-[15px] font-bold">내 호스트</span>
-        <span className="text-[12.5px] text-fg3">{filtered.length}개</span>
+        <span className="text-[15px] font-bold">{t('home.savedHosts.title')}</span>
+        <span className="text-[12.5px] text-fg3">{t('home.savedHosts.count', { count: filtered.length })}</span>
         <div className="flex-1" />
-        <SearchInput containerClassName="w-60 h-8.5" placeholder="이름, 주소, 라벨 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <SearchInput
+          containerClassName="w-60 h-8.5"
+          placeholder={t('home.savedHosts.searchPlaceholder')}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
         <SegmentedControl
           value={sortMode}
           onChange={setSortMode}
           options={[
-            { value: 'recent', label: '최근 연결' },
-            { value: 'name', label: '이름순' },
+            { value: 'recent', label: t('home.savedHosts.sortRecent') },
+            { value: 'name', label: t('home.savedHosts.sortName') },
           ]}
         />
       </div>
@@ -93,7 +100,7 @@ export function HostPickerGrid({ onBack, onRegister }: HostPickerGridProps) {
             </div>
             <div className="text-[11.5px] font-mono text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
             <Button variant="primary" size="sm" className="self-start" onClick={() => handleConnect(host)}>
-              연결
+              {t('common.connect')}
             </Button>
           </div>
         ))}
@@ -102,11 +109,11 @@ export function HostPickerGrid({ onBack, onRegister }: HostPickerGridProps) {
           className="flex flex-col gap-1.5 px-4.5 py-4 rounded-xl border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-fg2 text-[13px] hover:text-fg"
           onClick={onRegister}
         >
-          ＋ 새 호스트
+          ＋ {t('common.addHost')}
         </button>
       </div>
 
-      {filtered.length === 0 && <div className="text-fg2 text-[12.5px] py-2">호스트를 추가해 시작하세요</div>}
+      {filtered.length === 0 && <div className="text-fg2 text-[12.5px] py-2">{t('home.savedHosts.emptyState')}</div>}
     </div>
   )
 }
