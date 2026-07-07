@@ -15,7 +15,7 @@ import { RightDock } from '../../../widgets/right-dock'
 import { SharePanel } from '../../../widgets/share-panel'
 import { StatusBar } from '../../../widgets/status-bar'
 import { TabBar, useTabStore, type Tab } from '../../../widgets/tab-bar'
-import { TransferCenter } from '../../../widgets/transfer-center'
+import { TransferCenter, TransferBadge } from '../../../widgets/transfer-center'
 import { WorkspaceLayout, findLeaf, leaves, useWorkspaceLayoutStore } from '../../../widgets/workspace-layout'
 
 export function WorkspacePage() {
@@ -137,7 +137,7 @@ export function WorkspacePage() {
 
   return (
     <div className="workspace flex flex-col h-screen w-screen bg-canvas text-fg">
-      <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} />
+      <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} trailing={<TransferBadge />} />
       <div className="flex-1 flex min-h-0">
         {screen === 'settings' ? (
           <SettingsPage />

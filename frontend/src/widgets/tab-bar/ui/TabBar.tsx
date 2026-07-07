@@ -1,29 +1,32 @@
-import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { useTabStore, type Tab } from '../model/store'
 import { useSessionStore, type SessionState } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
 import { cn } from '../../../shared/lib/cn'
 import { decodePaneDrag, isPaneDrag, type PaneDragPayload } from '../../../shared/lib/paneDnd'
+import { IconButton, StatusDot, type DotStatus } from '../../../shared/ui'
 import { createLocalTab, createSSHTab } from '../lib/createTab'
 
 const HOVER_ACTIVATE_MS = 500
 
-const DOT: Record<SessionState | 'idle', string> = {
-  running: 'bg-green',
-  connecting: 'bg-amber animate-pulse-dot',
-  error: 'bg-red',
-  starting: 'bg-line',
-  closed: 'bg-line',
-  idle: 'bg-line',
+const DOT_STATUS: Record<SessionState | 'idle', DotStatus> = {
+  running: 'running',
+  connecting: 'connecting',
+  error: 'error',
+  starting: 'idle',
+  closed: 'idle',
+  idle: 'idle',
 }
 
 interface TabBarProps {
   onCloseTab: (tab: Tab) => void
   /** A dragged pane was dropped on tab `targetTabId`, or on empty tab-bar space (null). */
   onPaneDrop: (payload: PaneDragPayload, targetTabId: string | null) => void
+  /** Slot rendered before the settings button (e.g. the transfer-center badge). */
+  trailing?: ReactNode
 }
 
-export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
+export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
   const setActive = useTabStore((s) => s.setActive)
@@ -114,39 +117,44 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
   }
 
   return (
-    <div className="tab-bar flex-none flex items-stretch h-9 bg-surface border-b border-line" onDragOver={handleBarDragOver} onDrop={handleBarDrop}>
-      <button
-        className={cn(
-          'flex-none flex items-center justify-center w-9 border-none border-r border-line bg-transparent text-fg2 cursor-pointer hover:text-fg',
-          screen === 'home' && 'text-fg bg-canvas',
-        )}
-        onClick={showHome}
-        aria-label="홈"
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+    <div
+      className="tab-bar flex-none flex items-center h-14 gap-2 px-4 bg-surface border-b border-line"
+      onDragOver={handleBarDragOver}
+      onDrop={handleBarDrop}
+    >
+      <div className="flex-none w-7.5 h-7.5 mr-1.5 rounded-md bg-accent flex items-center justify-center text-on-accent font-bold text-[15px] font-mono">
+        m
+      </div>
+
+      <IconButton active={screen === 'home'} onClick={showHome} aria-label="홈">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 11 12 3l9 8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      </button>
+      </IconButton>
       <button
         className={cn(
-          'flex-none px-3 border-none border-r border-line bg-transparent text-fg2 text-[12px] font-semibold cursor-pointer hover:text-fg',
-          screen === 'sftp' && 'text-fg bg-canvas',
+          'flex-none px-4 py-2 rounded-md bg-transparent text-fg2 text-[13px] font-medium cursor-pointer hover:text-fg',
+          screen === 'sftp' && 'bg-surface2 text-fg font-bold',
         )}
         onClick={showSftp}
         aria-label="SFTP"
       >
         SFTP
       </button>
-      <div className="flex items-stretch min-w-0 overflow-x-auto">
+
+      <div className="flex-none w-px h-6 bg-line mx-1" />
+
+      <div className="flex-1 flex items-stretch gap-2 min-w-0 overflow-x-auto">
         {tabs.map((tab, index) => {
           const state = sessions[tab.sessionId]?.state ?? 'idle'
+          const active = tab.id === activeId
           return (
             <div
               key={tab.id}
               className={cn(
-                'flex items-center gap-1.5 min-w-30 max-w-45 px-2 py-1 border-r border-line cursor-pointer text-fg2',
-                tab.id === activeId && 'bg-canvas text-fg',
+                'flex-none flex items-center gap-2 w-44 box-border px-3 py-1.5 rounded-md border border-line cursor-pointer text-fg2',
+                active && 'bg-surface2 text-fg',
               )}
               draggable
               onDragStart={() => setDragIndex(index)}
@@ -156,13 +164,17 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
               onClick={() => setActive(tab.id)}
               onMouseDown={(e) => handleMiddleClick(e, tab)}
             >
-              <span className={cn('flex-shrink-0 w-[7px] h-[7px] rounded-full', DOT[state])} />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">{tab.title}</div>
-                <div className="text-[10px] opacity-70 overflow-hidden text-ellipsis whitespace-nowrap">{tab.subtitle}</div>
+              <StatusDot status={DOT_STATUS[state]} />
+              <div className="min-w-0 flex-1 leading-tight">
+                <div className={cn('text-[12.5px] overflow-hidden text-ellipsis whitespace-nowrap', active && 'font-bold')}>
+                  {tab.title}
+                </div>
+                <div className="text-[10.5px] font-mono text-fg3 overflow-hidden text-ellipsis whitespace-nowrap">
+                  {tab.subtitle}
+                </div>
               </div>
               <button
-                className="flex-shrink-0 border-none bg-transparent text-inherit cursor-pointer text-[13px] leading-none opacity-60 hover:opacity-100"
+                className="flex-shrink-0 border-none bg-transparent text-fg3 cursor-pointer text-[13px] leading-none opacity-60 hover:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation()
                   onCloseTab(tab)
@@ -176,25 +188,21 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
         })}
       </div>
 
-      {/* Own wrapper (not the scrollable tab-bar__tabs) so the popover isn't
+      {/* Own wrapper (not the scrollable tab list) so the popover isn't
           clipped -- overflow-x:auto on an ancestor forces its overflow-y to
           a non-visible value too, per spec, which would hide an
           absolutely-positioned dropdown anchored inside it. */}
       <div className="relative flex-none">
-        <button
-          className="w-9 h-full border-none border-r border-line bg-transparent text-fg2 text-[16px] cursor-pointer hover:text-fg"
-          onClick={openPopover}
-          aria-label="새 탭"
-        >
+        <IconButton onClick={openPopover} aria-label="새 탭" className="text-[18px]">
           +
-        </button>
+        </IconButton>
         {popoverOpen && (
           <div
-            className="absolute top-full left-0 z-150 flex flex-col min-w-40 bg-surface border border-line rounded p-1 shadow-float"
+            className="absolute top-full left-0 z-150 flex flex-col min-w-40 bg-surface2 border border-line rounded-lg p-1.5 shadow-menu"
             ref={popoverRef}
           >
             <button
-              className="px-2.5 py-1.5 border-none bg-transparent text-fg text-[13px] text-left rounded-sm cursor-pointer hover:bg-canvas"
+              className="px-3 py-2 border-none bg-transparent text-fg text-[12.5px] text-left rounded-md cursor-pointer hover:bg-accent/14"
               onClick={() => void createLocalTab()}
             >
               로컬 쉘
@@ -202,7 +210,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
             {Object.values(hosts).map((h) => (
               <button
                 key={h.id}
-                className="px-2.5 py-1.5 border-none bg-transparent text-fg text-[13px] text-left rounded-sm cursor-pointer hover:bg-canvas"
+                className="px-3 py-2 border-none bg-transparent text-fg text-[12.5px] text-left rounded-md cursor-pointer hover:bg-accent/14"
                 onClick={() => void createSSHTab(h)}
               >
                 {h.name}
@@ -212,15 +220,12 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
         )}
       </div>
 
-      <button
-        className={cn(
-          'flex-none flex items-center justify-center w-9 ml-auto border-none border-l border-line bg-transparent text-fg2 cursor-pointer hover:text-fg',
-          screen === 'settings' && 'text-fg bg-canvas',
-        )}
-        onClick={showSettings}
-        aria-label="설정"
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+      <div className="flex-1" />
+
+      {trailing}
+
+      <IconButton active={screen === 'settings'} onClick={showSettings} aria-label="설정">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="3" />
           <path
             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
@@ -228,7 +233,7 @@ export function TabBar({ onCloseTab, onPaneDrop }: TabBarProps) {
             strokeLinejoin="round"
           />
         </svg>
-      </button>
+      </IconButton>
     </div>
   )
 }
