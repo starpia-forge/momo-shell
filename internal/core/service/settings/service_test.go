@@ -34,7 +34,7 @@ func TestGetAll_DefaultsWhenEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAll() error = %v", err)
 	}
-	want := map[string]string{KeyTheme: "dark", KeyFontSize: "14", KeyScrollback: "10000"}
+	want := map[string]string{KeyTheme: "dark", KeyAccent: "pink", KeyFontSize: "14", KeyScrollback: "10000"}
 	for k, v := range want {
 		if all[k] != v {
 			t.Fatalf("GetAll()[%s] = %q, want %q", k, all[k], v)
@@ -80,6 +80,22 @@ func TestSet_ThemeAcceptsValidValues(t *testing.T) {
 	for _, v := range []string{"dark", "light"} {
 		if err := svc.Set(KeyTheme, v); err != nil {
 			t.Fatalf("Set(theme, %q) error = %v", v, err)
+		}
+	}
+}
+
+func TestSet_AccentRejectsInvalidValue(t *testing.T) {
+	svc := New(newFakeRepo())
+	if err := svc.Set(KeyAccent, "chartreuse"); err == nil {
+		t.Fatal("expected error for invalid accent")
+	}
+}
+
+func TestSet_AccentAcceptsValidValues(t *testing.T) {
+	svc := New(newFakeRepo())
+	for _, v := range []string{"pink", "orange", "purple", "blue"} {
+		if err := svc.Set(KeyAccent, v); err != nil {
+			t.Fatalf("Set(accent, %q) error = %v", v, err)
 		}
 	}
 }

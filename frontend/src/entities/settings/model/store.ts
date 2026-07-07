@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { getAllSettings, setSetting, type Theme } from '../../../shared/api/settings'
+import { getAllSettings, setSetting, type Accent, type Theme } from '../../../shared/api/settings'
 
 const MIN_FONT_SIZE = 8
 const MAX_FONT_SIZE = 32
@@ -12,11 +12,13 @@ const FONT_SIZE_PERSIST_DELAY_MS = 500
 
 interface SettingsStore {
   theme: Theme
+  accent: Accent
   fontSize: number
   scrollback: number
   loaded: boolean
   load: () => Promise<void>
   setTheme: (theme: Theme) => Promise<void>
+  setAccent: (accent: Accent) => Promise<void>
   setScrollback: (lines: number) => Promise<void>
   setFontSize: (size: number) => void
   resetFontSize: () => void
@@ -26,6 +28,7 @@ let fontSizePersistTimer: ReturnType<typeof setTimeout> | undefined
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   theme: 'dark',
+  accent: 'pink',
   fontSize: DEFAULT_FONT_SIZE,
   scrollback: 10000,
   loaded: false,
@@ -40,6 +43,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       await setSetting('appearance.theme', theme)
     } catch (err) {
       set({ theme: previous })
+      throw err
+    }
+  },
+  setAccent: async (accent) => {
+    const previous = get().accent
+    set({ accent })
+    try {
+      await setSetting('appearance.accent', accent)
+    } catch (err) {
+      set({ accent: previous })
       throw err
     }
   },

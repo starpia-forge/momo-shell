@@ -10,6 +10,7 @@ import (
 
 const (
 	KeyTheme      = "appearance.theme"
+	KeyAccent     = "appearance.accent"
 	KeyFontSize   = "terminal.fontSize"
 	KeyScrollback = "terminal.scrollback"
 )
@@ -26,8 +27,16 @@ const (
 // the full set, with stored values overlaid on top.
 var defaults = map[string]string{
 	KeyTheme:      "dark",
+	KeyAccent:     "pink",
 	KeyFontSize:   "14",
 	KeyScrollback: "10000",
+}
+
+var validAccents = map[string]bool{
+	"pink":   true,
+	"orange": true,
+	"purple": true,
+	"blue":   true,
 }
 
 // Service implements in.SettingsUseCase: key validation and default-merging
@@ -71,6 +80,10 @@ func validate(key, value string) error {
 	case KeyTheme:
 		if value != "dark" && value != "light" {
 			return fmt.Errorf("settings: invalid theme %q", value)
+		}
+	case KeyAccent:
+		if !validAccents[value] {
+			return fmt.Errorf("settings: invalid accent %q", value)
 		}
 	case KeyFontSize:
 		return validateIntRange(key, value, minFontSize, maxFontSize)

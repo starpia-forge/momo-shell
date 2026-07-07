@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from 'react'
 import { useSettingsStore } from '../../../entities/settings'
-import { Button, TextInput, useToastStore } from '../../../shared/ui'
+import { IconButton, TextInput, useToastStore } from '../../../shared/ui'
 
 export function TerminalTab() {
   const fontSize = useSettingsStore((s) => s.fontSize)
@@ -28,23 +28,27 @@ export function TerminalTab() {
   }
 
   return (
-    <section>
-      <h2 className="text-[14px] font-semibold mb-3">터미널</h2>
-      <div className="flex items-center justify-between py-2.5 border-b border-line">
-        <span className="text-[13px]">폰트 크기</span>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => { const s = useSettingsStore.getState(); s.setFontSize(s.fontSize - 1) }}>−</Button>
-          <span className="text-[13px] w-8 text-center">{fontSize}</span>
-          <Button onClick={() => { const s = useSettingsStore.getState(); s.setFontSize(s.fontSize + 1) }}>+</Button>
+    <section className="flex flex-col gap-2">
+      <h2 className="text-[20px] font-bold mb-1">터미널</h2>
+      <div className="flex items-center justify-between py-3.5 border-b border-line">
+        <span className="text-[14px] font-medium">폰트 크기</span>
+        <div className="flex items-center gap-0.5 p-0.75 rounded-md bg-inputbg border border-line">
+          <IconButton size={30} className="text-[15px]" onClick={() => { const s = useSettingsStore.getState(); s.setFontSize(s.fontSize - 1) }}>
+            −
+          </IconButton>
+          <span className="w-11 text-center font-mono text-[13px]">{fontSize}</span>
+          <IconButton size={30} className="text-[15px]" onClick={() => { const s = useSettingsStore.getState(); s.setFontSize(s.fontSize + 1) }}>
+            ＋
+          </IconButton>
         </div>
       </div>
-      <div className="flex items-center justify-between py-2.5 border-b border-line">
-        <div>
-          <div className="text-[13px]">스크롤백</div>
-          <div className="text-[11px] text-fg2">1,000 ~ 100,000줄</div>
+      <div className="flex items-center justify-between py-3.5 border-b border-line">
+        <div className="flex flex-col gap-1">
+          <span className="text-[14px] font-medium">스크롤백</span>
+          <span className="text-[12px] text-fg3">1,000 ~ 100,000줄</span>
         </div>
         <TextInput
-          className="w-25 text-right"
+          className="w-25 text-right font-mono"
           value={scrollbackDraft}
           onChange={(e) => setScrollbackDraft(e.target.value)}
           onBlur={commitScrollback}

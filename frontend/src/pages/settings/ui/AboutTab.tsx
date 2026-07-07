@@ -9,10 +9,10 @@ export function AboutTab() {
   }, [])
 
   return (
-    <section>
-      <h2 className="text-[14px] font-semibold mb-3">정보</h2>
-      <div className="flex items-center justify-between py-2.5 border-b border-line">
-        <span className="text-[13px]">momo-shell</span>
+    <section className="flex flex-col gap-2">
+      <h2 className="text-[20px] font-bold mb-1">정보</h2>
+      <div className="flex items-center justify-between py-3.5 border-b border-line">
+        <span className="text-[14px] font-medium">momo-shell</span>
         <span className="text-[13px] text-fg2">{version}</span>
       </div>
     </section>

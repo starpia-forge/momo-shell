@@ -3,7 +3,7 @@ import { useSettingsStore } from './store'
 import * as settingsApi from '../../../shared/api/settings'
 
 beforeEach(() => {
-  useSettingsStore.setState({ theme: 'dark', fontSize: 14, scrollback: 10000, loaded: false })
+  useSettingsStore.setState({ theme: 'dark', accent: 'pink', fontSize: 14, scrollback: 10000, loaded: false })
   vi.restoreAllMocks()
 })
 
@@ -13,9 +13,9 @@ afterEach(() => {
 
 describe('load', () => {
   it('merges the RPC result into state and sets loaded', async () => {
-    vi.spyOn(settingsApi, 'getAllSettings').mockResolvedValue({ theme: 'light', fontSize: 18, scrollback: 5000 })
+    vi.spyOn(settingsApi, 'getAllSettings').mockResolvedValue({ theme: 'light', accent: 'blue', fontSize: 18, scrollback: 5000 })
     await useSettingsStore.getState().load()
-    expect(useSettingsStore.getState()).toMatchObject({ theme: 'light', fontSize: 18, scrollback: 5000, loaded: true })
+    expect(useSettingsStore.getState()).toMatchObject({ theme: 'light', accent: 'blue', fontSize: 18, scrollback: 5000, loaded: true })
   })
 })
 
@@ -31,6 +31,21 @@ describe('setTheme', () => {
     vi.spyOn(settingsApi, 'setSetting').mockRejectedValue(new Error('boom'))
     await expect(useSettingsStore.getState().setTheme('light')).rejects.toThrow('boom')
     expect(useSettingsStore.getState().theme).toBe('dark')
+  })
+})
+
+describe('setAccent', () => {
+  it('applies optimistically and persists', async () => {
+    const setSetting = vi.spyOn(settingsApi, 'setSetting').mockResolvedValue(undefined)
+    await useSettingsStore.getState().setAccent('orange')
+    expect(useSettingsStore.getState().accent).toBe('orange')
+    expect(setSetting).toHaveBeenCalledWith('appearance.accent', 'orange')
+  })
+
+  it('rolls back and rethrows on persist failure', async () => {
+    vi.spyOn(settingsApi, 'setSetting').mockRejectedValue(new Error('boom'))
+    await expect(useSettingsStore.getState().setAccent('purple')).rejects.toThrow('boom')
+    expect(useSettingsStore.getState().accent).toBe('pink')
   })
 })
 

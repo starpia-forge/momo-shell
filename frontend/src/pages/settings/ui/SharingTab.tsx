@@ -20,14 +20,14 @@ export function SharingTab() {
   }
 
   return (
-    <section>
-      <h2 className="text-[14px] font-semibold mb-3">공유</h2>
-      <div className="flex items-center justify-between py-2.5 border-b border-line">
-        <div>
-          <div className="text-[13px]">장치 이름</div>
-          <div className="text-[11px] text-fg2">다음 mDNS 광고·페어링부터 적용됩니다</div>
+    <section className="flex flex-col gap-2">
+      <h2 className="text-[20px] font-bold mb-1">공유</h2>
+      <div className="flex items-center justify-between py-3.5 border-b border-line">
+        <div className="flex flex-col gap-1">
+          <span className="text-[14px] font-medium">장치 이름</span>
+          <span className="text-[12px] text-fg3">다음 mDNS 광고·페어링부터 적용됩니다</span>
         </div>
-        <TextInput className="w-50" value={name} onChange={(e) => setName(e.target.value)} onBlur={commit} onKeyDown={handleKeyDown} />
+        <TextInput className="w-55" value={name} onChange={(e) => setName(e.target.value)} onBlur={commit} onKeyDown={handleKeyDown} />
       </div>
     </section>
   )
