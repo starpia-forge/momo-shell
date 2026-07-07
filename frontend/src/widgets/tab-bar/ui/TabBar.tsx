@@ -145,7 +145,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
 
       <div className="flex-none w-px h-6 bg-line mx-1" />
 
-      <div className="flex-1 flex items-stretch gap-2 min-w-0 overflow-x-auto">
+      <div className="flex items-stretch gap-2 min-w-0 overflow-x-auto">
         {tabs.map((tab, index) => {
           const state = sessions[tab.sessionId]?.state ?? 'idle'
           const active = tab.id === activeId
