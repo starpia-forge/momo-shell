@@ -39,7 +39,7 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
         onClick: () =>
           void fetchSharedHosts(peer.id)
             .then(loadPeers)
-            .catch((err) => useToastStore.getState().push(describeShareError(err))),
+            .catch((err) => useToastStore.getState().push(describeShareError(err), 'error')),
       },
       { label: '삭제', danger: true, onClick: () => void removePeer(peer.id).then(loadPeers) },
     ]
@@ -59,8 +59,8 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
         onClick: () =>
           void importSharedHost(peerId, index)
             .then(() => useHostStore.getState().load())
-            .then(() => useToastStore.getState().push(`${host.name}을(를) 내 호스트로 가져왔습니다`))
-            .catch((err) => useToastStore.getState().push(describeShareError(err))),
+            .then(() => useToastStore.getState().push(`${host.name}을(를) 내 호스트로 가져왔습니다`, 'success'))
+            .catch((err) => useToastStore.getState().push(describeShareError(err), 'error')),
       },
     ]
   }

@@ -51,13 +51,13 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="dialog__panel min-w-80 max-w-[90vw] max-h-[85vh] overflow-auto rounded-md border border-line bg-surface p-4 text-fg"
+        className="dialog__panel min-w-80 max-w-[90vw] max-h-[85vh] overflow-auto rounded-2xl border border-line bg-surface px-7 py-6.5 text-fg shadow-modal"
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        {title && <div className="mb-3 text-[15px] font-semibold">{title}</div>}
+        {title && <div className="mb-4 text-[16px] font-bold">{title}</div>}
         {children}
       </div>
     </div>

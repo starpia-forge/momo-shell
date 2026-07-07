@@ -18,7 +18,7 @@ export function TerminalTab() {
       .setScrollback(value)
       .then(() => setScrollbackDraft(String(useSettingsStore.getState().scrollback)))
       .catch(() => {
-        useToastStore.getState().push('스크롤백 설정 변경에 실패했습니다')
+        useToastStore.getState().push('스크롤백 설정 변경에 실패했습니다', 'error')
         setScrollbackDraft(String(scrollback))
       })
   }

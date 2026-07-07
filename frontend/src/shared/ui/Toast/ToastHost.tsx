@@ -1,19 +1,37 @@
 import { useEffect } from 'react'
 import { cn } from '../../lib/cn'
-import { useToastStore } from './toastStore'
+import { useToastStore, type ToastVariant } from './toastStore'
 
 const AUTO_DISMISS_MS = 4000
 
-function ToastHostItem({ id, message, onClick }: { id: string; message: string; onClick?: () => void }) {
+const ICON: Record<ToastVariant, { glyph: string; tint: string }> = {
+  success: { glyph: '✓', tint: 'bg-green/16 text-green' },
+  error: { glyph: '!', tint: 'bg-red/16 text-red' },
+  info: { glyph: 'i', tint: 'bg-blue/16 text-blue' },
+}
+
+function ToastHostItem({
+  id,
+  message,
+  variant,
+  onClick,
+}: {
+  id: string
+  message: string
+  variant: ToastVariant
+  onClick?: () => void
+}) {
   useEffect(() => {
     const timer = setTimeout(() => useToastStore.getState().remove(id), AUTO_DISMISS_MS)
     return () => clearTimeout(timer)
   }, [id])
 
+  const icon = ICON[variant]
+
   return (
     <div
       className={cn(
-        'toast-host__item max-w-80 overflow-hidden text-ellipsis whitespace-nowrap rounded px-3.5 py-2 bg-surface border border-line text-fg text-[12px] shadow-float',
+        'toast-host__item flex items-center gap-3 max-w-80 rounded-lg px-4.5 py-3.5 bg-surface2 border border-line text-fg text-[13px] shadow-menu',
         onClick && 'cursor-pointer',
       )}
       role={onClick ? 'button' : undefined}
@@ -22,7 +40,15 @@ function ToastHostItem({ id, message, onClick }: { id: string; message: string; 
         useToastStore.getState().remove(id)
       }}
     >
-      {message}
+      <span
+        className={cn(
+          'flex-none flex items-center justify-center w-5.5 h-5.5 rounded-full text-[12px]',
+          icon.tint,
+        )}
+      >
+        {icon.glyph}
+      </span>
+      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{message}</span>
     </div>
   )
 }
@@ -36,7 +62,7 @@ export function ToastHost() {
   return (
     <div className="toast-host fixed right-4 bottom-4 z-500 flex flex-col-reverse items-end gap-2">
       {toasts.map((t) => (
-        <ToastHostItem key={t.id} id={t.id} message={t.message} onClick={t.onClick} />
+        <ToastHostItem key={t.id} id={t.id} message={t.message} variant={t.variant} onClick={t.onClick} />
       ))}
     </div>
   )

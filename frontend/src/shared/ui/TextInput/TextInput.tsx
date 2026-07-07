@@ -10,14 +10,14 @@ export function TextInput({ label, error, id, className, ...rest }: TextInputPro
   return (
     <div className="text-input flex flex-col gap-1">
       {label && (
-        <label className="text-[12px] text-fg2" htmlFor={id}>
+        <label className="text-[12.5px] font-medium text-fg2" htmlFor={id}>
           {label}
         </label>
       )}
       <input
         id={id}
         className={cn(
-          'rounded border px-2 py-1.5 bg-canvas text-fg text-[13px] focus:outline-none focus:border-accent',
+          'rounded-md border px-3.5 py-2.5 bg-inputbg text-fg text-[13px] focus:outline-none focus:border-accent',
           error ? 'border-red' : 'border-line',
           className,
         )}

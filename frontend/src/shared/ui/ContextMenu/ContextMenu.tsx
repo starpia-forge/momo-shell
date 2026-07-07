@@ -34,7 +34,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
 
   return (
     <div
-      className="context-menu fixed z-200 flex min-w-[140px] flex-col gap-0 rounded border border-line bg-surface p-1 shadow-float"
+      className="context-menu fixed z-200 flex min-w-[150px] flex-col gap-0 rounded-lg border border-line bg-surface2 p-1.5 shadow-menu"
       ref={ref}
       style={{ left: x, top: y }}
     >
@@ -42,7 +42,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         <button
           key={item.label}
           className={cn(
-            'rounded-sm px-2.5 py-1.5 text-left text-[13px] cursor-pointer hover:bg-canvas',
+            'rounded-md px-3 py-2 text-left text-[12.5px] cursor-pointer hover:bg-accent/14',
             item.danger ? 'text-red' : 'text-fg',
           )}
           onClick={() => {

@@ -28,11 +28,11 @@ function notifyTerminal(task: TaskInfo) {
   const label = task.kind === 'upload' ? '업로드' : '다운로드'
   const fileName = task.currentFile || task.src
   if (task.state === 'done') {
-    useToastStore.getState().push(`${label} 완료: ${fileName}`)
+    useToastStore.getState().push(`${label} 완료: ${fileName}`, 'success')
   } else if (task.state === 'failed') {
-    useToastStore.getState().push(`${label} 실패: ${fileName}${task.error ? ` (${task.error})` : ''}`)
+    useToastStore.getState().push(`${label} 실패: ${fileName}${task.error ? ` (${task.error})` : ''}`, 'error')
   } else if (task.state === 'canceled') {
-    useToastStore.getState().push(`${label} 취소됨: ${fileName}`)
+    useToastStore.getState().push(`${label} 취소됨: ${fileName}`, 'info')
   }
 }
 

@@ -11,8 +11,8 @@ export function SharingTab() {
 
   function commit() {
     setDeviceName(name.trim())
-      .then(() => useToastStore.getState().push('장치 이름을 저장했습니다'))
-      .catch((err) => useToastStore.getState().push(describeShareError(err)))
+      .then(() => useToastStore.getState().push('장치 이름을 저장했습니다', 'success'))
+      .catch((err) => useToastStore.getState().push(describeShareError(err), 'error'))
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {

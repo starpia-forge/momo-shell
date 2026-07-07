@@ -13,7 +13,7 @@ export function AppearanceTab() {
     useSettingsStore
       .getState()
       .setTheme(value)
-      .catch(() => useToastStore.getState().push('테마 변경에 실패했습니다'))
+      .catch(() => useToastStore.getState().push('테마 변경에 실패했습니다', 'error'))
   }
 
   return (
