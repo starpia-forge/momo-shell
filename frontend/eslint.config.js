@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint'
 import boundaries from 'eslint-plugin-boundaries'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import i18next from 'eslint-plugin-i18next'
 import globals from 'globals'
 
 // FSD layer elements. Patterns are relative to this file's directory
@@ -94,6 +95,16 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // Flags leftover hardcoded JSX text so future UI strings don't skip
+    // i18n extraction -- warn-level so it doesn't block builds outright.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.ts', 'src/shared/i18n/**'],
+    plugins: { i18next },
+    rules: {
+      'i18next/no-literal-string': ['warn', { mode: 'jsx-text-only' }],
     },
   }
 )
