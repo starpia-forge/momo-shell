@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Host } from '../../../entities/host'
 import { HostFormDialog } from '../../../features/host-crud'
-import { Spinner } from '../../../shared/ui'
+import { Button, Spinner } from '../../../shared/ui'
 import { useSftpStore } from '../model/store'
 import { HostPickerGrid } from './HostPickerGrid'
 
@@ -24,7 +24,7 @@ export function ConnectGate() {
 
   if (connecting) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-fg2 text-[13px]">
+      <div className="flex-1 basis-0 min-w-0 rounded-xl bg-surface border border-line flex flex-col items-center justify-center gap-2 text-fg2 text-[13px]">
         <Spinner size={20} />
         연결 중...
       </div>
@@ -32,26 +32,27 @@ export function ConnectGate() {
   }
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col">
+    <div className="flex-1 basis-0 min-w-0 min-h-0 rounded-xl bg-surface border border-line overflow-hidden flex flex-col">
       {view === 'picker' ? (
         <HostPickerGrid onBack={() => setView('idle')} onRegister={() => setDialogOpen(true)} />
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4">
-          <div className="text-[13px] font-semibold">연결이 필요합니다</div>
-          <div className="text-[12px] text-fg2 text-center">저장된 호스트에 연결하거나 새 호스트를 등록하세요.</div>
-          {gateError && <div className="text-[12px] text-red">{gateError}</div>}
-          <button
-            className="px-4 py-1.5 rounded border border-accent bg-accent/10 text-accent cursor-pointer text-[12px] hover:bg-accent/20"
-            onClick={() => setView('picker')}
-          >
-            연결
-          </button>
-          <button
-            className="px-3 py-1.5 rounded border border-dashed border-line bg-transparent text-fg2 cursor-pointer text-[12px] hover:border-accent hover:text-fg"
-            onClick={() => setDialogOpen(true)}
-          >
-            + 새 호스트 등록
-          </button>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4.5 p-8">
+          <div className="w-14 h-14 rounded-2xl bg-surface2 flex items-center justify-center text-[22px] font-mono text-fg3">⇅</div>
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="text-[15.5px] font-bold">원격에 연결되어 있지 않습니다</div>
+            <div className="text-[12.5px] text-fg2 text-center leading-relaxed">
+              저장된 호스트에 연결하거나 새 호스트를 등록해
+              <br />
+              파일 관리를 시작하세요
+            </div>
+          </div>
+          <div className="flex gap-2.5">
+            <Button variant="primary" onClick={() => setView('picker')}>
+              연결
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>새 호스트 등록</Button>
+          </div>
+          {gateError && <div className="text-[11.5px] text-red">이전 연결 실패: {gateError}</div>}
         </div>
       )}
       {dialogOpen && <HostFormDialog open onClose={() => setDialogOpen(false)} onSaved={handleSaved} />}

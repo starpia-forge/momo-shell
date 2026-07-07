@@ -2,7 +2,7 @@ import { useState, type DragEvent, type MouseEvent } from 'react'
 import { cn } from '../../../shared/lib/cn'
 import { isFileDrag } from '../../../shared/lib/paneDnd'
 import { formatModTime, formatSize, NamePromptDialog } from '../../../widgets/file-browser'
-import { ContextMenu, Spinner, Toast, type ContextMenuItem } from '../../../shared/ui'
+import { ContextMenu, Spinner, StatusDot, Toast, type ContextMenuItem } from '../../../shared/ui'
 import type { RemoteEntry } from '../../../shared/api/transfer'
 import { decodeSftpDrag, encodeSftpDrag, isSftpDrag } from '../lib/dnd'
 import type { PaneOps } from '../model/paneOps'
@@ -13,7 +13,7 @@ import { PropertiesDialog } from './PropertiesDialog'
 interface FilePaneProps {
   side: 'local' | 'remote'
   ops: PaneOps
-  /** Remote pane only -- shown as the ⏏ disconnect button in the header. */
+  /** Remote pane only -- shown as the "연결 해제" action in the header. */
   onDisconnect?: () => void
   /** Notifies SftpPage that an OS file drag is currently hovering this pane,
    * so its os:filedrop handler (coordinates only, no DOM target) knows
@@ -33,6 +33,7 @@ const TRANSFER_LABEL: Record<'local' | 'remote', string> = { local: '업로드',
  * same component serves both sides -- see model/paneOps.ts's rationale. */
 export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneProps) {
   const pane = useSftpStore((s) => s[side]) as PaneState
+  const hostLabel = useSftpStore((s) => s.hostLabel)
   const refresh = useSftpStore((s) => (side === 'local' ? s.refreshLocal : s.refreshRemote))
   const select = useSftpStore((s) => s.select)
   const clipboard = useSftpStore((s) => s.clipboard)
@@ -100,7 +101,7 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
         ...(clipboard ? [{ label: '붙여넣기', onClick: () => void paste(side) }] : []),
         { label: '이름 변경', onClick: () => setRenameTarget(menu.entry) },
         { label: '속성', onClick: () => setPropsEntry(menu.entry) },
-        { label: '삭제', danger: true, onClick: () => handleDelete(menu.entry) },
+        { label: '삭제', danger: true, divider: true, onClick: () => handleDelete(menu.entry) },
       ]
     : []
 
@@ -136,12 +137,14 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
     void transferSelection(payload.side, payload.paths)
   }
 
+  const selectedCount = pane.selected ? 1 : 0
+  const selectedEntry = pane.selected ? pane.entries.find((e) => e.path === pane.selected) : undefined
+
   return (
     <div
       className={cn(
-        'flex-1 basis-0 min-w-0 min-h-0 flex flex-col text-[13px]',
-        side === 'local' && 'border-r border-line',
-        dragOver && 'outline outline-[1px] outline-accent outline-offset-[-1px] bg-accent/8'
+        'flex-1 basis-0 min-w-0 min-h-0 flex flex-col text-[13px] rounded-xl bg-surface border overflow-hidden',
+        dragOver ? 'border-[1.5px] border-dashed border-accent bg-accent/8' : 'border-line',
       )}
       data-sftp-pane={side}
       onClick={() => select(side, null)}
@@ -150,21 +153,48 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
       onDragLeave={handlePaneDragLeave}
       onDrop={handlePaneDrop}
     >
-      <PaneHeader path={path} ops={ops} onNavigate={(p) => void refresh(p)} onNewFolder={() => setMkdirOpen(true)} onDisconnect={onDisconnect} />
+      <PaneHeader
+        title={side === 'local' ? '로컬' : '원격'}
+        subtitle={
+          side === 'local' ? (
+            <span className="text-[11.5px] text-fg3">이 컴퓨터</span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-[11.5px] text-green">
+              <StatusDot status="running" />
+              {hostLabel}
+            </span>
+          )
+        }
+        path={path}
+        ops={ops}
+        onNavigate={(p) => void refresh(p)}
+        onNewFolder={() => setMkdirOpen(true)}
+        onDisconnect={onDisconnect}
+      />
+
+      <div className="flex px-4 pt-2 pb-1.5 text-[11px] text-fg3 gap-3">
+        <span className="flex-1">이름</span>
+        <span className="w-19 text-right">크기</span>
+        <span className="w-24 text-right">수정</span>
+        <span className="w-20.5 text-right font-mono">권한</span>
+      </div>
 
       {pane.loading && (
-        <div className="flex items-center gap-1.5 p-2 text-fg2 text-[12px]">
+        <div className="flex items-center gap-1.5 px-4 pb-2 text-fg2 text-[12px]">
           <Spinner size={12} /> 불러오는 중...
         </div>
       )}
-      {pane.error && <div className="p-2 text-red text-[12px]">{pane.error}</div>}
+      {pane.error && <div className="px-4 pb-2 text-red text-[12px]">{pane.error}</div>}
 
       {!pane.loading && !pane.error && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-2">
           {pane.entries.map((entry) => (
             <div
               key={entry.path}
-              className={`flex items-center gap-1.5 px-2 py-1 cursor-default hover:bg-canvas ${pane.selected === entry.path ? 'bg-canvas' : ''}`}
+              className={cn(
+                'flex items-center gap-3 px-2.5 py-2.25 rounded-md cursor-default',
+                pane.selected === entry.path ? 'bg-accent/13 border border-accent/40' : 'border border-transparent hover:bg-surface2',
+              )}
               draggable
               onDragStart={(e) => encodeSftpDrag(e.dataTransfer, { side, paths: [entry.path] })}
               onClick={(e) => {
@@ -174,16 +204,22 @@ export function FilePane({ side, ops, onDisconnect, onFileDragHover }: FilePaneP
               onDoubleClick={() => handleEntryDoubleClick(entry)}
               onContextMenu={(e) => openEntryMenu(e, entry)}
             >
-              <span className="flex-none text-[12px]">{entry.isDir ? '📁' : '📄'}</span>
-              <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px]" title={entry.name}>
+              <span className={cn('flex-none rounded-[3px]', entry.isDir ? 'w-3 h-2.5 bg-blue' : 'w-3 h-3 bg-surface2')} />
+              <span className={cn('flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]', entry.isDir && 'font-medium')} title={entry.name}>
                 {entry.name}
               </span>
-              <span className="flex-none w-14 text-right text-[11px] text-fg2">{entry.isDir ? '—' : formatSize(entry.size)}</span>
-              <span className="flex-none w-17 text-right text-[11px] text-fg2">{formatModTime(entry.modTime)}</span>
+              <span className="flex-none w-19 text-right text-[12px] text-fg3">{entry.isDir ? '—' : formatSize(entry.size)}</span>
+              <span className="flex-none w-24 text-right text-[12px] text-fg3">{formatModTime(entry.modTime)}</span>
+              <span className="flex-none w-20.5 text-right text-[11px] text-fg3 font-mono">{entry.modeText}</span>
             </div>
           ))}
         </div>
       )}
+
+      <div className="flex-none h-8.5 flex items-center px-4 border-t border-line text-[11.5px] text-fg3">
+        {pane.entries.length}개 항목
+        {selectedCount > 0 && selectedEntry && !selectedEntry.isDir && ` · ${selectedCount}개 선택됨 (${formatSize(selectedEntry.size)})`}
+      </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
       {emptyMenu && <ContextMenu x={emptyMenu.x} y={emptyMenu.y} items={emptyMenuItems} onClose={() => setEmptyMenu(null)} />}

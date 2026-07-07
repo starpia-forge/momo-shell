@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { detectUploadConflicts, uploadFiles, type ConflictPolicy } from '../../../shared/api'
-import { ConflictDialog } from '../../../shared/ui'
+import { Button, ConflictDialog } from '../../../shared/ui'
 import { useFileUploadStore } from '../model/store'
 
 const AUTO_PROCEED_MS = 3000
@@ -64,10 +64,10 @@ export function DestinationBar() {
   return (
     <>
       {pending && (
-        <div className="fixed left-1/2 bottom-6 -translate-x-1/2 z-100 flex items-center gap-2 px-3 py-2 rounded-lg bg-surface border border-line shadow-[0_4px_16px_rgba(0,0,0,0.35)] text-fg text-[12px]">
+        <div className="fixed left-1/2 bottom-6 -translate-x-1/2 z-100 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-surface2 border border-line shadow-menu text-fg text-[12.5px]">
           <span className="whitespace-nowrap text-fg2">{pending.paths.length}개 파일을</span>
           <input
-            className="min-w-55 px-2 py-1 rounded border border-line bg-canvas text-fg text-[12px]"
+            className="min-w-55 px-2.5 py-1.5 rounded-md border border-line bg-inputbg text-fg font-mono text-[12px] focus:outline-none focus:border-accent"
             value={cwd}
             autoFocus
             onChange={(e) => setCwd(e.target.value)}
@@ -77,18 +77,12 @@ export function DestinationBar() {
             }}
           />
           <span className="whitespace-nowrap text-fg2">로 업로드 ({Math.ceil(remainingMs / 1000)}s)</span>
-          <button
-            className="border border-line bg-accent text-on-accent rounded px-2.5 py-1 text-[12px] cursor-pointer"
-            onClick={() => void commit(pending.sessionId, pending.paths, cwd)}
-          >
+          <Button variant="primary" size="sm" onClick={() => void commit(pending.sessionId, pending.paths, cwd)}>
             지금 업로드
-          </button>
-          <button
-            className="border border-line bg-canvas text-fg rounded px-2.5 py-1 text-[12px] cursor-pointer"
-            onClick={cancel}
-          >
+          </Button>
+          <Button size="sm" onClick={cancel}>
             취소
-          </button>
+          </Button>
         </div>
       )}
       <ConflictDialog

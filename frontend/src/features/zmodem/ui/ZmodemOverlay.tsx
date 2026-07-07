@@ -8,17 +8,11 @@ import {
   type TransferProgressPayload,
   type TransferZmodemPayload,
 } from '../../../shared/api'
+import { formatBytes } from '../../../shared/lib/formatBytes'
 import { Button, ProgressBar } from '../../../shared/ui'
 
 interface ZmodemOverlayProps {
   sessionId: string
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  const kb = n / 1024
-  if (kb < 1024) return `${kb.toFixed(1)} KB`
-  return `${(kb / 1024).toFixed(1)} MB`
 }
 
 /** Renders over a terminal pane while ZMODEM (rz/sz) owns its shell channel

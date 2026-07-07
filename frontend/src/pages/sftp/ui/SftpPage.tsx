@@ -51,7 +51,7 @@ export function SftpPage() {
   }, [dropIncoming])
 
   return (
-    <div className="sftp-page flex-1 min-w-0 h-full flex bg-canvas text-fg">
+    <div className="sftp-page flex-1 min-w-0 h-full flex gap-3 p-3 bg-canvas text-fg">
       <FilePane side="local" ops={localOps} onFileDragHover={() => (hoverRef.current = { side: 'local', at: Date.now() })} />
       {sessionId && remoteOps ? (
         <FilePane side="remote" ops={remoteOps} onDisconnect={disconnect} onFileDragHover={() => (hoverRef.current = { side: 'remote', at: Date.now() })} />
