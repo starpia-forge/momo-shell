@@ -3,21 +3,26 @@ import { useHostStore, type Host } from '../../../entities/host'
 import { useSessionStore } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
 import { HostFormDialog, confirmAndDeleteHost } from '../../../features/host-crud'
-import { cn } from '../../../shared/lib/cn'
-import { ContextMenu, type ContextMenuItem } from '../../../shared/ui'
+import { Button, Chip, ContextMenu, IconButton, SearchInput, SegmentedControl, StatusDot, type ContextMenuItem, type DotStatus } from '../../../shared/ui'
 
 interface SavedHostsGridProps {
   onConnect: (host: Host, sessionId: string) => void
 }
 
 type SortMode = 'recent' | 'name'
-type DotStatus = 'running' | 'connecting' | 'error' | 'idle'
 
-const DOT: Record<DotStatus, string> = {
-  running: 'bg-green',
-  connecting: 'bg-amber',
-  error: 'bg-red',
-  idle: 'bg-line',
+const STATUS_LABEL: Record<DotStatus, string> = {
+  running: '연결됨',
+  connecting: '연결 중…',
+  error: '오류',
+  idle: '유휴',
+}
+
+const STATUS_TEXT: Record<DotStatus, string> = {
+  running: 'text-green',
+  connecting: 'text-amber',
+  error: 'text-red',
+  idle: 'text-fg3',
 }
 
 export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
@@ -50,13 +55,13 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
     )
   }, [hosts, query, sortMode])
 
-  function statusFor(hostId: string): DotStatus {
+  function statusFor(hostId: string): { status: DotStatus; error?: string } {
     const match = Object.values(sessions).find((s) => s.hostId === hostId && s.state !== 'closed')
-    if (!match) return 'idle'
-    if (match.state === 'running') return 'running'
-    if (match.state === 'connecting') return 'connecting'
-    if (match.state === 'error') return 'error'
-    return 'idle'
+    if (!match) return { status: 'idle' }
+    if (match.state === 'running') return { status: 'running' }
+    if (match.state === 'connecting') return { status: 'connecting' }
+    if (match.state === 'error') return { status: 'error', error: match.error }
+    return { status: 'idle' }
   }
 
   async function handleConnect(host: Host) {
@@ -71,61 +76,90 @@ export function SavedHostsGrid({ onConnect }: SavedHostsGridProps) {
 
   function contextMenuItems(host: Host): ContextMenuItem[] {
     return [
-      { label: '연결', onClick: () => void handleConnect(host) },
       { label: '편집', onClick: () => setDialog({ hostId: host.id }) },
       { label: '복제', onClick: () => setDialog({ cloneFrom: host }) },
-      { label: '삭제', danger: true, onClick: () => void confirmAndDeleteHost(host) },
+      { label: '새 탭으로 연결', onClick: () => void handleConnect(host) },
+      { label: '삭제', danger: true, divider: true, onClick: () => void confirmAndDeleteHost(host) },
     ]
   }
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[14px] font-semibold">내 호스트 ({filtered.length})</span>
-        <div className="flex items-center gap-2.5">
-          <input
-            className="px-2 py-1.5 rounded border border-line bg-surface text-fg text-[12px]"
-            placeholder="🔍 검색"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button
-            className="border-none bg-transparent text-accent cursor-pointer text-[12px]"
-            onClick={() => setSortMode((m) => (m === 'recent' ? 'name' : 'recent'))}
-            title="정렬 방식 전환"
-          >
-            {sortMode === 'recent' ? '최근 연결 순' : '이름순'}
-          </button>
-        </div>
+    <section className="flex flex-col gap-5">
+      <div className="flex items-center gap-4">
+        <span className="text-[19px] font-bold">내 호스트</span>
+        <span className="text-[13px] text-fg3">{filtered.length}개</span>
+        <div className="flex-1" />
+        <SearchInput
+          containerClassName="w-70 h-9.5"
+          placeholder="이름, 주소, 라벨 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <SegmentedControl
+          value={sortMode}
+          onChange={setSortMode}
+          options={[
+            { value: 'recent', label: '최근 연결' },
+            { value: 'name', label: '이름순' },
+          ]}
+        />
+        <Button variant="primary" className="h-9.5" onClick={() => setDialog({})}>
+          ＋ 새 호스트
+        </Button>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
-        {filtered.map((host) => (
-          <div
-            key={host.id}
-            className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-line bg-surface cursor-pointer text-left hover:border-accent"
-            onDoubleClick={() => void handleConnect(host)}
-            onContextMenu={(e) => openContextMenu(e, host)}
-          >
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className={cn('flex-shrink-0 w-2 h-2 rounded-full', DOT[statusFor(host.id)])} />
-              <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">{host.name}</span>
-            </div>
-            <div className="text-[11px] text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">{host.address}</div>
-            <button
-              className="self-start border border-line bg-canvas text-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
-              onClick={() => void handleConnect(host)}
+      <div className="grid grid-cols-3 gap-4">
+        {filtered.map((host) => {
+          const { status, error } = statusFor(host.id)
+          return (
+            <div
+              key={host.id}
+              className="group flex flex-col gap-3 px-5.5 py-5 rounded-xl border border-line bg-surface cursor-pointer text-left hover:border-accent"
+              onDoubleClick={() => void handleConnect(host)}
+              onContextMenu={(e) => openContextMenu(e, host)}
             >
-              연결
-            </button>
-          </div>
-        ))}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[15.5px] font-bold">
+                  {host.name}
+                </span>
+                <span className={`flex-none flex items-center gap-1.5 text-[12px] ${STATUS_TEXT[status]}`}>
+                  <StatusDot status={status} />
+                  {STATUS_LABEL[status]}
+                </span>
+              </div>
+              <div className="text-[12.5px] font-mono text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">
+                {host.username}@{host.address}:{host.port}
+              </div>
+
+              <div className="hidden group-hover:flex items-center gap-2">
+                <Button variant="primary" size="sm" onClick={() => void handleConnect(host)}>
+                  연결
+                </Button>
+                <IconButton size={30} onClick={(e) => openContextMenu(e, host)} aria-label="더 보기">
+                  ⋯
+                </IconButton>
+                <span className="text-[11.5px] text-fg3">더블클릭으로도 연결</span>
+              </div>
+              <div className="flex group-hover:hidden gap-1.5">
+                {status === 'error' && error ? (
+                  <span className="text-[11.5px] text-red">{error}</span>
+                ) : (
+                  host.labels.map((label) => (
+                    <Chip key={label} tone="neutral">
+                      {label}
+                    </Chip>
+                  ))
+                )}
+              </div>
+            </div>
+          )
+        })}
 
         <button
-          className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-fg2 text-[13px] hover:text-fg"
+          className="flex flex-col gap-1.5 px-5.5 py-5 rounded-xl border border-dashed border-line bg-surface cursor-pointer items-center justify-center text-fg2 text-[13px] hover:text-fg"
           onClick={() => setDialog({})}
         >
-          + 새 호스트
+          ＋ 새 호스트
         </button>
       </div>
 

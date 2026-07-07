@@ -5,7 +5,7 @@ import { PinEntryDialog, DirectAddPeerDialog } from '../../../features/peer-pair
 import { CredentialDialog } from '../../../features/shared-host-connect'
 import { useHostStore, type Host } from '../../../entities/host'
 import { cn } from '../../../shared/lib/cn'
-import { ContextMenu, useToastStore, type ContextMenuItem } from '../../../shared/ui'
+import { Button, Chip, ContextMenu, StatusDot, useToastStore, type ContextMenuItem } from '../../../shared/ui'
 
 interface SharedHostsGridProps {
   onConnect: (host: Host, sessionId: string) => void
@@ -22,6 +22,8 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
 
   useEffect(() => registerPeerUpdates(), [])
 
+  const onlineCount = peers.filter((p) => p.online).length
+
   function openPeerMenu(e: MouseEvent, peer: PeerView) {
     e.preventDefault()
     setMenu({ x: e.clientX, y: e.clientY, peer })
@@ -36,7 +38,7 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
             .then(loadPeers)
             .catch((err) => useToastStore.getState().push(describeShareError(err), 'error')),
       },
-      { label: '삭제', danger: true, onClick: () => void removePeer(peer.id).then(loadPeers) },
+      { label: '삭제', danger: true, divider: true, onClick: () => void removePeer(peer.id).then(loadPeers) },
     ]
   }
 
@@ -69,66 +71,101 @@ export function SharedHostsGrid({ onConnect, onConnectShared }: SharedHostsGridP
   }
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[14px] font-semibold">공유 호스트</span>
-        <div className="flex items-center gap-2.5">
-          <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setAddingByAddress(true)}>
-            IP로 추가
-          </button>
-        </div>
+    <section className="flex flex-col gap-5">
+      <div className="flex items-center gap-4">
+        <span className="text-[19px] font-bold">공유받은 호스트</span>
+        {onlineCount > 0 && (
+          <span className="flex items-center gap-1.75 text-[12.5px] text-fg2">
+            <StatusDot status="running" />
+            같은 네트워크에서 피어 {onlineCount}명 발견
+          </span>
+        )}
+        <div className="flex-1" />
+        <Button size="sm" onClick={() => setAddingByAddress(true)}>
+          IP로 추가
+        </Button>
       </div>
 
-      {peers.length === 0 && <div className="text-fg2 text-[12px] py-2">발견된 공유 피어가 없습니다</div>}
+      {peers.length === 0 && <div className="text-fg2 text-[12.5px] py-2">발견된 공유 피어가 없습니다</div>}
 
-      {peers.map((peer) => (
-        <div key={peer.id} className="mb-3.5">
+      <div className="grid grid-cols-2 gap-4">
+        {peers.map((peer) => (
           <div
-            className={cn('flex items-center gap-2 py-1.5', !peer.online && 'text-fg2 opacity-60')}
+            key={peer.id}
+            className={cn(
+              'flex flex-col gap-3.5 px-5.5 py-5 rounded-xl border bg-surface',
+              peer.paired ? 'border-line' : 'border-dashed border-line justify-center',
+              !peer.online && 'opacity-60',
+            )}
             onContextMenu={(e) => peer.paired && openPeerMenu(e, peer)}
           >
-            <span>📡</span>
-            <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">
-              {peer.name}
-              {peer.paired ? ` (${peer.hosts.length})` : ''}
-            </span>
-            {!peer.online && peer.lastSyncAt && (
-              <span className="text-[10px] text-fg2">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
-            )}
-            {!peer.paired && (
-              <button className="border-none bg-transparent text-accent cursor-pointer text-[12px]" onClick={() => setPairing({ id: peer.id, name: peer.name })}>
-                연결
-              </button>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[14.5px] font-bold">{peer.name}</span>
+              <Chip tone={peer.paired ? 'green' : 'neutral'}>{peer.paired ? '페어링됨' : '미페어링'}</Chip>
+              <div className="flex-1" />
+              {!peer.online && peer.lastSyncAt && (
+                <span className="text-[10.5px] text-fg3">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
+              )}
+              {peer.paired ? (
+                <span className="text-[11.5px] text-fg3">호스트 {peer.hosts.length}개 공유 중</span>
+              ) : (
+                <Button variant="outline-accent" onClick={() => setPairing({ id: peer.id, name: peer.name })}>
+                  페어링
+                </Button>
+              )}
+            </div>
+
+            {peer.paired ? (
+              <>
+                <div className="flex flex-col gap-2">
+                  {peer.hosts.length === 0 && <div className="text-fg2 text-[12.5px] py-1">공유된 호스트가 없습니다</div>}
+                  {peer.hosts.map((h, index) => (
+                    <div
+                      key={`${h.address}:${h.port}`}
+                      className="flex items-center gap-3 px-3.5 py-2.75 rounded-md bg-inputbg cursor-pointer"
+                      onDoubleClick={() => setConnecting(h)}
+                      onContextMenu={(e) => openHostMenu(e, peer.id, index, h)}
+                    >
+                      <span className="text-[13px] font-medium">{h.name}</span>
+                      <span className="text-[11.5px] font-mono text-fg3">
+                        {h.address}:{h.port}
+                      </span>
+                      <div className="flex-1" />
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void importSharedHost(peer.id, index)
+                            .then(() => useHostStore.getState().load())
+                            .then(() => useToastStore.getState().push(`${h.name}을(를) 내 호스트로 가져왔습니다`, 'success'))
+                            .catch((err) => useToastStore.getState().push(describeShareError(err), 'error'))
+                        }}
+                      >
+                        내 호스트로 저장
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConnecting(h)
+                        }}
+                      >
+                        연결
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[11.5px] text-fg3">연결 시 자격증명은 직접 입력합니다</div>
+              </>
+            ) : (
+              <div className="text-[12.5px] text-fg2 leading-relaxed">
+                이 피어의 공유 호스트를 보려면 페어링이 필요합니다. 상대 화면에 표시된 PIN을 입력하세요.
+              </div>
             )}
           </div>
-
-          {peer.paired && (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
-              {peer.hosts.length === 0 && <div className="text-fg2 text-[12px] py-2">공유된 호스트가 없습니다</div>}
-              {peer.hosts.map((h, index) => (
-                <div
-                  key={`${h.address}:${h.port}`}
-                  className="flex flex-col gap-1.5 px-3 py-2.5 rounded-md border border-line bg-surface cursor-pointer text-left hover:border-accent"
-                  onDoubleClick={() => setConnecting(h)}
-                  onContextMenu={(e) => openHostMenu(e, peer.id, index, h)}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-accent">⇢</span>
-                    <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px]">{h.name}</span>
-                  </div>
-                  <div className="text-[11px] text-fg2 overflow-hidden text-ellipsis whitespace-nowrap">{h.address}</div>
-                  <button
-                    className="self-start border border-line bg-canvas text-accent rounded px-2 py-[3px] text-[11px] cursor-pointer"
-                    onClick={() => setConnecting(h)}
-                  >
-                    연결
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={peerMenuItems(menu.peer)} onClose={() => setMenu(null)} />}
       {hostMenu && (

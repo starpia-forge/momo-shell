@@ -143,17 +143,15 @@ export function WorkspacePage() {
           <SettingsPage />
         ) : screen === 'sftp' ? (
           <SftpPage />
+        ) : screen === 'home' ? (
+          <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
         ) : (
           <>
             <div className="flex-none w-55">
               <HostSidebar onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
             </div>
             <div className="flex-1 min-w-0 min-h-0 p-1 overflow-hidden">
-              {screen === 'home' ? (
-                <HomePage onConnect={handleHostConnect} onConnectShared={handleSharedConnect} />
-              ) : (
-                activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />
-              )}
+              {activeTab && <WorkspaceLayout key={activeTab.id} tabId={activeTab.id} onTabBecameEmpty={handleTabBecameEmpty} />}
             </div>
             <RightDock
               historyPanel={

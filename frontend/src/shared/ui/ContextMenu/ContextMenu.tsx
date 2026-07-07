@@ -5,6 +5,8 @@ export interface ContextMenuItem {
   label: string
   onClick: () => void
   danger?: boolean
+  /** Render a divider above this item. */
+  divider?: boolean
 }
 
 interface ContextMenuProps {
@@ -39,19 +41,21 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
       style={{ left: x, top: y }}
     >
       {items.map((item) => (
-        <button
-          key={item.label}
-          className={cn(
-            'rounded-md px-3 py-2 text-left text-[12.5px] cursor-pointer hover:bg-accent/14',
-            item.danger ? 'text-red' : 'text-fg',
-          )}
-          onClick={() => {
-            item.onClick()
-            onClose()
-          }}
-        >
-          {item.label}
-        </button>
+        <div key={item.label}>
+          {item.divider && <div className="h-px bg-line my-1.25 mx-2" />}
+          <button
+            className={cn(
+              'w-full rounded-md px-3 py-2 text-left text-[12.5px] cursor-pointer hover:bg-accent/14',
+              item.danger ? 'text-red' : 'text-fg',
+            )}
+            onClick={() => {
+              item.onClick()
+              onClose()
+            }}
+          >
+            {item.label}
+          </button>
+        </div>
       ))}
     </div>
   )

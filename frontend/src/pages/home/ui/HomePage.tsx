@@ -9,7 +9,7 @@ interface HomePageProps {
 
 export function HomePage({ onConnect, onConnectShared }: HomePageProps) {
   return (
-    <div className="home-page h-full overflow-y-auto p-4 px-5 bg-canvas text-fg flex flex-col gap-6">
+    <div className="home-page h-full overflow-y-auto py-11 px-14 bg-canvas text-fg flex flex-col gap-10">
       <SavedHostsGrid onConnect={onConnect} />
       <SharedHostsGrid onConnect={onConnect} onConnectShared={onConnectShared} />
     </div>
