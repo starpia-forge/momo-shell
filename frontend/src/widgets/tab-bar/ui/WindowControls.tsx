@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Quit, WindowIsMaximised, WindowMinimise, WindowToggleMaximise } from '../../../../wailsjs/runtime/runtime'
 
 export function WindowControls() {
+  const { t } = useTranslation()
   const [maximised, setMaximised] = useState(false)
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export function WindowControls() {
       <button
         className="w-[34px] h-[30px] rounded-lg flex items-center justify-center text-fg2 bg-transparent border-none cursor-pointer hover:bg-surface2"
         onClick={() => WindowMinimise()}
-        aria-label="최소화"
+        aria-label={t('windowControls.minimize')}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
           <line x1="1.5" y1="6" x2="10.5" y2="6" />
@@ -30,7 +32,7 @@ export function WindowControls() {
       <button
         className="w-[34px] h-[30px] rounded-lg flex items-center justify-center text-fg2 bg-transparent border-none cursor-pointer hover:bg-surface2"
         onClick={handleToggleMaximise}
-        aria-label={maximised ? '이전 크기로 복원' : '최대화'}
+        aria-label={maximised ? t('windowControls.restore') : t('windowControls.maximize')}
       >
         {maximised ? (
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
@@ -46,7 +48,7 @@ export function WindowControls() {
       <button
         className="w-[34px] h-[30px] rounded-lg flex items-center justify-center text-fg2 bg-transparent border-none cursor-pointer hover:bg-red/20 hover:text-red"
         onClick={() => Quit()}
-        aria-label="닫기"
+        aria-label={t('common.close')}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
           <line x1="2" y1="2" x2="10" y2="10" />

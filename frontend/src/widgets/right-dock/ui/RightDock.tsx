@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRightDockStore, type RightDockTab } from '../model/store'
 import { cn } from '../../../shared/lib/cn'
 import { IconButton } from '../../../shared/ui'
@@ -9,19 +10,20 @@ interface RightDockProps {
   sharePanel: ReactNode
 }
 
-const RAIL: { tab: RightDockTab; glyph: string; label: string }[] = [
-  { tab: 'history', glyph: '≡', label: '히스토리' },
-  { tab: 'files', glyph: '▤', label: '파일' },
-  { tab: 'share', glyph: '⇡', label: '공유' },
-]
-
 /** Hosts HISTORY, FILES, and SHARE as mutually-exclusive panels behind a
  * always-visible icon rail -- the rail stays put (46px) whether or not the
  * 300px panel is open, so it never fights the terminal for who owns that
  * strip of the window. */
 export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockProps) {
+  const { t } = useTranslation()
   const open = useRightDockStore((s) => s.open)
   const active = useRightDockStore((s) => s.active)
+
+  const RAIL: { tab: RightDockTab; glyph: string; label: string }[] = [
+    { tab: 'history', glyph: '≡', label: t('rightDock.history') },
+    { tab: 'files', glyph: '▤', label: t('rightDock.files') },
+    { tab: 'share', glyph: '⇡', label: t('settings.sharing.title') },
+  ]
 
   return (
     <div className="flex-none flex h-full border-l border-line">

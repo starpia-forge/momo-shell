@@ -1,5 +1,6 @@
 import { openLocalSession, openSSHSession, useSessionStore } from '../../../entities/session'
 import type { Host } from '../../../entities/host'
+import i18n from '../../../shared/i18n'
 import { useTabStore } from '../model/store'
 
 export async function createLocalTab(): Promise<void> {
@@ -9,7 +10,7 @@ export async function createLocalTab(): Promise<void> {
     id: sessionId,
     kind: 'local',
     sessionId,
-    title: '로컬 쉘',
+    title: i18n.t('tabBar.localShell'),
     subtitle: shell,
   })
 }

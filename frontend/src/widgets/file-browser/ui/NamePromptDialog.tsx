@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button, Dialog, TextInput } from '../../../shared/ui'
 
 interface NamePromptDialogProps {
@@ -11,6 +12,7 @@ interface NamePromptDialogProps {
 
 /** Single-field name prompt shared by "새 폴더" and "이름 변경". */
 export function NamePromptDialog({ open, title, initialValue = '', onConfirm, onClose }: NamePromptDialogProps) {
+  const { t } = useTranslation()
   const [value, setValue] = useState(initialValue)
 
   useEffect(() => {
@@ -36,10 +38,10 @@ export function NamePromptDialog({ open, title, initialValue = '', onConfirm, on
         <TextInput autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>
-            취소
+            {t('common.cancel')}
           </Button>
           <Button type="submit" variant="primary" disabled={!value.trim()}>
-            확인
+            {t('common.confirm')}
           </Button>
         </div>
       </form>

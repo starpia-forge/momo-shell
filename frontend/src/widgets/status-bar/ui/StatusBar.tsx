@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useSessionStore } from '../../../entities/session'
 import { StatusDot, type DotStatus } from '../../../shared/ui'
 
@@ -11,15 +12,15 @@ const DOT_STATUS: Record<string, DotStatus> = {
   error: 'error',
 }
 
-const STATE_LABEL: Record<string, string> = {
-  connecting: '연결 중',
-  starting: '연결 중',
-  running: '연결됨',
-  closed: '유휴',
-  error: '오류',
-}
-
 export function StatusBar({ sessionId }: StatusBarProps) {
+  const { t } = useTranslation()
+  const STATE_LABEL: Record<string, string> = {
+    connecting: t('statusBar.stateConnecting'),
+    starting: t('statusBar.stateConnecting'),
+    running: t('home.savedHosts.statusRunning'),
+    closed: t('home.savedHosts.statusIdle'),
+    error: t('home.savedHosts.statusError'),
+  }
   const session = useSessionStore((s) => (sessionId ? s.sessions[sessionId] : undefined))
 
   return (
@@ -37,7 +38,7 @@ export function StatusBar({ sessionId }: StatusBarProps) {
           </span>
         </>
       ) : (
-        <span>연결 중...</span>
+        <span>{t('common.connecting')}</span>
       )}
     </div>
   )

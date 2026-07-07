@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useHostStore, type Host } from '../../../entities/host'
 import { useSessionStore } from '../../../entities/session'
 import { connectHost } from '../../../features/session-connect'
@@ -19,6 +20,7 @@ interface HostSidebarProps {
 type SortMode = 'recent' | 'name'
 
 export function HostSidebar({ onConnect, onConnectShared, activeHostId }: HostSidebarProps) {
+  const { t } = useTranslation()
   const hosts = useHostStore((s) => s.hosts)
   const load = useHostStore((s) => s.load)
   const sessions = useSessionStore((s) => s.sessions)
@@ -69,10 +71,10 @@ export function HostSidebar({ onConnect, onConnectShared, activeHostId }: HostSi
 
   function contextMenuItems(host: Host): ContextMenuItem[] {
     return [
-      { label: '편집', onClick: () => setDialog({ hostId: host.id }) },
-      { label: '복제', onClick: () => setDialog({ cloneFrom: host }) },
-      { label: '새 탭으로 연결', onClick: () => void handleConnect(host) },
-      { label: '삭제', danger: true, divider: true, onClick: () => void confirmAndDeleteHost(host) },
+      { label: t('common.edit'), onClick: () => setDialog({ hostId: host.id }) },
+      { label: t('home.savedHosts.contextClone'), onClick: () => setDialog({ cloneFrom: host }) },
+      { label: t('home.savedHosts.contextConnectNewTab'), onClick: () => void handleConnect(host) },
+      { label: t('common.delete'), danger: true, divider: true, onClick: () => void confirmAndDeleteHost(host) },
     ]
   }
 
@@ -80,20 +82,20 @@ export function HostSidebar({ onConnect, onConnectShared, activeHostId }: HostSi
     <div className="flex flex-col h-full bg-surface border-r border-line text-fg text-[13px] p-3.5 gap-3">
       <SearchInput
         containerClassName="h-8.5"
-        placeholder="호스트 검색"
+        placeholder={t('hostSidebar.searchPlaceholder')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
         <div className="flex items-center justify-between px-2.5 py-1.5">
-          <span className="text-[11px] font-bold text-fg3 tracking-wide">내 호스트</span>
+          <span className="text-[11px] font-bold text-fg3 tracking-wide">{t('home.savedHosts.title')}</span>
           <button
             className="border-none bg-transparent text-fg3 cursor-pointer text-[10.5px] hover:text-fg2"
             onClick={() => setSortMode((m) => (m === 'recent' ? 'name' : 'recent'))}
-            title="정렬 방식 전환"
+            title={t('hostSidebar.sortToggle')}
           >
-            {sortMode === 'recent' ? '최근 연결 순' : '이름순'}
+            {sortMode === 'recent' ? t('hostSidebar.sortRecent') : t('hostSidebar.sortName')}
           </button>
         </div>
         {filtered.map((host) => (
@@ -121,7 +123,7 @@ export function HostSidebar({ onConnect, onConnectShared, activeHostId }: HostSi
         className="h-9 rounded-md border border-dashed border-line bg-transparent text-fg2 cursor-pointer text-[12.5px] hover:border-accent hover:text-fg"
         onClick={() => setDialog({})}
       >
-        ＋ 새 호스트
+        ＋ {t('common.addHost')}
       </button>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextMenuItems(menu.host)} onClose={() => setMenu(null)} />}

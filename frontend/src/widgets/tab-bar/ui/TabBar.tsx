@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTabStore, type Tab } from '../model/store'
 import { useSessionStore, type SessionState } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
@@ -29,6 +30,7 @@ interface TabBarProps {
 }
 
 export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
+  const { t } = useTranslation()
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
   const setActive = useTabStore((s) => s.setActive)
@@ -135,7 +137,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
         m
       </div>
 
-      <IconButton active={screen === 'home'} onClick={showHome} aria-label="홈" className="[--wails-draggable:no-drag]">
+      <IconButton active={screen === 'home'} onClick={showHome} aria-label={t('common.home')} className="[--wails-draggable:no-drag]">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 11 12 3l9 8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round" />
@@ -188,7 +190,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
                   e.stopPropagation()
                   onCloseTab(tab)
                 }}
-                aria-label={`${tab.title} 닫기`}
+                aria-label={t('tabBar.closeTab', { title: tab.title })}
               >
                 ×
               </button>
@@ -202,7 +204,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
           a non-visible value too, per spec, which would hide an
           absolutely-positioned dropdown anchored inside it. */}
       <div className="relative flex-none [--wails-draggable:no-drag]">
-        <IconButton onClick={openPopover} aria-label="새 탭" className="text-[18px]">
+        <IconButton onClick={openPopover} aria-label={t('tabBar.newTab')} className="text-[18px]">
           +
         </IconButton>
         {popoverOpen && (
@@ -214,7 +216,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
               className="px-3 py-2 border-none bg-transparent text-fg text-[12.5px] text-left rounded-md cursor-pointer hover:bg-accent/14"
               onClick={() => void createLocalTab()}
             >
-              로컬 쉘
+              {t('tabBar.localShell')}
             </button>
             {Object.values(hosts).map((h) => (
               <button
@@ -234,7 +236,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
       <div className="flex items-center gap-2 [--wails-draggable:no-drag]">
         {trailing}
 
-        <IconButton active={screen === 'settings'} onClick={showSettings} aria-label="설정">
+        <IconButton active={screen === 'settings'} onClick={showSettings} aria-label={t('tabBar.settings')}>
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3" />
             <path

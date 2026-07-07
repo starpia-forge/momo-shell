@@ -1,4 +1,5 @@
 import { useEffect, useState, type DragEvent, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   browseForDownloadDirectory,
   browseForUploadFiles,
@@ -40,6 +41,7 @@ interface MenuState {
 }
 
 export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
+  const { t } = useTranslation()
   const state = useFileBrowserStore((s) => (sessionId ? (s.bySession[sessionId] ?? EMPTY_BROWSE_STATE) : EMPTY_BROWSE_STATE))
   const [pathInput, setPathInput] = useState('')
   const [menu, setMenu] = useState<MenuState | null>(null)
@@ -105,12 +107,12 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
   }, [sessionId])
 
   if (!sessionId) {
-    return <div className="flex-1 flex items-center justify-center p-4 text-center text-fg2 text-[12px]">세션이 없습니다</div>
+    return <div className="flex-1 flex items-center justify-center p-4 text-center text-fg2 text-[12px]">{t('fileBrowser.noSession')}</div>
   }
   if (!isSSH) {
     return (
       <div className="flex-1 flex items-center justify-center p-4 text-center text-fg2 text-[12px]">
-        로컬 세션에서는 파일 브라우저를 사용할 수 없습니다
+        {t('fileBrowser.localSessionUnsupported')}
       </div>
     )
   }
@@ -177,7 +179,7 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
 
   function handleDelete(entry: RemoteEntry) {
     if (!sessionId) return
-    if (!window.confirm(`${entry.name} 삭제할까요?`)) return
+    if (!window.confirm(t('sftp.filePane.confirmDelete', { name: entry.name }))) return
     void removeRemote(sessionId, entry.path)
       .then(() => refresh(currentPath))
       .catch((err) => setToast(String(err)))
@@ -185,7 +187,7 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
 
   function handleChmod(entry: RemoteEntry) {
     if (!sessionId) return
-    const input = window.prompt(`${entry.name}의 권한 (예: 755)`, (entry.mode & 0o777).toString(8))
+    const input = window.prompt(t('fileBrowser.chmodPrompt', { name: entry.name }), (entry.mode & 0o777).toString(8))
     if (!input) return
     const mode = parseInt(input, 8)
     if (Number.isNaN(mode)) return
@@ -212,10 +214,10 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
 
   const menuItems: ContextMenuItem[] = menu
     ? [
-        ...(menu.entry.isDir ? [] : [{ label: '다운로드', onClick: () => handleDownload(menu.entry) }]),
-        { label: '이름 변경', onClick: () => setRenameTarget(menu.entry) },
-        { label: '권한 변경', onClick: () => handleChmod(menu.entry) },
-        { label: '삭제', danger: true, onClick: () => handleDelete(menu.entry) },
+        ...(menu.entry.isDir ? [] : [{ label: t('common.download'), onClick: () => handleDownload(menu.entry) }]),
+        { label: t('common.rename'), onClick: () => setRenameTarget(menu.entry) },
+        { label: t('fileBrowser.changePermissions'), onClick: () => handleChmod(menu.entry) },
+        { label: t('common.delete'), danger: true, onClick: () => handleDelete(menu.entry) },
       ]
     : []
 
@@ -240,12 +242,12 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
           className="text-[12px]"
           onClick={() => void refresh(parentRemotePath(currentPath))}
           disabled={currentPath === '/'}
-          aria-label="뒤로"
-          title="뒤로"
+          aria-label={t('fileBrowser.back')}
+          title={t('fileBrowser.back')}
         >
           ←
         </IconButton>
-        <IconButton size={26} className="text-[12px]" onClick={() => void homeDir(sessionId).then(refresh)} aria-label="홈" title="홈">
+        <IconButton size={26} className="text-[12px]" onClick={() => void homeDir(sessionId).then(refresh)} aria-label={t('common.home')} title={t('common.home')}>
           ~
         </IconButton>
         <input
@@ -256,20 +258,20 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
             if (e.key === 'Enter') void refresh(pathInput)
           }}
         />
-        <IconButton size={26} className="text-[12px]" onClick={() => void refresh(currentPath)} aria-label="새로고침" title="새로고침">
+        <IconButton size={26} className="text-[12px]" onClick={() => void refresh(currentPath)} aria-label={t('common.refresh')} title={t('common.refresh')}>
           ⟳
         </IconButton>
-        <IconButton size={26} className="text-[12px]" onClick={handleUpload} aria-label="업로드" title="업로드">
+        <IconButton size={26} className="text-[12px]" onClick={handleUpload} aria-label={t('common.upload')} title={t('common.upload')}>
           ⬆
         </IconButton>
-        <IconButton size={26} className="text-[16px]" onClick={() => setMkdirOpen(true)} aria-label="새 폴더" title="새 폴더">
+        <IconButton size={26} className="text-[16px]" onClick={() => setMkdirOpen(true)} aria-label={t('common.newFolder')} title={t('common.newFolder')}>
           +
         </IconButton>
       </div>
 
       {state.loading && (
         <div className="flex items-center gap-1.5 px-3.5 pb-2 text-fg2 text-[12px]">
-          <Spinner size={12} /> 불러오는 중...
+          <Spinner size={12} /> {t('common.loading')}
         </div>
       )}
       {state.error && <div className="px-3.5 pb-2 text-red text-[12px]">{state.error}</div>}
@@ -302,10 +304,10 @@ export function FileBrowserPanel({ sessionId, isSSH }: FileBrowserPanelProps) {
       )}
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
-      <NamePromptDialog open={mkdirOpen} title="새 폴더" onConfirm={handleMkdirConfirm} onClose={() => setMkdirOpen(false)} />
+      <NamePromptDialog open={mkdirOpen} title={t('common.newFolder')} onConfirm={handleMkdirConfirm} onClose={() => setMkdirOpen(false)} />
       <NamePromptDialog
         open={renameTarget !== null}
-        title="이름 변경"
+        title={t('common.rename')}
         initialValue={renameTarget?.name}
         onConfirm={handleRenameConfirm}
         onClose={() => setRenameTarget(null)}

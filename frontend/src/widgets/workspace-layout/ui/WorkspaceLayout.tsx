@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState, type DragEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { disposeSession, openSSHSession, TerminalPane, useSessionStore } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
@@ -89,6 +90,7 @@ interface PaneViewProps {
 }
 
 function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
+  const { t } = useTranslation()
   const session = useSessionStore((s) => s.sessions[leaf.sessionId])
   const hosts = useHostStore((s) => s.hosts)
   const isFocused = useWorkspaceLayoutStore((s) => s.focusedLeaf[tabId] === leaf.id)
@@ -98,7 +100,7 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   const [fileDragOver, setFileDragOver] = useState(false)
   const isSSH = session?.kind === 'ssh'
   const host = isSSH && session?.hostId ? hosts[session.hostId] : undefined
-  const title = isSSH ? (host?.name ?? '연결 중...') : '로컬 쉘'
+  const title = isSSH ? (host?.name ?? t('common.connecting')) : t('tabBar.localShell')
   const subtitle = isSSH ? (host?.address ?? '') : (session?.shell ?? '')
   const dragPayload = { tabId, leafId: leaf.id, sessionId: leaf.sessionId }
 
@@ -171,9 +173,9 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
   }
 
   const contextMenuItems: ContextMenuItem[] = [
-    { label: '오른쪽에 분할', onClick: () => void splitFocused(tabId, 'row') },
-    { label: '아래에 분할', onClick: () => void splitFocused(tabId, 'column') },
-    { label: '닫기', danger: true, onClick: handleClose },
+    { label: t('workspaceLayout.splitRight'), onClick: () => void splitFocused(tabId, 'row') },
+    { label: t('workspaceLayout.splitDown'), onClick: () => void splitFocused(tabId, 'column') },
+    { label: t('common.close'), danger: true, onClick: handleClose },
   ]
 
   return (
@@ -199,16 +201,16 @@ function PaneView({ tabId, leaf, onTabBecameEmpty }: PaneViewProps) {
           {subtitle && <span className="text-[11px] font-mono text-fg2 whitespace-nowrap overflow-hidden text-ellipsis">: {subtitle}</span>}
         </div>
         <div className="flex-none flex items-center gap-1">
-          <IconButton size={22} className="text-[12px]" onClick={() => useTerminalSearchStore.getState().openFor(leaf.id)} aria-label="검색">
+          <IconButton size={22} className="text-[12px]" onClick={() => useTerminalSearchStore.getState().openFor(leaf.id)} aria-label={t('workspaceLayout.search')}>
             ⌕
           </IconButton>
-          <IconButton size={22} className="text-[12px]" onClick={() => void splitFocused(tabId, 'row')} aria-label="오른쪽에 분할">
+          <IconButton size={22} className="text-[12px]" onClick={() => void splitFocused(tabId, 'row')} aria-label={t('workspaceLayout.splitRight')}>
             ◫
           </IconButton>
-          <IconButton size={22} className="text-[12px]" onClick={() => void splitFocused(tabId, 'column')} aria-label="아래에 분할">
+          <IconButton size={22} className="text-[12px]" onClick={() => void splitFocused(tabId, 'column')} aria-label={t('workspaceLayout.splitDown')}>
             ⬒
           </IconButton>
-          <IconButton size={22} className="text-[12px]" onClick={handleClose} aria-label={`${title} 닫기`}>
+          <IconButton size={22} className="text-[12px]" onClick={handleClose} aria-label={t('workspaceLayout.closeTitled', { title })}>
             ×
           </IconButton>
         </div>

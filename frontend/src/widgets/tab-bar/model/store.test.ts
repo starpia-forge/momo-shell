@@ -6,7 +6,7 @@ function makeTab(overrides: Partial<Tab> = {}): Tab {
     id: 't1',
     kind: 'local',
     sessionId: 's1',
-    title: '로컬 쉘',
+    title: 'Local Shell',
     subtitle: '',
     ...overrides,
   }

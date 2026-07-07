@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   deleteHistoryEntry,
   listHistory,
@@ -27,6 +28,7 @@ function matchesScope(entry: HistoryEntry, effectiveHostId: string): boolean {
 }
 
 export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelProps) {
+  const { t } = useTranslation()
   const entries = useHistoryPanelStore((s) => s.entries)
   const filter = useHistoryPanelStore((s) => s.filter)
   const scopeMode = useHistoryPanelStore((s) => s.scopeMode)
@@ -66,7 +68,7 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
 
   function handleCopy(command: string) {
     void setClipboardText(command)
-    setToast('복사됨')
+    setToast(t('historyPanel.copied'))
   }
 
   function handleSend(command: string) {
@@ -81,18 +83,18 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
 
   return (
     <div className="flex flex-col flex-1 min-h-0 text-[13px] p-3.5 gap-3">
-      <span className="text-[13.5px] font-bold">명령어 히스토리</span>
+      <span className="text-[13.5px] font-bold">{t('historyPanel.title')}</span>
       <SegmentedControl
         value={scopeMode}
         onChange={(v) => setScopeMode(v as HistoryScopeMode)}
         options={[
-          { value: 'all', label: '전체' },
-          { value: 'current', label: '현재 호스트' },
+          { value: 'all', label: t('historyPanel.scopeAll') },
+          { value: 'current', label: t('historyPanel.scopeCurrent') },
         ]}
       />
       <SearchInput
         containerClassName="h-8"
-        placeholder="명령어 필터…"
+        placeholder={t('historyPanel.filterPlaceholder')}
         value={filter}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
       />
@@ -111,15 +113,15 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
             </span>
             <span className="flex-none text-[10.5px] text-fg3 group-hover:hidden">{formatRelativeTime(entry.executedAt)}</span>
             <div className="hidden flex-none items-center gap-1.5 group-hover:flex">
-              <span className="text-[11px] text-accent-text">복사</span>
+              <span className="text-[11px] text-accent-text">{t('common.copy')}</span>
               <button
                 className="border-none bg-transparent text-fg2 cursor-pointer text-[13px] leading-none px-1 py-0.5 hover:text-fg"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleSend(entry.command)
                 }}
-                aria-label="포커스된 창에 입력"
-                title="포커스된 창에 입력"
+                aria-label={t('historyPanel.sendToFocusedWindow')}
+                title={t('historyPanel.sendToFocusedWindow')}
               >
                 ↵
               </button>
@@ -129,8 +131,8 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
                   e.stopPropagation()
                   handleDelete(entry.id)
                 }}
-                aria-label="삭제"
-                title="삭제"
+                aria-label={t('common.delete')}
+                title={t('common.delete')}
               >
                 ×
               </button>
@@ -138,7 +140,7 @@ export function HistoryPanel({ focusedSessionId, currentHostId }: HistoryPanelPr
           </div>
         ))}
       </div>
-      <div className="text-[11px] text-fg3">클릭하면 클립보드에 복사됩니다</div>
+      <div className="text-[11px] text-fg3">{t('historyPanel.clickToCopyHint')}</div>
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   )

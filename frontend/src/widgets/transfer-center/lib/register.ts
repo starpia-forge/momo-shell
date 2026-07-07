@@ -1,4 +1,5 @@
 import { subscribe, topics, type TaskInfo, type TransferProgressPayload } from '../../../shared/api'
+import i18n from '../../../shared/i18n'
 import { useToastStore } from '../../../shared/ui'
 import { useTransferCenterStore } from '../model/store'
 
@@ -25,14 +26,15 @@ function unsubscribeProgress(taskId: string) {
 function notifyTerminal(task: TaskInfo) {
   if (notifiedTerminal.has(task.id)) return
   notifiedTerminal.add(task.id)
-  const label = task.kind === 'upload' ? '업로드' : '다운로드'
+  const label = task.kind === 'upload' ? i18n.t('common.upload') : i18n.t('common.download')
   const fileName = task.currentFile || task.src
   if (task.state === 'done') {
-    useToastStore.getState().push(`${label} 완료: ${fileName}`, 'success')
+    useToastStore.getState().push(i18n.t('transfer.completedToast', { label, fileName }), 'success')
   } else if (task.state === 'failed') {
-    useToastStore.getState().push(`${label} 실패: ${fileName}${task.error ? ` (${task.error})` : ''}`, 'error')
+    const key = task.error ? 'transfer.failedToastWithError' : 'transfer.failedToast'
+    useToastStore.getState().push(i18n.t(key, { label, fileName, error: task.error }), 'error')
   } else if (task.state === 'canceled') {
-    useToastStore.getState().push(`${label} 취소됨: ${fileName}`, 'info')
+    useToastStore.getState().push(i18n.t('transfer.canceledToast', { label, fileName }), 'info')
   }
 }
 

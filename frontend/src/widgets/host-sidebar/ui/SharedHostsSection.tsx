@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePeerStore, registerPeerUpdates, loadPeers, type PeerView } from '../../../entities/peer'
 import { removePeer, fetchSharedHosts, importSharedHost, describeShareError, type SharedHost } from '../../../shared/api/share'
 import { PinEntryDialog, DirectAddPeerDialog } from '../../../features/peer-pairing'
@@ -13,6 +14,7 @@ interface SharedHostsSectionProps {
 }
 
 export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSectionProps) {
+  const { t } = useTranslation()
   const peers = usePeerStore((s) => s.peers)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [pairing, setPairing] = useState<{ id: string; name: string } | null>(null)
@@ -35,13 +37,13 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
   function peerMenuItems(peer: PeerView): ContextMenuItem[] {
     return [
       {
-        label: '새로고침',
+        label: t('common.refresh'),
         onClick: () =>
           void fetchSharedHosts(peer.id)
             .then(loadPeers)
             .catch((err) => useToastStore.getState().push(describeShareError(err), 'error')),
       },
-      { label: '삭제', danger: true, onClick: () => void removePeer(peer.id).then(loadPeers) },
+      { label: t('common.delete'), danger: true, onClick: () => void removePeer(peer.id).then(loadPeers) },
     ]
   }
 
@@ -53,13 +55,13 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
 
   function hostMenuItems(peerId: string, index: number, host: SharedHost): ContextMenuItem[] {
     return [
-      { label: '연결', onClick: () => setConnecting(host) },
+      { label: t('common.connect'), onClick: () => setConnecting(host) },
       {
-        label: '내 호스트로 가져오기',
+        label: t('home.sharedHosts.importAsMyHost'),
         onClick: () =>
           void importSharedHost(peerId, index)
             .then(() => useHostStore.getState().load())
-            .then(() => useToastStore.getState().push(`${host.name}을(를) 내 호스트로 가져왔습니다`, 'success'))
+            .then(() => useToastStore.getState().push(t('home.sharedHosts.importedToast', { name: host.name }), 'success'))
             .catch((err) => useToastStore.getState().push(describeShareError(err), 'error')),
       },
     ]
@@ -77,9 +79,9 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
   return (
     <div className="flex-none flex flex-col">
       <div className="flex items-center justify-between px-2.5 py-1.5 mt-2">
-        <span className="text-[11px] font-bold text-fg3 tracking-wide">공유받은 호스트</span>
+        <span className="text-[11px] font-bold text-fg3 tracking-wide">{t('home.sharedHosts.title')}</span>
         <button className="border-none bg-transparent text-fg3 cursor-pointer text-[10.5px] hover:text-fg2" onClick={() => setAddingByAddress(true)}>
-          IP로 추가
+          {t('home.sharedHosts.addByAddress')}
         </button>
       </div>
       {peers.length > 0 && (
@@ -99,7 +101,9 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
                   {peer.paired ? ` (${peer.hosts.length})` : ''}
                 </span>
                 {!peer.online && peer.lastSyncAt && (
-                  <span className="flex-none text-[10px] text-fg3">마지막 동기화 {new Date(peer.lastSyncAt * 1000).toLocaleString()}</span>
+                  <span className="flex-none text-[10px] text-fg3">
+                    {t('home.sharedHosts.lastSync', { time: new Date(peer.lastSyncAt * 1000).toLocaleString() })}
+                  </span>
                 )}
                 {!peer.paired && (
                   <Button
@@ -109,13 +113,13 @@ export function SharedHostsSection({ onConnect, onConnectShared }: SharedHostsSe
                       setPairing({ id: peer.id, name: peer.name })
                     }}
                   >
-                    연결
+                    {t('home.sharedHosts.pair')}
                   </Button>
                 )}
               </div>
               {peer.paired && expanded[peer.id] && (
                 <ul className="m-0 py-0 pr-2.5 pb-1 pl-7 flex flex-col gap-0.5">
-                  {peer.hosts.length === 0 && <li className="text-[11px] text-fg3 py-1">공유된 호스트가 없습니다</li>}
+                  {peer.hosts.length === 0 && <li className="text-[11px] text-fg3 py-1">{t('home.sharedHosts.noHosts')}</li>}
                   {peer.hosts.map((h, index) => (
                     <li
                       key={`${h.address}:${h.port}`}

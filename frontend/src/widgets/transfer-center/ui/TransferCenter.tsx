@@ -1,23 +1,24 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cancelTransfer } from '../../../shared/api'
 import { formatBytes } from '../../../shared/lib/formatBytes'
 import { ProgressBar } from '../../../shared/ui'
 import { registerTransferCenter } from '../lib/register'
 import { isActiveTask, sortedTasks, useTransferCenterStore } from '../model/store'
 
-const STATE_LABEL: Record<string, string> = {
-  queued: '대기 중…',
-  running: '진행 중',
-  done: '완료',
-  failed: '실패',
-  canceled: '취소됨',
-}
-
 /** Popover anchored under the tab bar's TransferBadge, listing every
  * upload/download task with per-task progress and cancel. ZMODEM (rz/sz)
  * transfers have their own overlay on the pane and aren't listed here --
  * this is the SFTP upload/download queue from M1. */
 export function TransferCenter() {
+  const { t } = useTranslation()
+  const STATE_LABEL: Record<string, string> = {
+    queued: t('transfer.stateQueued'),
+    running: t('transfer.stateRunning'),
+    done: t('transfer.stateDone'),
+    failed: t('transfer.stateFailed'),
+    canceled: t('transfer.stateCanceled'),
+  }
   const tasks = useTransferCenterStore((s) => s.tasks)
   const open = useTransferCenterStore((s) => s.open)
 
@@ -45,7 +46,7 @@ export function TransferCenter() {
                 <button
                   className="flex-none border-none bg-transparent text-fg3 cursor-pointer text-[12px] hover:text-fg"
                   onClick={() => void cancelTransfer(task.id)}
-                  aria-label="취소"
+                  aria-label={t('common.cancel')}
                 >
                   ✕
                 </button>

@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../../shared/lib/cn'
 import { isActiveTask, sortedTasks, useTransferCenterStore } from '../model/store'
 
 /** Tab-bar pill that toggles the TransferCenter popover; mirrors its task
  * count. Both read the same store so they stay in sync without coupling. */
 export function TransferBadge() {
+  const { t } = useTranslation()
   const tasks = useTransferCenterStore((s) => s.tasks)
   const open = useTransferCenterStore((s) => s.open)
 
@@ -24,7 +26,7 @@ export function TransferBadge() {
       onClick={() => useTransferCenterStore.getState().toggleOpen()}
     >
       <span className="font-mono font-bold">↑↓</span>
-      <span>전송 {activeCount > 0 ? activeCount : list.length}</span>
+      <span>{t('transfer.badgeLabel', { count: activeCount > 0 ? activeCount : list.length })}</span>
     </button>
   )
 }
