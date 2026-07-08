@@ -53,6 +53,10 @@ type SessionCreator interface {
 	// Write injects a command line into a live session (RunCommand's
 	// execution path). session.Service.Write already satisfies this.
 	Write(sessionID string, data []byte) error
+	// Snapshot returns every live session's current entity state
+	// (ListSessions' data source). session.Service.Snapshot already
+	// satisfies this.
+	Snapshot() []domain.Session
 }
 
 // CommandResolver is the narrow slice of resolve.Service RunCommand
@@ -76,13 +80,9 @@ type Deps struct {
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
 // ConnectHost, in.AIApprovalUseCase's RespondConnectApproval), the
-// masked-egress read (ReadScrollback), and MCP client pairing/auth
-// (in.MCPServerCallbacks, callbacks.go). It does not yet implement all of
-// in.AIControlUseCase (ListSessions/ListHosts land in A4b, blocked on their
-// own missing data sources today), so no compile-time conformance assertion
-// against that interface is made here -- it's added once a phase closes out
-// the interface (A4b or later), rather than forcing speculative stub methods
-// now.
+// masked-egress read (ReadScrollback), the read-only session/host listing
+// (resources.go), and MCP client pairing/auth (in.MCPServerCallbacks,
+// callbacks.go).
 type Service struct {
 	hosts      out.HostRepository
 	sessions   SessionCreator

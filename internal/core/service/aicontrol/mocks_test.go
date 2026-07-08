@@ -72,6 +72,7 @@ type fakeSessionCreator struct {
 	createFunc       func(opts in.SSHOpts) (domain.SessionInfo, error)
 	sessionShellFunc func(sessionID string) (shell string, kind domain.SessionKind, ok bool)
 	writeFunc        func(sessionID string, data []byte) error
+	snapshotFunc     func() []domain.Session
 
 	mu     sync.Mutex
 	writes []fakeWrite
@@ -99,6 +100,13 @@ func (f *fakeSessionCreator) Write(sessionID string, data []byte) error {
 	f.mu.Unlock()
 	if f.writeFunc != nil {
 		return f.writeFunc(sessionID, data)
+	}
+	return nil
+}
+
+func (f *fakeSessionCreator) Snapshot() []domain.Session {
+	if f.snapshotFunc != nil {
+		return f.snapshotFunc()
 	}
 	return nil
 }

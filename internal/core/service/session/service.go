@@ -311,6 +311,24 @@ func (s *Service) CloseAll() {
 	}
 }
 
+// Snapshot returns a value-copy of every live session's current entity
+// state (AI-facing consumers project this further, e.g. aicontrol's
+// ListSessions maps it to domain.SessionView + a Controlled overlay).
+// domain.Session's fields are all scalars set at construction except
+// State, which is mutated in place as a session's lifecycle advances
+// (connectSSH/pump) -- reading it here, inside the same s.mu critical
+// section every such mutation is now guarded by, is what makes the copy
+// race-free.
+func (s *Service) Snapshot() []domain.Session {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]domain.Session, 0, len(s.sessions))
+	for _, live := range s.sessions {
+		out = append(out, *live.session)
+	}
+	return out
+}
+
 func (s *Service) get(id string) (*liveSession, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

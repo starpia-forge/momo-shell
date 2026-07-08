@@ -125,7 +125,14 @@ func (s *Service) connectSSH(id string, host domain.Host, secret string, live *l
 	}
 
 	live.setStream(stream)
+	// Unlike the StateError/StateClosed transitions below (and in pump.go),
+	// this one runs while the session is still reachable through s.sessions
+	// (no s.remove yet) with no lock held -- Snapshot reads State under
+	// s.mu, so this write must be too, or a concurrent Snapshot could
+	// observe a torn domain.SessionState (string) header.
+	s.mu.Lock()
 	_ = live.session.TransitionTo(domain.StateRunning)
+	s.mu.Unlock()
 	_ = s.hostRepo.TouchConnected(host.ID)
 
 	for _, t := range s.taps {
