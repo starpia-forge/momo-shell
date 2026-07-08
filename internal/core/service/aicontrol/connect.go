@@ -65,24 +65,29 @@ type CommandResolver interface {
 
 // Deps are the out-ports/collaborators Service needs.
 type Deps struct {
-	Hosts     out.HostRepository // reused directly -- already a port, no wrapper needed (cf. session.Deps.HostRepo)
-	Sessions  SessionCreator
-	Publisher out.EventPublisher
-	Resolver  CommandResolver
+	Hosts      out.HostRepository // reused directly -- already a port, no wrapper needed (cf. session.Deps.HostRepo)
+	Sessions   SessionCreator
+	Publisher  out.EventPublisher
+	Resolver   CommandResolver
+	Scrollback ScrollbackReader // ReadScrollback's ring-buffer source (scrollback.Service satisfies it structurally)
+	Masker     OutputMasker     // ReadScrollback's secret-redaction layer (mask.Service satisfies it structurally)
 }
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
-// ConnectHost, in.AIApprovalUseCase's RespondConnectApproval). It does not
-// yet implement all of in.AIControlUseCase (ListSessions/ListHosts/
-// ReadScrollback land in other phases, each blocked on its own missing data
-// source today), so no compile-time conformance assertion against that
-// interface is made here -- it's added once a phase closes out the
-// interface (A4 or later), rather than forcing speculative stub methods now.
+// ConnectHost, in.AIApprovalUseCase's RespondConnectApproval) and the
+// masked-egress read (ReadScrollback). It does not yet implement all of
+// in.AIControlUseCase (ListSessions/ListHosts land in A4, blocked on their
+// own missing data sources today), so no compile-time conformance assertion
+// against that interface is made here -- it's added once a phase closes out
+// the interface (A4 or later), rather than forcing speculative stub methods
+// now.
 type Service struct {
-	hosts    out.HostRepository
-	sessions SessionCreator
-	pub      out.EventPublisher
-	resolver CommandResolver
+	hosts      out.HostRepository
+	sessions   SessionCreator
+	pub        out.EventPublisher
+	resolver   CommandResolver
+	scrollback ScrollbackReader
+	masker     OutputMasker
 
 	mu          sync.Mutex
 	pending     map[string]chan bool             // requestID -> approval channel (share.Service.pending mirror)
@@ -96,6 +101,8 @@ func New(deps Deps) *Service {
 		sessions:    deps.Sessions,
 		pub:         deps.Publisher,
 		resolver:    deps.Resolver,
+		scrollback:  deps.Scrollback,
+		masker:      deps.Masker,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
 		commands:    make(map[string]*domain.CommandHandle),

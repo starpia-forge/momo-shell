@@ -121,6 +121,45 @@ func (f *fakeResolver) Resolve(command, dialect string) resolve.Verdict {
 	return f.verdict
 }
 
+// fakeScrollbackReader is a hand-rolled ScrollbackReader returning a canned
+// (data, nextSeq) pair per test case, and recording the (sessionID, sinceSeq)
+// it was called with so tests can assert ReadScrollback's fan-out.
+type fakeScrollbackReader struct {
+	data []byte
+	next uint64
+
+	called      bool
+	gotSession  string
+	gotSinceSeq uint64
+}
+
+func (f *fakeScrollbackReader) ReadSince(sessionID string, sinceSeq uint64) ([]byte, uint64) {
+	f.called = true
+	f.gotSession = sessionID
+	f.gotSinceSeq = sinceSeq
+	return f.data, f.next
+}
+
+// fakeOutputMasker is a hand-rolled OutputMasker returning a canned
+// (masked, gated, notice) result, recording the (sessionID, chunk) it was
+// called with.
+type fakeOutputMasker struct {
+	masked []byte
+	gated  bool
+	notice string
+
+	called     bool
+	gotSession string
+	gotChunk   []byte
+}
+
+func (f *fakeOutputMasker) Apply(sessionID string, chunk []byte) ([]byte, bool, string) {
+	f.called = true
+	f.gotSession = sessionID
+	f.gotChunk = append([]byte(nil), chunk...)
+	return f.masked, f.gated, f.notice
+}
+
 // recordingPublisher is a hand-rolled out.EventPublisher that records every
 // Publish call (share/mocks_test.go mirror).
 type recordingPublisher struct {
