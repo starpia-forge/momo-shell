@@ -2,6 +2,7 @@ package resolve
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"momo-shell/internal/adapter/out/shparse"
@@ -111,6 +112,18 @@ func TestResolve_Integration_EmptyVarRmRequiresApproval(t *testing.T) {
 	}
 	if v.Risk != RiskHigh {
 		t.Errorf("Risk = %v, want %v", v.Risk, RiskHigh)
+	}
+
+	// C3: even once approved, the rewritten command must re-check $EMPTY at
+	// execution time rather than trusting the static verdict alone.
+	if !strings.Contains(v.GuardedCmd, `${EMPTY:-}`) {
+		t.Errorf("GuardedCmd should re-check EMPTY's runtime value, got %q", v.GuardedCmd)
+	}
+	if !strings.Contains(v.GuardedCmd, abortMarker) {
+		t.Errorf("GuardedCmd should contain the abort marker, got %q", v.GuardedCmd)
+	}
+	if !strings.Contains(v.GuardedCmd, "rm -rf /$EMPTY") {
+		t.Errorf("GuardedCmd should embed the original command verbatim, got %q", v.GuardedCmd)
 	}
 }
 

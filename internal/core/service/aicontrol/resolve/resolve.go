@@ -8,6 +8,8 @@
 package resolve
 
 import (
+	"strings"
+
 	"momo-shell/internal/core/port/out"
 )
 
@@ -29,7 +31,14 @@ const (
 type Verdict struct {
 	Risk      RiskLevel
 	Uncertain bool
-	Reasons   []string
+	// GuardedCmd is the inline-guard-rewritten form of the command, meant to
+	// run in place of the original once approved (doc 17 §6.3's runtime
+	// TOCTOU backstop, layered on top of -- not instead of -- L1's static
+	// verdict above). Empty means no rewrite was needed: run the original
+	// command as-is (safe command, no variable-dependent destructive
+	// target, or static analysis failed).
+	GuardedCmd string
+	Reasons    []string
 }
 
 // AutoRunnable reports whether a command may execute without approval --
@@ -66,5 +75,7 @@ func (s *Service) Resolve(command, dialect string) Verdict {
 			Reasons:   []string{"static analysis failed: " + err.Error()},
 		}
 	}
-	return classify(analysis)
+	v := classify(analysis)
+	v.GuardedCmd = buildGuardedCommand(strings.TrimSpace(command), analysis)
+	return v
 }
