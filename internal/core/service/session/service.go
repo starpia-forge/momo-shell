@@ -245,6 +245,18 @@ func (s *Service) FileSystem(id string) (out.RemoteFileSystem, error) {
 	return live.fileSystem()
 }
 
+// SessionShell reports a session's resolved shell and kind, for observers
+// that need to pick a dialect-specific behavior (e.g. shell-integration hook
+// selection). shell is the resolved local shell path and is empty for SSH
+// sessions -- the remote shell is never recorded (see domain.Session.Shell).
+func (s *Service) SessionShell(id string) (shell string, kind domain.SessionKind, ok bool) {
+	live, found := s.get(id)
+	if !found {
+		return "", "", false
+	}
+	return live.session.Shell, live.session.Kind, true
+}
+
 func (s *Service) Resize(id string, cols, rows int) error {
 	live, ok := s.get(id)
 	if !ok {

@@ -17,6 +17,7 @@ import (
 	"momo-shell/internal/adapter/out/pty"
 	"momo-shell/internal/adapter/out/sftp"
 	"momo-shell/internal/adapter/out/shareclient"
+	shellintegrationscripts "momo-shell/internal/adapter/out/shellintegration"
 	"momo-shell/internal/adapter/out/sqlite"
 	"momo-shell/internal/adapter/out/sshconn"
 	"momo-shell/internal/adapter/out/wailsevent"
@@ -27,6 +28,7 @@ import (
 	"momo-shell/internal/core/service/session"
 	"momo-shell/internal/core/service/settings"
 	"momo-shell/internal/core/service/share"
+	"momo-shell/internal/core/service/shellintegration"
 	"momo-shell/internal/core/service/transfer"
 )
 
@@ -81,6 +83,14 @@ func main() {
 	})
 	transferSvc := transfer.New(transfer.Deps{Shell: sessionSvc, Pub: publisher, Zmodem: zmodem.New()})
 	sessionSvc.SetMiddleware(transferSvc)
+	// Runtime OSC133 shell-integration hooks (doc 17 §7.1: zmodem detection
+	// runs first in the chain, shell-integration second) -- same two-phase,
+	// consumer-defined-interface pattern as transferSvc above.
+	shellIntegrationSvc := shellintegration.New(shellintegration.Deps{
+		Shell:   sessionSvc,
+		Builder: shellintegrationscripts.New(),
+	})
+	sessionSvc.AddMiddleware(shellIntegrationSvc)
 
 	shareSvc := share.New(share.Deps{
 		HostRepo:   hostRepo,
