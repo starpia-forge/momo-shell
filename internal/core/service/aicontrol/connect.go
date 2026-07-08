@@ -69,17 +69,19 @@ type Deps struct {
 	Sessions   SessionCreator
 	Publisher  out.EventPublisher
 	Resolver   CommandResolver
-	Scrollback ScrollbackReader // ReadScrollback's ring-buffer source (scrollback.Service satisfies it structurally)
-	Masker     OutputMasker     // ReadScrollback's secret-redaction layer (mask.Service satisfies it structurally)
+	Scrollback ScrollbackReader        // ReadScrollback's ring-buffer source (scrollback.Service satisfies it structurally)
+	Masker     OutputMasker            // ReadScrollback's secret-redaction layer (mask.Service satisfies it structurally)
+	Clients    out.MCPClientRepository // callbacks.go's token store (A4a) -- may be nil until A7 wires a real repo; unused until then
 }
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
-// ConnectHost, in.AIApprovalUseCase's RespondConnectApproval) and the
-// masked-egress read (ReadScrollback). It does not yet implement all of
-// in.AIControlUseCase (ListSessions/ListHosts land in A4, blocked on their
+// ConnectHost, in.AIApprovalUseCase's RespondConnectApproval), the
+// masked-egress read (ReadScrollback), and MCP client pairing/auth
+// (in.MCPServerCallbacks, callbacks.go). It does not yet implement all of
+// in.AIControlUseCase (ListSessions/ListHosts land in A4b, blocked on their
 // own missing data sources today), so no compile-time conformance assertion
 // against that interface is made here -- it's added once a phase closes out
-// the interface (A4 or later), rather than forcing speculative stub methods
+// the interface (A4b or later), rather than forcing speculative stub methods
 // now.
 type Service struct {
 	hosts      out.HostRepository
@@ -88,9 +90,10 @@ type Service struct {
 	resolver   CommandResolver
 	scrollback ScrollbackReader
 	masker     OutputMasker
+	clients    out.MCPClientRepository
 
 	mu          sync.Mutex
-	pending     map[string]chan bool             // requestID -> approval channel (share.Service.pending mirror)
+	pending     map[string]chan bool             // requestID -> approval channel (share.Service.pending mirror; connect/control/command/pair requests all share this map, keyed by uuid so there's no collision)
 	delegations map[string]*domain.Delegation    // sessionID -> delegation
 	commands    map[string]*domain.CommandHandle // sessionID -> current in-flight command (D1's lifecycle.go drives its transitions)
 }
@@ -103,6 +106,7 @@ func New(deps Deps) *Service {
 		resolver:    deps.Resolver,
 		scrollback:  deps.Scrollback,
 		masker:      deps.Masker,
+		clients:     deps.Clients,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
 		commands:    make(map[string]*domain.CommandHandle),

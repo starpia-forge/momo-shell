@@ -111,3 +111,22 @@ func TopicMCPCommandApproval() string {
 func TopicMCPCommandState() string {
 	return "mcp:cmd-state"
 }
+
+// TopicMCPPairRequest notifies the frontend of an incoming MCP pairing
+// request awaiting the local user's approve/deny decision via
+// RespondPairing (doc 20 D1 -- no PIN, human approval only). Mirrors
+// TopicSharePairRequest.
+func TopicMCPPairRequest() string {
+	return "mcp:pair-request"
+}
+
+// TopicMCPPairRequestResolved notifies the frontend that a previously
+// raised mcp:pair-request is no longer pending (answered, timed out, or
+// the requester disconnected), so the approval dialog can dismiss itself
+// even without ever calling RespondPairing for it. Mirrors
+// TopicSharePairRequestResolved -- unlike the other mcp:*-approval topics,
+// pairing has a ctx-cancel (client-disconnect) path that needs this
+// companion to dismiss the dialog.
+func TopicMCPPairRequestResolved() string {
+	return "mcp:pair-request-resolved"
+}

@@ -160,6 +160,107 @@ func (f *fakeOutputMasker) Apply(sessionID string, chunk []byte) ([]byte, bool, 
 	return f.masked, f.gated, f.notice
 }
 
+// fakeMCPClients is an in-memory out.MCPClientRepository for tests
+// (share/mocks_test.go's fakeClients mirror, over domain.MCPClient). It
+// supports seeding rows with a preset tokenHash (including Revoked:true
+// rows, since FindByTokenHash must return those as-is per the port's
+// contract) and records TouchSeen calls so AuthClient tests can assert it
+// fired on success.
+type fakeMCPClients struct {
+	mu      sync.Mutex
+	clients map[string]domain.MCPClient
+	tokens  map[string]string // clientID -> tokenHash
+
+	touchedSeen []string
+}
+
+func newFakeMCPClients() *fakeMCPClients {
+	return &fakeMCPClients{clients: make(map[string]domain.MCPClient), tokens: make(map[string]string)}
+}
+
+// seed registers a client under a known tokenHash, bypassing Save, so tests
+// can construct rows (e.g. Revoked:true) that HandlePair's issueToken path
+// would never produce.
+func (c *fakeMCPClients) seed(client domain.MCPClient, tokenHash string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.clients[client.ClientID] = client
+	c.tokens[client.ClientID] = tokenHash
+}
+
+func (c *fakeMCPClients) List() ([]domain.MCPClient, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]domain.MCPClient, 0, len(c.clients))
+	for _, client := range c.clients {
+		out = append(out, client)
+	}
+	return out, nil
+}
+
+func (c *fakeMCPClients) FindByTokenHash(hash string) (domain.MCPClient, bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for id, h := range c.tokens {
+		if h == hash {
+			return c.clients[id], true, nil
+		}
+	}
+	return domain.MCPClient{}, false, nil
+}
+
+func (c *fakeMCPClients) Save(client domain.MCPClient, tokenHash string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.clients[client.ClientID] = client
+	c.tokens[client.ClientID] = tokenHash
+	return nil
+}
+
+func (c *fakeMCPClients) Revoke(clientID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	client, ok := c.clients[clientID]
+	if !ok {
+		return errNotFound
+	}
+	client.Revoked = true
+	c.clients[clientID] = client
+	return nil
+}
+
+func (c *fakeMCPClients) Delete(clientID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.clients, clientID)
+	delete(c.tokens, clientID)
+	return nil
+}
+
+func (c *fakeMCPClients) TouchSeen(clientID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.touchedSeen = append(c.touchedSeen, clientID)
+	return nil
+}
+
+func (c *fakeMCPClients) count() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.clients)
+}
+
+func (c *fakeMCPClients) wasTouched(clientID string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, id := range c.touchedSeen {
+		if id == clientID {
+			return true
+		}
+	}
+	return false
+}
+
 // recordingPublisher is a hand-rolled out.EventPublisher that records every
 // Publish call (share/mocks_test.go mirror).
 type recordingPublisher struct {
