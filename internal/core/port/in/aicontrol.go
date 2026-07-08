@@ -20,4 +20,11 @@ type AIControlUseCase interface {
 	// ReadScrollback returns a masked slice of sessionID's scrollback
 	// starting after sinceSeq.
 	ReadScrollback(clientID, sessionID string, sinceSeq uint64) (domain.MaskedChunk, error)
+
+	// ConnectHost resolves hostName against saved hosts and opens a fresh
+	// SSH session against it, blocking for a human grant decision first
+	// (design doc 17 §5.2, path A -- every connect_host call is a fresh
+	// delegation). Credentials never cross this boundary: the caller only
+	// ever supplies a name.
+	ConnectHost(clientID, hostName string) (domain.SessionView, error)
 }

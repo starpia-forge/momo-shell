@@ -79,3 +79,10 @@ func TopicSharePeersUpdated() string {
 func TopicSharePairRequestResolved() string {
 	return "share:pair-request-resolved"
 }
+
+// TopicMCPConnectApproval notifies the frontend of a pending connect_host
+// grant request awaiting the local user's approve/deny decision via
+// RespondConnectApproval. Mirrors TopicSharePairRequest.
+func TopicMCPConnectApproval() string {
+	return "mcp:connect-approval"
+}
