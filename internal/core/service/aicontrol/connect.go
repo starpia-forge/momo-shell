@@ -13,6 +13,7 @@ import (
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/in"
 	"momo-shell/internal/core/port/out"
+	"momo-shell/internal/core/service/aicontrol/resolve"
 )
 
 // defaultCols/defaultRows size a session opened via connect_host: MCP
@@ -49,6 +50,17 @@ type SessionCreator interface {
 	// SessionShell reports whether sessionID is a live session -- reused
 	// here purely for its ok bool (RequestControl's existence check).
 	SessionShell(sessionID string) (shell string, kind domain.SessionKind, ok bool)
+	// Write injects a command line into a live session (RunCommand's
+	// execution path). session.Service.Write already satisfies this.
+	Write(sessionID string, data []byte) error
+}
+
+// CommandResolver is the narrow slice of resolve.Service RunCommand
+// consumes -- a consumer-defined interface (SessionCreator's pattern) so
+// tests can inject a canned Verdict instead of driving the real static
+// analyzer.
+type CommandResolver interface {
+	Resolve(command, dialect string) resolve.Verdict
 }
 
 // Deps are the out-ports/collaborators Service needs.
@@ -56,6 +68,7 @@ type Deps struct {
 	Hosts     out.HostRepository // reused directly -- already a port, no wrapper needed (cf. session.Deps.HostRepo)
 	Sessions  SessionCreator
 	Publisher out.EventPublisher
+	Resolver  CommandResolver
 }
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
@@ -69,6 +82,7 @@ type Service struct {
 	hosts    out.HostRepository
 	sessions SessionCreator
 	pub      out.EventPublisher
+	resolver CommandResolver
 
 	mu          sync.Mutex
 	pending     map[string]chan bool          // requestID -> approval channel (share.Service.pending mirror)
@@ -80,6 +94,7 @@ func New(deps Deps) *Service {
 		hosts:       deps.Hosts,
 		sessions:    deps.Sessions,
 		pub:         deps.Publisher,
+		resolver:    deps.Resolver,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
 	}

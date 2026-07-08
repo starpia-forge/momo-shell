@@ -6,6 +6,7 @@ import (
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/in"
+	"momo-shell/internal/core/service/aicontrol/resolve"
 )
 
 // fakeHostRepo is a hand-rolled in-memory out.HostRepository (house style:
@@ -70,6 +71,15 @@ var errNotFound = errors.New("aicontrol test: not found")
 type fakeSessionCreator struct {
 	createFunc       func(opts in.SSHOpts) (domain.SessionInfo, error)
 	sessionShellFunc func(sessionID string) (shell string, kind domain.SessionKind, ok bool)
+	writeFunc        func(sessionID string, data []byte) error
+
+	mu     sync.Mutex
+	writes []fakeWrite
+}
+
+type fakeWrite struct {
+	sessionID string
+	data      []byte
 }
 
 func (f *fakeSessionCreator) CreateSSH(opts in.SSHOpts) (domain.SessionInfo, error) {
@@ -81,6 +91,34 @@ func (f *fakeSessionCreator) SessionShell(sessionID string) (shell string, kind 
 		return f.sessionShellFunc(sessionID)
 	}
 	return "", "", true
+}
+
+func (f *fakeSessionCreator) Write(sessionID string, data []byte) error {
+	f.mu.Lock()
+	f.writes = append(f.writes, fakeWrite{sessionID: sessionID, data: append([]byte(nil), data...)})
+	f.mu.Unlock()
+	if f.writeFunc != nil {
+		return f.writeFunc(sessionID, data)
+	}
+	return nil
+}
+
+func (f *fakeSessionCreator) allWrites() []fakeWrite {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]fakeWrite, len(f.writes))
+	copy(out, f.writes)
+	return out
+}
+
+// fakeResolver is a hand-rolled CommandResolver returning a canned Verdict
+// per test case (house style: no mock framework).
+type fakeResolver struct {
+	verdict resolve.Verdict
+}
+
+func (f *fakeResolver) Resolve(command, dialect string) resolve.Verdict {
+	return f.verdict
 }
 
 // recordingPublisher is a hand-rolled out.EventPublisher that records every

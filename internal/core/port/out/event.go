@@ -94,3 +94,12 @@ func TopicMCPConnectApproval() string {
 func TopicMCPControlApproval() string {
 	return "mcp:control-approval"
 }
+
+// TopicMCPCommandApproval notifies the frontend of a pending RunCommand
+// request (risk medium/high/uncertain) awaiting the local user's
+// approve/deny decision via RespondCommandApproval. Separate from the
+// connect/control approval topics so the frontend can render the
+// command-specific dialog (risk, reasons, guarded rewrite -- FR-7).
+func TopicMCPCommandApproval() string {
+	return "mcp:cmd-approval"
+}

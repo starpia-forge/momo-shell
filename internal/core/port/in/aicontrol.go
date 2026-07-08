@@ -38,4 +38,10 @@ type AIControlUseCase interface {
 	// sessionID. It does not touch any command the session may be running
 	// -- that's KillCommand's job, added once signal delivery (F2) lands.
 	ReleaseControl(clientID, sessionID string) error
+
+	// RunCommand gates command through the 3-layer safety pipeline (doc 17
+	// §6, doc 18 C4): requires an active delegation for sessionID by
+	// clientID, statically resolves risk, auto-runs low-risk/certain
+	// commands and blocks the rest for human approval, then injects.
+	RunCommand(clientID, sessionID, command string) (domain.CommandHandle, error)
 }
