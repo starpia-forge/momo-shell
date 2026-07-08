@@ -70,15 +70,21 @@ func TestRunCommand_AutoRunsLowRiskCertainCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunCommand() error = %v", err)
 	}
-	if handle != (domain.CommandHandle{SessionID: "sess-1", Command: "echo hi"}) {
-		t.Errorf("RunCommand() = %+v, want {sess-1, echo hi}", handle)
+	want := domain.CommandHandle{SessionID: "sess-1", Command: "echo hi", State: domain.CmdRunning, Seq: 1}
+	if handle != want {
+		t.Errorf("RunCommand() = %+v, want %+v", handle, want)
 	}
 	writes := sessions.allWrites()
 	if len(writes) != 1 || string(writes[0].data) != "echo hi\r" || writes[0].sessionID != "sess-1" {
 		t.Errorf("writes = %+v, want one write of %q to sess-1", writes, "echo hi\r")
 	}
-	if len(pub.all()) != 0 {
-		t.Error("expected no mcp:cmd-approval event for an auto-runnable command")
+	for _, e := range pub.all() {
+		if _, ok := e.payload.(commandApprovalPayload); ok {
+			t.Error("expected no mcp:cmd-approval event for an auto-runnable command")
+		}
+	}
+	if len(pub.all()) != 1 {
+		t.Errorf("expected exactly one mcp:cmd-state event (initial running), got %d events", len(pub.all()))
 	}
 
 	svc.mu.Lock()
@@ -118,6 +124,9 @@ func TestRunCommand_ApprovedRiskyCommandInjectsGuardedForm(t *testing.T) {
 	}
 	if handle.Command != verdict.GuardedCmd {
 		t.Errorf("handle.Command = %q, want the guarded form %q", handle.Command, verdict.GuardedCmd)
+	}
+	if handle.State != domain.CmdRunning || handle.Seq != 1 {
+		t.Errorf("handle = %+v, want State=running Seq=1 armed after injection", handle)
 	}
 	writes := sessions.allWrites()
 	if len(writes) != 1 || string(writes[0].data) != verdict.GuardedCmd+"\r" {

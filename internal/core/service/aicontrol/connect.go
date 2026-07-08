@@ -85,8 +85,9 @@ type Service struct {
 	resolver CommandResolver
 
 	mu          sync.Mutex
-	pending     map[string]chan bool          // requestID -> approval channel (share.Service.pending mirror)
-	delegations map[string]*domain.Delegation // sessionID -> delegation
+	pending     map[string]chan bool             // requestID -> approval channel (share.Service.pending mirror)
+	delegations map[string]*domain.Delegation    // sessionID -> delegation
+	commands    map[string]*domain.CommandHandle // sessionID -> current in-flight command (D1's lifecycle.go drives its transitions)
 }
 
 func New(deps Deps) *Service {
@@ -97,6 +98,7 @@ func New(deps Deps) *Service {
 		resolver:    deps.Resolver,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
+		commands:    make(map[string]*domain.CommandHandle),
 	}
 }
 

@@ -103,3 +103,11 @@ func TopicMCPControlApproval() string {
 func TopicMCPCommandApproval() string {
 	return "mcp:cmd-approval"
 }
+
+// TopicMCPCommandState notifies the frontend of a run_command execution
+// lifecycle transition (running/tui/done -- doc 17 §6.4's state-streaming
+// handle, D1). Separate from TopicMCPCommandApproval, which is the
+// pre-execution gate decision, not the post-injection execution progress.
+func TopicMCPCommandState() string {
+	return "mcp:cmd-state"
+}

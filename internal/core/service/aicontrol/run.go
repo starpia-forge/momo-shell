@@ -83,13 +83,19 @@ func (s *Service) RunCommand(clientID, sessionID, command string) (domain.Comman
 		return domain.CommandHandle{}, err
 	}
 
+	// Injection succeeded: bump delegation activity and arm the execution
+	// lifecycle (D1) -- lifecycle.go's Observer callbacks drive it onward.
+	h := domain.NewCommandHandle(sessionID, toRun)
 	s.mu.Lock()
 	if d, ok := s.delegations[sessionID]; ok {
 		d.LastActAt = time.Now()
 	}
+	s.commands[sessionID] = h // a new command replaces any prior handle for this session
+	snapshot := *h
 	s.mu.Unlock()
 
-	return domain.CommandHandle{SessionID: sessionID, Command: toRun}, nil
+	s.publishCommandState(snapshot) // stream the initial running state
+	return snapshot, nil
 }
 
 // dialectFromShell maps a session's resolved shell (session.Service.
