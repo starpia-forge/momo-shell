@@ -30,3 +30,14 @@ func (b *Builder) HookScript(dialect out.ShellDialect, nonce string) ([]byte, er
 		return nil, fmt.Errorf("shellintegration: unsupported dialect %q", dialect)
 	}
 }
+
+func (b *Builder) ProbeScript(dialect out.ShellDialect, nonce string, vars []string) ([]byte, error) {
+	switch dialect {
+	case out.DialectBash:
+		return bashProbeScript(nonce, vars), nil
+	case out.DialectPowerShell:
+		return powershellProbeScript(nonce, vars), nil
+	default:
+		return nil, fmt.Errorf("shellintegration: unsupported dialect %q", dialect)
+	}
+}

@@ -13,12 +13,14 @@ const (
 	evCommandStart
 	evCommandDone
 	evHookInstalled
+	evProbeReply
 )
 
 type parsedEvent struct {
 	kind     eventKind
 	exitCode int
 	nonce    string
+	payload  string
 }
 
 const (
@@ -125,6 +127,12 @@ func parseOSCUnit(unit []byte) (parsedEvent, bool) {
 		return parsedEvent{kind: evCommandDone, exitCode: code}, true
 	case strings.HasPrefix(s, "1337;momo;hookinstalled;"):
 		return parsedEvent{kind: evHookInstalled, nonce: strings.TrimPrefix(s, "1337;momo;hookinstalled;")}, true
+	case strings.HasPrefix(s, "1337;momo;probe;"):
+		nonce, payload, ok := strings.Cut(strings.TrimPrefix(s, "1337;momo;probe;"), ";")
+		if !ok {
+			return parsedEvent{}, false
+		}
+		return parsedEvent{kind: evProbeReply, nonce: nonce, payload: payload}, true
 	default:
 		return parsedEvent{}, false
 	}

@@ -21,13 +21,24 @@ type fakeInjector struct {
 	kind     domain.SessionKind
 	shellOK  bool
 	writeErr error
+
+	// onWrite, if set, is called synchronously with each write's bytes
+	// after recording it -- used by probe tests to synthesize a reply
+	// in-line before WriteRaw returns to its caller (Query), avoiding any
+	// goroutine-timing dependency in the test.
+	onWrite func(data []byte)
 }
 
 func (f *fakeInjector) WriteRaw(sessionID string, data []byte) error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.writes = append(f.writes, append([]byte{}, data...))
-	return f.writeErr
+	err := f.writeErr
+	hook := f.onWrite
+	f.mu.Unlock()
+	if hook != nil {
+		hook(data)
+	}
+	return err
 }
 
 func (f *fakeInjector) SessionShell(sessionID string) (string, domain.SessionKind, bool) {
@@ -63,6 +74,13 @@ func (b *fakeBuilder) HookScript(dialect out.ShellDialect, nonce string) ([]byte
 		return nil, errors.New("fakeBuilder: unsupported dialect")
 	}
 	return []byte("momostart_" + nonce + "\nNOISE\n\x1b]1337;momo;hookinstalled;" + nonce + "\x07"), nil
+}
+
+func (b *fakeBuilder) ProbeScript(dialect out.ShellDialect, nonce string, vars []string) ([]byte, error) {
+	if b.unsupported != "" && dialect == b.unsupported {
+		return nil, errors.New("fakeBuilder: unsupported dialect")
+	}
+	return []byte("PROBE:" + nonce + ":" + strings.Join(vars, ",")), nil
 }
 
 func extractNonce(script []byte) string {

@@ -21,3 +21,19 @@ const bashHookTemplate = `printf 'momostart_@@NONCE@@\n'; HISTCONTROL=ignorespac
 func bashHookScript(nonce string) []byte {
 	return []byte(strings.ReplaceAll(bashHookTemplate, "@@NONCE@@", nonce))
 }
+
+// bashProbeTemplate queries each of @@VARS@@ (a space-separated shell word
+// list) for unset/set + value, base64-encoding the value so it can never
+// contain OSC framing bytes (ESC, ], ;, BEL) -- see doc 19 §3.3/§4: this
+// structurally eliminates sentinel-collision risk rather than escaping it.
+// $? is saved into __momo_pc before the loop and restored via
+// `( exit $__momo_pc )` in a subshell, so the probe itself never disturbs
+// the caller's exit code.
+const bashProbeTemplate = `__momo_pc=$?; __momo_out=""; for __momo_v in @@VARS@@; do if [ -n "${!__momo_v+x}" ]; then __momo_val=$(printf '%s' "${!__momo_v}" | base64 | tr -d '\n'); __momo_out="${__momo_out}${__momo_v}=1:${__momo_val};"; else __momo_out="${__momo_out}${__momo_v}=0:;"; fi; done; printf "\033]1337;momo;probe;@@NONCE@@;%s\007" "$__momo_out"; ( exit $__momo_pc )
+`
+
+func bashProbeScript(nonce string, vars []string) []byte {
+	s := strings.ReplaceAll(bashProbeTemplate, "@@NONCE@@", nonce)
+	s = strings.ReplaceAll(s, "@@VARS@@", strings.Join(vars, " "))
+	return []byte(s)
+}

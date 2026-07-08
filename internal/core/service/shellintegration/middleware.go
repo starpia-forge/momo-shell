@@ -124,6 +124,8 @@ type notification struct {
 	exitCode  int
 	altScreen bool
 	entered   bool
+	nonce     string
+	payload   string
 }
 
 const evAltScreen eventKind = -1 // out of parser's eventKind range; middleware-only
@@ -174,6 +176,8 @@ func (s *Service) stepLocked(st *sessionState, chunk []byte) (rendered []byte, n
 			case evHookInstalled:
 				// Reinject landed while already active, or a stale/
 				// duplicate marker -- already active, nothing to do.
+			case evProbeReply:
+				notes = append(notes, notification{kind: evProbeReply, nonce: ev.nonce, payload: ev.payload})
 			}
 		}
 		enter, exit := st.altScreen.scan(rendered)
@@ -209,6 +213,12 @@ func consumeSuppressed(st *sessionState, data []byte) {
 }
 
 func (s *Service) dispatch(sessionID string, n notification) {
+	if n.kind == evProbeReply {
+		// Routed to a waiting Query call, not fanned out to observers --
+		// this is a request/response reply, not a lifecycle event.
+		s.routeProbe(n.nonce, n.payload)
+		return
+	}
 	for _, o := range s.observers {
 		switch n.kind {
 		case evPromptStart:

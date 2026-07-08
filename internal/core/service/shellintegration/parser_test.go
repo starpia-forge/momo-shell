@@ -60,6 +60,35 @@ func TestParser_HookInstalledMarker(t *testing.T) {
 	}
 }
 
+func TestParser_ProbeReplyMarker(t *testing.T) {
+	var p parser
+	rendered, events := p.feed([]byte("\x1b]1337;momo;probe;deadbeef;FOO=1:Zm9v;BAR=0:;\x07"))
+	if len(rendered) != 0 {
+		t.Fatalf("expected the probe marker to be fully stripped, got %q", rendered)
+	}
+	if len(events) != 1 || events[0].kind != evProbeReply {
+		t.Fatalf("expected 1 evProbeReply event, got %+v", events)
+	}
+	if events[0].nonce != "deadbeef" {
+		t.Errorf("nonce = %q, want %q", events[0].nonce, "deadbeef")
+	}
+	if want := "FOO=1:Zm9v;BAR=0:;"; events[0].payload != want {
+		t.Errorf("payload = %q, want %q", events[0].payload, want)
+	}
+}
+
+func TestParser_ProbeReplyMalformedNotRecognized(t *testing.T) {
+	var p parser
+	// Missing the ";" separator between nonce and payload.
+	rendered, events := p.feed([]byte("\x1b]1337;momo;probe;deadbeef\x07"))
+	if len(events) != 0 {
+		t.Fatalf("expected no events for a malformed probe marker, got %+v", events)
+	}
+	if !bytes.Contains(rendered, []byte("1337;momo;probe;deadbeef")) {
+		t.Fatalf("expected the unrecognized marker to pass through unchanged, got %q", rendered)
+	}
+}
+
 func TestParser_UnrecognizedOSCPassesThrough(t *testing.T) {
 	var p parser
 	// OSC 0 (window title) -- not one of our markers.
@@ -91,7 +120,7 @@ func TestParser_STTerminatedUnit(t *testing.T) {
 // the authoritative proof for "청크 경계 분할: 무손실 복원" (doc 18/19) --
 // stronger than relying on real PTY read timing, which is nondeterministic.
 func TestParser_ChunkSplitExhaustive(t *testing.T) {
-	whole := []byte("hello\x1b]133;A\x07world\x1b]133;C\x07more output\x1b]133;D;7\x07\x1b]1337;momo;hookinstalled;abc123\x07tail")
+	whole := []byte("hello\x1b]133;A\x07world\x1b]133;C\x07more output\x1b]133;D;7\x07\x1b]1337;momo;hookinstalled;abc123\x07\x1b]1337;momo;probe;deadbeef;FOO=1:Zm9v;\x07tail")
 
 	var want parser
 	wantRendered, wantEvents := want.feed(whole)

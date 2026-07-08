@@ -70,6 +70,14 @@ type Service struct {
 	// read without a lock from the pump goroutine, matching
 	// session.Service's own taps/middlewares slices.
 	observers []Observer
+
+	// probeMu guards probes, which correlates an in-flight Query call to the
+	// pump goroutine's evProbeReply delivery by nonce (see probe.go). Never
+	// held at the same time as a sessionState's own mu -- Query and
+	// routeProbe each only ever touch probeMu, so the two can't deadlock
+	// against each other or against OnOutput's own locking.
+	probeMu sync.Mutex
+	probes  map[string]chan string
 }
 
 func New(deps Deps) *Service {
@@ -77,6 +85,7 @@ func New(deps Deps) *Service {
 		shell:    deps.Shell,
 		builder:  deps.Builder,
 		sessions: make(map[string]*sessionState),
+		probes:   make(map[string]chan string),
 	}
 }
 

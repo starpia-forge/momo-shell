@@ -24,4 +24,12 @@ type ShellScriptBuilder interface {
 	// nonce and end by emitting a "hookinstalled;<nonce>" marker once the
 	// hooks are live.
 	HookScript(dialect ShellDialect, nonce string) ([]byte, error)
+
+	// ProbeScript returns the runtime-injected line that queries the named
+	// shell variables and reports each as unset or set (with its value
+	// base64-encoded) via a single "probe;<nonce>;<payload>" marker --
+	// verified against real shells in the S4 spike
+	// (.claudedocs/plan/19-mcp-s4-shellintegration-spike.md §3). Does not
+	// disturb $?/$LASTEXITCODE or shell history.
+	ProbeScript(dialect ShellDialect, nonce string, vars []string) ([]byte, error)
 }

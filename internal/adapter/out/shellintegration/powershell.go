@@ -25,3 +25,23 @@ const powershellHookTemplate = `Write-Host "momostart_@@NONCE@@"; function globa
 func powershellHookScript(nonce string) []byte {
 	return []byte(strings.ReplaceAll(powershellHookTemplate, "@@NONCE@@", nonce))
 }
+
+// powershellProbeTemplate mirrors bashProbeTemplate for PowerShell 5.1+
+// (verified in the S4 spike, doc 19 §3.2): queries each of @@VARS@@ (a
+// PowerShell array literal) for unset/set + value, base64-encoded via
+// [Convert]::ToBase64String so the value can never contain OSC framing
+// bytes. $LASTEXITCODE is saved into $__momo_pc before the loop and
+// restored afterward, so the probe itself never disturbs the caller's exit
+// code. Ends in "\r\n" for the same reason as powershellHookTemplate --
+// PSReadLine's Enter binding fires on CR, not LF.
+const powershellProbeTemplate = `$__momo_pc = $LASTEXITCODE; $__momo_out = ""; foreach ($__momo_v in @@VARS@@) { if (Test-Path "variable:$__momo_v") { $__momo_val = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Variable -Name $__momo_v -ValueOnly).ToString())); $__momo_out += "$__momo_v=1:$__momo_val;" } else { $__momo_out += "$__momo_v=0:;" } }; Write-Host -NoNewline ([char]27 + "]1337;momo;probe;@@NONCE@@;" + $__momo_out + [char]7); $global:LASTEXITCODE = $__momo_pc` + "\r\n"
+
+func powershellProbeScript(nonce string, vars []string) []byte {
+	quoted := make([]string, len(vars))
+	for i, v := range vars {
+		quoted[i] = `"` + v + `"`
+	}
+	s := strings.ReplaceAll(powershellProbeTemplate, "@@NONCE@@", nonce)
+	s = strings.ReplaceAll(s, "@@VARS@@", "@("+strings.Join(quoted, ",")+")")
+	return []byte(s)
+}

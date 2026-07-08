@@ -60,3 +60,63 @@ func TestHookScript_UnknownDialect(t *testing.T) {
 		t.Fatal("expected an error for an unsupported dialect, got nil")
 	}
 }
+
+func TestProbeScript_Bash(t *testing.T) {
+	b := New()
+	script, err := b.ProbeScript(out.DialectBash, "abc123", []string{"FOO", "BAR"})
+	if err != nil {
+		t.Fatalf("ProbeScript failed: %v", err)
+	}
+	s := string(script)
+
+	if !strings.HasPrefix(s, "__momo_pc=$?; ") {
+		t.Fatalf("expected script to capture $? first, got %q", s)
+	}
+	if !strings.Contains(s, "for __momo_v in FOO BAR; do") {
+		t.Fatalf("expected the variable list interpolated as a bash word list, got %q", s)
+	}
+	if !strings.Contains(s, `${!__momo_v+x}`) {
+		t.Fatalf("expected the unset-vs-set existence test, got %q", s)
+	}
+	if !strings.Contains(s, `"\033]1337;momo;probe;abc123;%s\007"`) {
+		t.Fatalf("expected the probe marker with the nonce interpolated, got %q", s)
+	}
+	if !strings.Contains(s, "( exit $__momo_pc )") {
+		t.Fatalf("expected $? to be restored via a subshell exit, got %q", s)
+	}
+}
+
+func TestProbeScript_PowerShell(t *testing.T) {
+	b := New()
+	script, err := b.ProbeScript(out.DialectPowerShell, "xyz789", []string{"FOO", "BAR"})
+	if err != nil {
+		t.Fatalf("ProbeScript failed: %v", err)
+	}
+	s := string(script)
+
+	if !strings.HasPrefix(s, `$__momo_pc = $LASTEXITCODE; `) {
+		t.Fatalf("expected script to capture $LASTEXITCODE first, got %q", s)
+	}
+	if !strings.Contains(s, `foreach ($__momo_v in @("FOO","BAR"))`) {
+		t.Fatalf("expected the variable list interpolated as a PowerShell array literal, got %q", s)
+	}
+	if !strings.Contains(s, `Test-Path "variable:$__momo_v"`) {
+		t.Fatalf("expected the unset-vs-set existence test, got %q", s)
+	}
+	if !strings.Contains(s, `"]1337;momo;probe;xyz789;"`) {
+		t.Fatalf("expected the probe marker with the nonce interpolated, got %q", s)
+	}
+	if !strings.Contains(s, "$global:LASTEXITCODE = $__momo_pc") {
+		t.Fatalf("expected $LASTEXITCODE to be restored, got %q", s)
+	}
+	if !strings.HasSuffix(s, "\r\n") {
+		t.Fatalf("expected script to end in CRLF (PSReadLine requires CR to submit), got %q", s)
+	}
+}
+
+func TestProbeScript_UnknownDialect(t *testing.T) {
+	b := New()
+	if _, err := b.ProbeScript(out.DialectUnknown, "n", []string{"X"}); err == nil {
+		t.Fatal("expected an error for an unsupported dialect, got nil")
+	}
+}
