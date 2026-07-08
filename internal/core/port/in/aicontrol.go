@@ -27,4 +27,15 @@ type AIControlUseCase interface {
 	// delegation). Credentials never cross this boundary: the caller only
 	// ever supplies a name.
 	ConnectHost(clientID, hostName string) (domain.SessionView, error)
+
+	// RequestControl delegates an already-open session to clientID under
+	// scope, blocking for a human grant decision. A session already
+	// delegated to a different client is rejected outright (no prompt); a
+	// repeat request from the same client is idempotent (returns the
+	// existing Delegation).
+	RequestControl(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error)
+	// ReleaseControl voluntarily gives up clientID's delegation over
+	// sessionID. It does not touch any command the session may be running
+	// -- that's KillCommand's job, added once signal delivery (F2) lands.
+	ReleaseControl(clientID, sessionID string) error
 }

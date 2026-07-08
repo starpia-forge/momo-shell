@@ -86,3 +86,11 @@ func TopicSharePairRequestResolved() string {
 func TopicMCPConnectApproval() string {
 	return "mcp:connect-approval"
 }
+
+// TopicMCPControlApproval notifies the frontend of a pending RequestControl
+// grant request awaiting the local user's approve/deny decision via
+// RespondControlApproval. Separate from TopicMCPConnectApproval so the
+// frontend can render the right dialog for each request kind.
+func TopicMCPControlApproval() string {
+	return "mcp:control-approval"
+}

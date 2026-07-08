@@ -46,6 +46,9 @@ type connectApprovalPayload struct {
 // shellintegration.ShellInjector.
 type SessionCreator interface {
 	CreateSSH(opts in.SSHOpts) (domain.SessionInfo, error)
+	// SessionShell reports whether sessionID is a live session -- reused
+	// here purely for its ok bool (RequestControl's existence check).
+	SessionShell(sessionID string) (shell string, kind domain.SessionKind, ok bool)
 }
 
 // Deps are the out-ports/collaborators Service needs.

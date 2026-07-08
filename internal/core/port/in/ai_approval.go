@@ -9,4 +9,5 @@ package in
 // ShareUseCase: requester and responder are different trust levels.
 type AIApprovalUseCase interface {
 	RespondConnectApproval(requestID string, approve bool) error
+	RespondControlApproval(requestID string, approve bool) error
 }

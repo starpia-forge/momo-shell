@@ -64,13 +64,23 @@ func (r *fakeHostRepo) ListLabels() ([]string, error) { return nil, nil }
 var errNotFound = errors.New("aicontrol test: not found")
 
 // fakeSessionCreator is a hand-rolled SessionCreator. createFunc lets a test
-// script CreateSSH's outcome (success/error) per case.
+// script CreateSSH's outcome (success/error) per case; sessionShellFunc does
+// the same for SessionShell's existence check, defaulting to "exists" since
+// most tests (ConnectHost) never call it.
 type fakeSessionCreator struct {
-	createFunc func(opts in.SSHOpts) (domain.SessionInfo, error)
+	createFunc       func(opts in.SSHOpts) (domain.SessionInfo, error)
+	sessionShellFunc func(sessionID string) (shell string, kind domain.SessionKind, ok bool)
 }
 
 func (f *fakeSessionCreator) CreateSSH(opts in.SSHOpts) (domain.SessionInfo, error) {
 	return f.createFunc(opts)
+}
+
+func (f *fakeSessionCreator) SessionShell(sessionID string) (shell string, kind domain.SessionKind, ok bool) {
+	if f.sessionShellFunc != nil {
+		return f.sessionShellFunc(sessionID)
+	}
+	return "", "", true
 }
 
 // recordingPublisher is a hand-rolled out.EventPublisher that records every
