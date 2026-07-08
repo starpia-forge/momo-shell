@@ -88,3 +88,42 @@ func TestMigrate_V2ToV3AddsAppSettings(t *testing.T) {
 		t.Fatalf("table app_settings not queryable after migration: %v", err)
 	}
 }
+
+// TestMigrate_V3ToV4AddsMCPClients simulates an existing v3 database
+// (schema_version=3, no mcp_clients table) being opened by the current
+// code, asserting the v4 migration runs and the new table is queryable.
+func TestMigrate_V3ToV4AddsMCPClients(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.db")
+
+	db, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if _, err := db.Exec("PRAGMA user_version = 3"); err != nil {
+		t.Fatalf("reset schema version: %v", err)
+	}
+	if _, err := db.Exec("DROP TABLE IF EXISTS mcp_clients"); err != nil {
+		t.Fatalf("drop mcp_clients: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() (reopen) error = %v", err)
+	}
+	defer reopened.Close()
+
+	var version int
+	if err := reopened.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("read schema version: %v", err)
+	}
+	if version != schemaVersion {
+		t.Fatalf("schema version = %d, want %d", version, schemaVersion)
+	}
+
+	if _, err := reopened.Exec("SELECT * FROM mcp_clients LIMIT 1"); err != nil {
+		t.Fatalf("table mcp_clients not queryable after migration: %v", err)
+	}
+}

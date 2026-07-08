@@ -7,7 +7,7 @@ import (
 
 // schemaVersion tracks applied migrations via PRAGMA user_version so Open
 // is idempotent across app restarts.
-const schemaVersion = 3
+const schemaVersion = 4
 
 func migrate(db *sql.DB) error {
 	var version int
@@ -27,6 +27,11 @@ func migrate(db *sql.DB) error {
 	}
 	if version < 3 {
 		if err := migrateV3(db); err != nil {
+			return err
+		}
+	}
+	if version < 4 {
+		if err := migrateV4(db); err != nil {
 			return err
 		}
 	}
@@ -135,6 +140,33 @@ func migrateV3(db *sql.DB) error {
 	for _, stmt := range stmts {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("sqlite: migrate v3: %w", err)
+		}
+	}
+	return nil
+}
+
+// migrateV4 adds mcp_clients, tracking MCP clients this instance has
+// paired with (doc 20 D2 -- token = authentication only, no scope column;
+// authorization is delegation's job). revoked is a soft-delete flag rather
+// than row removal, distinct from every other repo in this package
+// (host/history/share all hard-delete): audit history (E3) needs to
+// resolve a clientID to a name even after revocation.
+func migrateV4(db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS mcp_clients (
+			client_id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			token_hash TEXT NOT NULL,
+			paired_at INTEGER NOT NULL,
+			last_seen_at INTEGER,
+			revoked INTEGER NOT NULL DEFAULT 0
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_mcp_clients_token_hash ON mcp_clients(token_hash)`,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("sqlite: migrate v4: %w", err)
 		}
 	}
 	return nil
