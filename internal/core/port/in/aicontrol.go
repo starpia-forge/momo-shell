@@ -70,4 +70,22 @@ type AIControlUseCase interface {
 	// delegation (unlike KillControl) and does not restore env vars the AI
 	// may have exported.
 	ResetShell(clientID, sessionID string) error
+
+	// CancelCommand requires an active delegation for sessionID by clientID
+	// and an in-flight command (doc 18 D2, doc 21's kill-switch decisions),
+	// then sends Ctrl-C (0x03) to interrupt it while keeping the shell alive
+	// -- a real OS signal is not used (SSH servers ignore ssh.Session.Signal;
+	// the PTY line discipline turns 0x03 into the foreground process-group
+	// interrupt on every transport). It does not itself transition the
+	// command's lifecycle state; the shell-integration Observer drives
+	// running/tui -> done with the real exit code once the interrupt lands.
+	CancelCommand(clientID, sessionID string) (domain.CommandHandle, error)
+	// BackgroundCommand requires an active delegation for sessionID by
+	// clientID and an in-flight command, then sends Ctrl-Z (0x1a) followed by
+	// `bg` to suspend it and resume it detached from the foreground, and
+	// transitions the command's lifecycle to CmdBackground. Hard-kill
+	// (force-terminating only the command while keeping the session) and
+	// reattach are both deferred (doc 21 §4) -- this is best-effort based on
+	// existing shell primitives, not process-group tracking.
+	BackgroundCommand(clientID, sessionID string) (domain.CommandHandle, error)
 }

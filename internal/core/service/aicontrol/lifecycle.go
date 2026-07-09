@@ -39,7 +39,7 @@ func (s *Service) publishCommandState(h domain.CommandHandle) {
 func (s *Service) OnCommandEnd(sessionID string, exitCode int) {
 	s.mu.Lock()
 	h, ok := s.commands[sessionID]
-	if !ok || h.State == domain.CmdDone {
+	if !ok || h.State.IsTerminal() {
 		s.mu.Unlock()
 		return
 	}
@@ -56,7 +56,7 @@ func (s *Service) OnCommandEnd(sessionID string, exitCode int) {
 func (s *Service) OnAltScreen(sessionID string, entered bool) {
 	s.mu.Lock()
 	h, ok := s.commands[sessionID]
-	if !ok || h.State == domain.CmdDone {
+	if !ok || h.State.IsTerminal() {
 		s.mu.Unlock()
 		return
 	}

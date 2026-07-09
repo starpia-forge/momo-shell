@@ -10,17 +10,32 @@ import "fmt"
 type CommandState string
 
 const (
-	CmdRunning CommandState = "running"
-	CmdTUI     CommandState = "tui"
-	CmdDone    CommandState = "done"
+	CmdRunning    CommandState = "running"
+	CmdTUI        CommandState = "tui"
+	CmdDone       CommandState = "done"
+	CmdBackground CommandState = "background" // D2: sent to the background (Ctrl-Z + bg), no longer foreground
 )
 
 // legalCommandTransitions: running and tui cycle into each other (alt-screen
-// enter/exit), either can terminate into done. done is terminal.
+// enter/exit), either can terminate into done or background. done and
+// background are both terminal (D2: cancel has no dedicated state -- it
+// rides the same running/tui->done edge via a real exit code, see
+// aicontrol.CancelCommand).
 var legalCommandTransitions = map[CommandState]map[CommandState]bool{
-	CmdRunning: {CmdTUI: true, CmdDone: true},
-	CmdTUI:     {CmdRunning: true, CmdDone: true},
-	CmdDone:    {},
+	CmdRunning:    {CmdTUI: true, CmdDone: true, CmdBackground: true},
+	CmdTUI:        {CmdRunning: true, CmdDone: true, CmdBackground: true},
+	CmdDone:       {},
+	CmdBackground: {},
+}
+
+// IsTerminal reports whether s has no legal outgoing transitions (done and
+// background both qualify). D2 introduced this to guard shell-integration
+// Observer callbacks (OnCommandEnd/OnAltScreen) against a stale/duplicate
+// signal mutating a handle that has already left the foreground-lifecycle
+// state space -- e.g. a spurious OnCommandEnd for a backgrounded command's
+// `bg` builtin must not overwrite its state.
+func (s CommandState) IsTerminal() bool {
+	return len(legalCommandTransitions[s]) == 0
 }
 
 // CommandHandle is run_command's state-streaming handle (design doc 17

@@ -64,6 +64,14 @@ func (f *fakeAIControlUseCase) ResetShell(clientID, sessionID string) error {
 	panic("not used by dispatch's read-only scope")
 }
 
+func (f *fakeAIControlUseCase) CancelCommand(clientID, sessionID string) (domain.CommandHandle, error) {
+	panic("not used by dispatch's read-only scope")
+}
+
+func (f *fakeAIControlUseCase) BackgroundCommand(clientID, sessionID string) (domain.CommandHandle, error) {
+	panic("not used by dispatch's read-only scope")
+}
+
 var _ in.AIControlUseCase = (*fakeAIControlUseCase)(nil)
 
 // startDispatchSession wires Dispatch.HandleSession to one end of a
