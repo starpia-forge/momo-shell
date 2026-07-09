@@ -313,7 +313,10 @@
   "delegation": {
     "badgeLabel": "{{count}} controlled",
     "kill": "Kill",
-    "tabIndicator": "AI-controlled"
+    "tabIndicator": "AI-controlled",
+    "cmdTui": "TUI",
+    "cmdDone": "exit {{exitCode}}",
+    "scopeCap": "{{active}}/{{max}} sessions"
   },
   "shareErrors": {
     "lockout": "Try again in a moment (60s)",

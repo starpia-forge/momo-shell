@@ -1,6 +1,7 @@
 import {
   KillControl,
   ListClients,
+  ListConnectionScopes,
   ListDelegations,
   RespondCommandApproval,
   RespondConnectApproval,
@@ -23,6 +24,14 @@ export interface Delegation {
   clientId: string
   aiCreated: boolean
   grantedAt: number
+}
+
+export interface ConnectionScope {
+  scopeId: string
+  clientId: string
+  hostNames: string[]
+  maxConcurrent: number
+  activeCount: number
 }
 
 export async function respondPairing(requestId: string, approve: boolean): Promise<void> {
@@ -61,4 +70,9 @@ export async function killControl(sessionId: string): Promise<void> {
 export async function listDelegations(): Promise<Delegation[]> {
   const delegations = await ListDelegations()
   return delegations ?? []
+}
+
+export async function listConnectionScopes(): Promise<ConnectionScope[]> {
+  const scopes = await ListConnectionScopes()
+  return scopes ?? []
 }

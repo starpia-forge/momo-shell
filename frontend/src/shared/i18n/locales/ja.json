@@ -310,7 +310,10 @@
   "delegation": {
     "badgeLabel": "{{count}}件制御中",
     "kill": "強制解除",
-    "tabIndicator": "AI制御中"
+    "tabIndicator": "AI制御中",
+    "cmdTui": "TUI",
+    "cmdDone": "終了コード {{exitCode}}",
+    "scopeCap": "{{active}}/{{max}} セッション"
   },
   "shareErrors": {
     "lockout": "しばらくしてから再試行してください (60秒)",

@@ -20,6 +20,7 @@ export const topics = {
   mcpConnectionScopeApproval: () => `mcp:connection-scope-approval`,
   mcpCommandApproval: () => `mcp:cmd-approval`,
   mcpDelegation: () => `mcp:delegation`,
+  mcpCommandState: () => `mcp:cmd-state`,
 }
 
 export interface SessionStatePayload {
@@ -164,6 +165,18 @@ export interface MCPDelegationPayload {
   state: 'delegated' | 'none'
   reason: 'granted' | 'released' | 'killed' | 'expired'
   aiCreated: boolean
+}
+
+/** Published on every in-flight AI command's lifecycle transition (D1) --
+ * running while executing, tui while an alt-screen/REPL program has taken
+ * over, done once it exits (exitCode set). No awaiting_input state; gate
+ * states (pending approval etc.) are handled by the separate
+ * mcp:cmd-approval flow, not this stream. */
+export interface MCPCommandStatePayload {
+  sessionId: string
+  seq: number
+  state: 'running' | 'tui' | 'done'
+  exitCode?: number
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

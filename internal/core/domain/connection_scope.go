@@ -14,3 +14,15 @@ type ConnectionScope struct {
 	MaxConcurrent int             // visible concurrent-session cap -- doc 17 §5.2: reject once exceeded
 	GrantedAt     time.Time
 }
+
+// ConnectionScopeStatus is a read-only projection of a ConnectionScope plus
+// its live active-delegation count, for the control panel's "N/cap" display
+// (B5b, doc 18 §4's "동시-세션 상한 표시" acceptance criterion). HostNames is
+// flattened from ConnectionScope's set to a slice for the JSON-facing DTO.
+type ConnectionScopeStatus struct {
+	ScopeID       string
+	ClientID      string
+	HostNames     []string
+	MaxConcurrent int
+	ActiveCount   int
+}

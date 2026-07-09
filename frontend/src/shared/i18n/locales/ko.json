@@ -310,7 +310,10 @@
   "delegation": {
     "badgeLabel": "{{count}}개 통제 중",
     "kill": "회수",
-    "tabIndicator": "AI 통제 중"
+    "tabIndicator": "AI 통제 중",
+    "cmdTui": "TUI",
+    "cmdDone": "종료 코드 {{exitCode}}",
+    "scopeCap": "{{active}}/{{max}} 세션"
   },
   "shareErrors": {
     "lockout": "잠시 후 다시 시도하세요 (60초)",

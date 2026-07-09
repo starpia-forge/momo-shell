@@ -99,6 +99,39 @@ func delegationToDTO(d domain.Delegation) DelegationDTO {
 	return DelegationDTO{SessionID: d.SessionID, ClientID: d.ClientID, AICreated: d.AICreated, GrantedAt: d.GrantedAt.Unix()}
 }
 
+// ConnectionScopeDTO is the JSON-facing response DTO for an active fan-out
+// grant plus its live active-delegation count (B5b's concurrent-session cap
+// display).
+type ConnectionScopeDTO struct {
+	ScopeID       string   `json:"scopeId"`
+	ClientID      string   `json:"clientId"`
+	HostNames     []string `json:"hostNames"`
+	MaxConcurrent int      `json:"maxConcurrent"`
+	ActiveCount   int      `json:"activeCount"`
+}
+
+func (s *MCPApprovalService) ListConnectionScopes() ([]ConnectionScopeDTO, error) {
+	scopes, err := s.uc.ListConnectionScopes()
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]ConnectionScopeDTO, len(scopes))
+	for i, sc := range scopes {
+		dtos[i] = connectionScopeToDTO(sc)
+	}
+	return dtos, nil
+}
+
+func connectionScopeToDTO(sc domain.ConnectionScopeStatus) ConnectionScopeDTO {
+	return ConnectionScopeDTO{
+		ScopeID:       sc.ScopeID,
+		ClientID:      sc.ClientID,
+		HostNames:     sc.HostNames,
+		MaxConcurrent: sc.MaxConcurrent,
+		ActiveCount:   sc.ActiveCount,
+	}
+}
+
 func mcpClientToDTO(c domain.MCPClient) MCPClientDTO {
 	dto := MCPClientDTO{ID: c.ClientID, Name: c.Name, PairedAt: c.PairedAt.Unix(), Revoked: c.Revoked}
 	if c.LastSeenAt != nil {

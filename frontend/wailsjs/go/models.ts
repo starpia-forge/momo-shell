@@ -12,6 +12,26 @@ export namespace wails {
 	        this.version = source["version"];
 	    }
 	}
+	export class ConnectionScopeDTO {
+	    scopeId: string;
+	    clientId: string;
+	    hostNames: string[];
+	    maxConcurrent: number;
+	    activeCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConnectionScopeDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.scopeId = source["scopeId"];
+	        this.clientId = source["clientId"];
+	        this.hostNames = source["hostNames"];
+	        this.maxConcurrent = source["maxConcurrent"];
+	        this.activeCount = source["activeCount"];
+	    }
+	}
 	export class DelegationDTO {
 	    sessionId: string;
 	    clientId: string;

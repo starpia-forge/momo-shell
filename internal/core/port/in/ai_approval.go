@@ -50,4 +50,9 @@ type AIApprovalUseCase interface {
 	// frontend's control panel to seed its store on load (B5a) --
 	// mcp:delegation only reports transitions from that point forward.
 	ListDelegations() ([]domain.Delegation, error)
+
+	// ListConnectionScopes returns every active fan-out grant with its live
+	// active-delegation count against MaxConcurrent, for the control panel's
+	// concurrent-session cap display (B5b, doc 18 §4).
+	ListConnectionScopes() ([]domain.ConnectionScopeStatus, error)
 }

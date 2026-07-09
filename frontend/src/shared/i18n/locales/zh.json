@@ -310,7 +310,10 @@
   "delegation": {
     "badgeLabel": "{{count}} 个受控",
     "kill": "终止",
-    "tabIndicator": "AI 控制中"
+    "tabIndicator": "AI 控制中",
+    "cmdTui": "TUI",
+    "cmdDone": "退出码 {{exitCode}}",
+    "scopeCap": "{{active}}/{{max}} 会话"
   },
   "shareErrors": {
     "lockout": "请稍后重试（60秒）",
