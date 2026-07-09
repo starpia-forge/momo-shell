@@ -5,26 +5,35 @@ import (
 	"embed"
 	"log"
 	"path/filepath"
+	"time"
 
 	wailsapp "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
+	"momo-shell/internal/adapter/in/mcpipc"
 	"momo-shell/internal/adapter/in/sharehttp"
 	wailsfacade "momo-shell/internal/adapter/in/wails"
 	"momo-shell/internal/adapter/out/keychain"
 	"momo-shell/internal/adapter/out/mdns"
 	"momo-shell/internal/adapter/out/pty"
+	"momo-shell/internal/adapter/out/secretscan"
 	"momo-shell/internal/adapter/out/sftp"
 	"momo-shell/internal/adapter/out/shareclient"
 	shellintegrationscripts "momo-shell/internal/adapter/out/shellintegration"
+	"momo-shell/internal/adapter/out/shparse"
 	"momo-shell/internal/adapter/out/sqlite"
 	"momo-shell/internal/adapter/out/sshconn"
 	"momo-shell/internal/adapter/out/wailsevent"
 	"momo-shell/internal/adapter/out/zmodem"
+	"momo-shell/internal/core/service/aicontrol"
+	"momo-shell/internal/core/service/aicontrol/resolve"
+	"momo-shell/internal/core/service/custodian"
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
 	"momo-shell/internal/core/service/localfs"
+	"momo-shell/internal/core/service/mask"
+	"momo-shell/internal/core/service/scrollback"
 	"momo-shell/internal/core/service/session"
 	"momo-shell/internal/core/service/settings"
 	"momo-shell/internal/core/service/share"
@@ -63,6 +72,7 @@ func main() {
 	shareSettingsRepo := sqlite.NewShareSettingsRepo(db)
 	peerRepo := sqlite.NewPeerRepo(db)
 	settingsRepo := sqlite.NewSettingsRepo(db)
+	mcpClientRepo := sqlite.NewMCPClientRepo(db)
 	sshOpener := sshconn.New(sshconn.WithFileSystemFactory(sftp.NewFromClient))
 	localOpener := pty.NewOpener()
 
@@ -91,6 +101,48 @@ func main() {
 		Builder: shellintegrationscripts.New(),
 	})
 	sessionSvc.AddMiddleware(shellIntegrationSvc)
+
+	// AI-control wiring (doc 20 D1-D4, A-track): scrollback capture feeds
+	// ReadScrollback's egress (masked via custodian+secretscan), resolve
+	// gates RunCommand, and aicontrol.Service is both the MCP tool/resource
+	// backend (mcpipc.Dispatch) and the pairing/auth callback target
+	// (mcpipc.Server). AddTap must happen before any session exists (same
+	// window as AddMiddleware above).
+	scrollbackSvc := scrollback.New()
+	sessionSvc.AddTap(scrollbackSvc)
+
+	secretScanner := secretscan.New()
+	custodianSvc := custodian.New(scrollbackSvc, secretStore)
+	maskSvc := mask.New(mask.Deps{
+		Scanner: secretScanner,
+		Secrets: custodianSvc,
+		// Commands (layer-2 command-aware gating) stays nil -- wiring it
+		// needs aicontrol to expose its own in-flight command state, which
+		// would introduce a two-phase aicontrol<->mask cycle; deferred to
+		// its own cycle rather than bundled into this already-large wiring
+		// pass. mask treats a nil Commands as a safe no-op (layer 1/3 still
+		// fully active).
+	})
+
+	resolverSvc := resolve.New(resolve.Deps{Parser: shparse.New()})
+
+	aiSvc := aicontrol.New(aicontrol.Deps{
+		Hosts:      hostRepo,
+		Sessions:   sessionSvc,
+		Publisher:  publisher,
+		Resolver:   resolverSvc,
+		Scrollback: scrollbackSvc,
+		Masker:     maskSvc,
+		Clients:    mcpClientRepo,
+	})
+	shellIntegrationSvc.AddObserver(aiSvc) // D1: drive CommandHandle from OSC133 events
+
+	mcpServer := mcpipc.New(aiSvc, mcpipc.NewDispatch(aiSvc))
+	// SweepExpired is pure/deterministic and owns no timer itself (control.go
+	// doc comment) -- this is the periodic caller its doc says lands with
+	// whichever phase starts aicontrol's lifecycle.
+	sweepTicker := time.NewTicker(time.Minute)
+	sweepDone := make(chan struct{})
 
 	shareSvc := share.New(share.Deps{
 		HostRepo:   hostRepo,
@@ -128,6 +180,7 @@ func main() {
 	settingsService := wailsfacade.NewSettingsService(settingsSvc, version)
 	localFSService := wailsfacade.NewLocalFSService(localfsSvc)
 	fileDropRelay := wailsfacade.NewFileDropRelay(publisher)
+	mcpApprovalService := wailsfacade.NewMCPApprovalService(aiSvc)
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-shell",
@@ -152,8 +205,26 @@ func main() {
 			if err := shareSvc.Start(); err != nil {
 				log.Printf("share: start discovery: %v", err)
 			}
+			if err := mcpServer.Start(); err != nil {
+				log.Printf("mcp: start ipc server: %v", err)
+			}
+			go func() {
+				for {
+					select {
+					case <-sweepTicker.C:
+						aiSvc.SweepExpired(time.Now())
+					case <-sweepDone:
+						return
+					}
+				}
+			}()
 		},
 		OnShutdown: func(ctx context.Context) {
+			// Stop the MCP surface first so no in-flight AI request observes
+			// a session/DB torn down out from under it.
+			sweepTicker.Stop()
+			close(sweepDone)
+			_ = mcpServer.Stop(ctx)
 			sessionSvc.CloseAll()
 			historySvc.Close()
 			_ = shareSvc.DisableSharing()
@@ -169,6 +240,7 @@ func main() {
 			shareService,
 			settingsService,
 			localFSService,
+			mcpApprovalService,
 		},
 	})
 
