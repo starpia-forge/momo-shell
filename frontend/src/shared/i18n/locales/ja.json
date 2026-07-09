@@ -27,6 +27,7 @@
       "appearance": "外観",
       "terminal": "ターミナル",
       "sharing": "共有",
+      "mcp": "AIクライアント",
       "about": "情報"
     },
     "general": {
@@ -58,6 +59,17 @@
       "deviceName": "デバイス名",
       "deviceNameDesc": "次回の mDNS 広告・ペアリングから適用されます",
       "deviceNameSaved": "デバイス名を保存しました"
+    },
+    "mcp": {
+      "title": "AIクライアント",
+      "desc": "このアプリとペアリングされたMCPクライアントの一覧です。ペアリングはID トークンの発行のみで、セッション制御・コマンド実行には別途承認が必要です。",
+      "noClients": "まだペアリングされたAIクライアントはありません",
+      "pairedAt": "{{time}} にペアリング",
+      "lastSeen": "最終接続 {{time}}",
+      "revoke": "取り消し",
+      "revoked": "取り消し済み",
+      "revokeSuccess": "{{name}} を取り消しました",
+      "revokeFailed": "クライアントの取り消しに失敗しました"
     },
     "about": {
       "title": "情報"
@@ -273,6 +285,12 @@
     "enterPinHint": "相手の画面に表示されたPINを入力してください。",
     "requestTitle": "ペアリングリクエスト",
     "requestBody": "（{{address}}）がペアリングをリクエストしました。相手の画面のPINと一致する場合は承認してください。",
+    "reject": "拒否",
+    "approve": "承認"
+  },
+  "mcpPairing": {
+    "requestTitle": "AIクライアントペアリングリクエスト",
+    "requestBody": " がAIクライアントとしてペアリングをリクエストしました。これはIDトークンの発行のみで、セッション制御やコマンド実行の権限が付与されるわけではありません。",
     "reject": "拒否",
     "approve": "承認"
   },

@@ -13,6 +13,8 @@ export const topics = {
   sharePairRequest: () => `share:pair-request`,
   sharePairRequestResolved: () => `share:pair-request-resolved`,
   sharePeersUpdated: () => `share:peers-updated`,
+  mcpPairRequest: () => `mcp:pair-request`,
+  mcpPairRequestResolved: () => `mcp:pair-request-resolved`,
 }
 
 export interface SessionStatePayload {
@@ -85,6 +87,21 @@ export interface SharePairRequestPayload {
  * timed out, or the requester disconnected) -- lets the approval dialog
  * dismiss itself even if respondPairing was never called for it. */
 export interface SharePairRequestResolvedPayload {
+  requestId: string
+}
+
+/** Published when an incoming MCP client's pair frame is awaiting the local
+ * user's approve/deny decision via respondPairing (mcp). No PIN or remote
+ * address -- MCP pairing is a local-only IPC transport (doc 20 D1). */
+export interface MCPPairRequestPayload {
+  requestId: string
+  clientName: string
+}
+
+/** Published once an mcp:pair-request is no longer pending (answered, timed
+ * out, or the client disconnected) -- SharePairRequestResolvedPayload's
+ * mirror. */
+export interface MCPPairRequestResolvedPayload {
   requestId: string
 }
 

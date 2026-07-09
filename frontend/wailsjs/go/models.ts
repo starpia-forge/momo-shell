@@ -126,6 +126,26 @@ export namespace wails {
 	        this.rows = source["rows"];
 	    }
 	}
+	export class MCPClientDTO {
+	    id: string;
+	    name: string;
+	    pairedAt: number;
+	    lastSeenAt?: number;
+	    revoked: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MCPClientDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.pairedAt = source["pairedAt"];
+	        this.lastSeenAt = source["lastSeenAt"];
+	        this.revoked = source["revoked"];
+	    }
+	}
 	export class SharedHostDTO {
 	    name: string;
 	    address: string;

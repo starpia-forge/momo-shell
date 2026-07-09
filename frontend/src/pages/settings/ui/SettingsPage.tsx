@@ -5,15 +5,17 @@ import { GeneralTab } from './GeneralTab'
 import { AppearanceTab } from './AppearanceTab'
 import { TerminalTab } from './TerminalTab'
 import { SharingTab } from './SharingTab'
+import { MCPClientsTab } from './MCPClientsTab'
 import { AboutTab } from './AboutTab'
 
-type SettingsTab = 'general' | 'appearance' | 'terminal' | 'sharing' | 'about'
+type SettingsTab = 'general' | 'appearance' | 'terminal' | 'sharing' | 'mcp' | 'about'
 
 const TABS = [
   { id: 'general', labelKey: 'settings.tabs.general' },
   { id: 'appearance', labelKey: 'settings.tabs.appearance' },
   { id: 'terminal', labelKey: 'settings.tabs.terminal' },
   { id: 'sharing', labelKey: 'settings.tabs.sharing' },
+  { id: 'mcp', labelKey: 'settings.tabs.mcp' },
   { id: 'about', labelKey: 'settings.tabs.about' },
 ] as const satisfies { id: SettingsTab; labelKey: string }[]
 
@@ -43,6 +45,7 @@ export function SettingsPage() {
           {tab === 'appearance' && <AppearanceTab />}
           {tab === 'terminal' && <TerminalTab />}
           {tab === 'sharing' && <SharingTab />}
+          {tab === 'mcp' && <MCPClientsTab />}
           {tab === 'about' && <AboutTab />}
         </div>
       </div>

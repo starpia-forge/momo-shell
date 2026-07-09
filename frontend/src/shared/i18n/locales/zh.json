@@ -27,6 +27,7 @@
       "appearance": "外观",
       "terminal": "终端",
       "sharing": "共享",
+      "mcp": "AI 客户端",
       "about": "关于"
     },
     "general": {
@@ -58,6 +59,17 @@
       "deviceName": "设备名称",
       "deviceNameDesc": "从下次 mDNS 广播和配对开始生效",
       "deviceNameSaved": "设备名称已保存"
+    },
+    "mcp": {
+      "title": "AI 客户端",
+      "desc": "与此应用配对的 MCP 客户端列表。配对仅签发身份令牌，会话控制和命令执行仍需单独批准。",
+      "noClients": "尚无已配对的 AI 客户端",
+      "pairedAt": "配对于 {{time}}",
+      "lastSeen": "最后活跃 {{time}}",
+      "revoke": "撤销",
+      "revoked": "已撤销",
+      "revokeSuccess": "已撤销 {{name}}",
+      "revokeFailed": "撤销客户端失败"
     },
     "about": {
       "title": "关于"
@@ -273,6 +285,12 @@
     "enterPinHint": "请输入对方屏幕上显示的 PIN。",
     "requestTitle": "配对请求",
     "requestBody": "（{{address}}）请求配对。如果与对方屏幕上的 PIN 一致，请批准。",
+    "reject": "拒绝",
+    "approve": "批准"
+  },
+  "mcpPairing": {
+    "requestTitle": "AI 客户端配对请求",
+    "requestBody": " 请求以 AI 客户端身份配对。此操作仅签发身份令牌，不会因此授予会话控制或命令执行权限。",
     "reject": "拒绝",
     "approve": "批准"
   },

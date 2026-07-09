@@ -27,6 +27,7 @@
       "appearance": "Appearance",
       "terminal": "Terminal",
       "sharing": "Sharing",
+      "mcp": "AI Clients",
       "about": "About"
     },
     "general": {
@@ -58,6 +59,17 @@
       "deviceName": "Device name",
       "deviceNameDesc": "Applies to future mDNS advertisements and pairings",
       "deviceNameSaved": "Device name saved"
+    },
+    "mcp": {
+      "title": "AI Clients",
+      "desc": "MCP clients paired with this app. Pairing only issues an identity token -- session control and command execution still require separate approval.",
+      "noClients": "No AI clients paired yet",
+      "pairedAt": "Paired {{time}}",
+      "lastSeen": "last seen {{time}}",
+      "revoke": "Revoke",
+      "revoked": "Revoked",
+      "revokeSuccess": "Revoked {{name}}",
+      "revokeFailed": "Failed to revoke client"
     },
     "about": {
       "title": "About"
@@ -276,6 +288,12 @@
     "enterPinHint": "Enter the PIN shown on their screen.",
     "requestTitle": "Pairing Request",
     "requestBody": " ({{address}}) requested pairing. Approve it if it matches the PIN on their screen.",
+    "reject": "Reject",
+    "approve": "Approve"
+  },
+  "mcpPairing": {
+    "requestTitle": "AI Client Pairing Request",
+    "requestBody": " wants to pair as an AI client. This only issues an identity token -- it does not grant session control or command execution by itself.",
     "reject": "Reject",
     "approve": "Approve"
   },

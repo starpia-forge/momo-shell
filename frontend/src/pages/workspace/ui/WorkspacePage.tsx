@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
 import { DestinationBar } from '../../../features/file-upload'
+import { MCPPairApprovalDialog } from '../../../features/mcp-pairing'
 import { PairApprovalDialog } from '../../../features/peer-pairing'
 import { HostKeyPrompt } from '../../../features/session-connect'
 import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
@@ -176,6 +177,7 @@ export function WorkspacePage() {
       <TransferCenter />
       <HostKeyPrompt />
       <PairApprovalDialog />
+      <MCPPairApprovalDialog />
       <DestinationBar />
     </div>
   )
