@@ -6,8 +6,11 @@ import "momo-shell/internal/core/domain"
 // decisions on pending AI-control requests -- connect_host/control grants,
 // run_command, and now MCP client pairing (RespondPairing, mirroring
 // ShareUseCase.RespondPairing -- same requester/responder split as share,
-// no PIN per doc 20 D1); secret-input approval joins this interface once
-// its phase lands (D3). Separate from AIControlUseCase (the AI-facing side
+// no PIN per doc 20 D1). D3's secret-input approval dissolved without
+// joining this interface (doc 22) -- echo-off detection is unobservable
+// over SSH/ConPTY, and the human-co-resident GUI terminal model handles
+// interactive secrets without an AI-mediated path. Separate from
+// AIControlUseCase (the AI-facing side
 // that raises and waits on the request) and from MCPServerCallbacks (the
 // untrusted IPC adapter's pairing-request side) for the same reason
 // ShareServerCallbacks is separate from ShareUseCase: requester and

@@ -14,9 +14,15 @@ const (
 	DelegNone            DelegationState = "none"
 	DelegActive          DelegationState = "delegated"
 	DelegAwaitingApprove DelegationState = "awaiting_approval"
-	DelegAwaitingSecret  DelegationState = "awaiting_secret"
-	DelegTUIHandoff      DelegationState = "tui_handoff"
-	DelegExpired         DelegationState = "expired"
+	// DelegAwaitingSecret is reserved: doc 18's D3 (echo-off secret-prompt
+	// detection) dissolved without shipping a code path that enters this
+	// state (doc 22 -- echo-off is unobservable over SSH/ConPTY, and the
+	// human-co-resident GUI terminal model makes the detection mostly moot
+	// anyway). Kept for a possible future revival, mirroring doc 21's
+	// SignalCapable dissolution.
+	DelegAwaitingSecret DelegationState = "awaiting_secret"
+	DelegTUIHandoff     DelegationState = "tui_handoff"
+	DelegExpired        DelegationState = "expired"
 )
 
 // legalDelegationTransitions encodes the allowed state machine (design doc

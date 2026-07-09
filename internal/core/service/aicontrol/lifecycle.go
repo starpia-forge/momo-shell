@@ -80,7 +80,9 @@ func (s *Service) OnAltScreen(sessionID string, entered bool) {
 // OnCommandStart and OnPrompt complete shellintegration.Observer's method set.
 // D1's execution FSM doesn't need OnCommandStart (RunCommand already arms
 // CmdRunning at injection time -- see run.go); OnPrompt is C2's probe-timing
-// signal (Service.AtPrompt) and D3's future secret-input detection, not D1's
-// concern.
+// signal (Service.AtPrompt), not D1's concern. D3's echo-off secret-input
+// detection (once expected to also hang off OnPrompt) dissolved without
+// shipping -- echo-off is unobservable over SSH/ConPTY (doc 22) -- so
+// OnPrompt stays a pure probe-timing hook with no secret-input consumer.
 func (s *Service) OnCommandStart(sessionID string) {}
 func (s *Service) OnPrompt(sessionID string)       {}
