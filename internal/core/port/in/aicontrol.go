@@ -57,4 +57,17 @@ type AIControlUseCase interface {
 	// clientID, statically resolves risk, auto-runs low-risk/certain
 	// commands and blocks the rest for human approval, then injects.
 	RunCommand(clientID, sessionID, command string) (domain.CommandHandle, error)
+
+	// GetShellState requires an active delegation for sessionID by clientID,
+	// then probes the shell for its cwd and a fixed set of main env vars
+	// (design doc 17 §5.1, FR-3), publishing the result on
+	// out.TopicMCPShellState for the frontend badge before returning it.
+	GetShellState(clientID, sessionID string) (domain.ShellState, error)
+	// ResetShell requires an active delegation for sessionID by clientID,
+	// then interrupts any in-flight command and returns the shell to its
+	// home directory -- a clean-reset for AI-caused contamination (doc 17
+	// §5.1: "reset_shell(오염 blast radius 대응)"). It does not revoke the
+	// delegation (unlike KillControl) and does not restore env vars the AI
+	// may have exported.
+	ResetShell(clientID, sessionID string) error
 }

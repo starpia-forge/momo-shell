@@ -1,6 +1,7 @@
 package aicontrol
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -186,6 +187,17 @@ func (f *fakeOutputMasker) Apply(sessionID string, chunk []byte) ([]byte, bool, 
 	f.gotSession = sessionID
 	f.gotChunk = append([]byte(nil), chunk...)
 	return f.masked, f.gated, f.notice
+}
+
+// fakeShellStateReader is a hand-rolled ShellStateReader (state.go, B4)
+// delegating to a func field so each test supplies its own canned
+// vars/error, mirroring fakeSessionCreator's func-field style.
+type fakeShellStateReader struct {
+	readVarsFunc func(ctx context.Context, sessionID string, names []string) (map[string]string, error)
+}
+
+func (f *fakeShellStateReader) ReadVars(ctx context.Context, sessionID string, names []string) (map[string]string, error) {
+	return f.readVarsFunc(ctx, sessionID, names)
 }
 
 // fakeMCPClients is an in-memory out.MCPClientRepository for tests

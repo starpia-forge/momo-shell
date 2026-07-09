@@ -139,3 +139,12 @@ func TopicMCPPairRequest() string {
 func TopicMCPPairRequestResolved() string {
 	return "mcp:pair-request-resolved"
 }
+
+// TopicMCPShellState notifies the frontend of a fresh cwd/env snapshot for
+// a delegated session, published each time GetShellState resolves a query
+// (design doc 17 §5.1, FR-3: "위임 중 세션의 cwd·주요 env를 이벤트로 프론트에
+// 노출"). Not a continuous stream -- only fires on an on-demand GetShellState
+// call, never on every prompt.
+func TopicMCPShellState() string {
+	return "mcp:shell-state"
+}

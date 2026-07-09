@@ -95,6 +95,7 @@ type Deps struct {
 	Scrollback ScrollbackReader        // ReadScrollback's ring-buffer source (scrollback.Service satisfies it structurally)
 	Masker     OutputMasker            // ReadScrollback's secret-redaction layer (mask.Service satisfies it structurally)
 	Clients    out.MCPClientRepository // callbacks.go's token store (A4a) -- may be nil until A7 wires a real repo; unused until then
+	ShellState ShellStateReader        // GetShellState's cwd/env probe source (state.go, B4) -- main.go adapts shellintegration.Service.Query to this
 }
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
@@ -110,6 +111,7 @@ type Service struct {
 	scrollback ScrollbackReader
 	masker     OutputMasker
 	clients    out.MCPClientRepository
+	shellState ShellStateReader
 
 	mu          sync.Mutex
 	pending     map[string]chan bool               // requestID -> approval channel (share.Service.pending mirror; connect/control/command/pair/scope requests all share this map, keyed by uuid so there's no collision)
@@ -127,6 +129,7 @@ func New(deps Deps) *Service {
 		scrollback:  deps.Scrollback,
 		masker:      deps.Masker,
 		clients:     deps.Clients,
+		shellState:  deps.ShellState,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
 		commands:    make(map[string]*domain.CommandHandle),

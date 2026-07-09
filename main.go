@@ -44,6 +44,27 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// shellStateAdapter satisfies aicontrol.ShellStateReader by flattening
+// shellintegration.Service.Query's map[string]VarValue (Set/Value pairs) to
+// a plain map[string]string of currently-set vars -- the composition-root
+// glue so aicontrol.state.go (B4) never imports the shellintegration
+// package directly (SessionCreator's import-avoidance convention).
+type shellStateAdapter struct{ si *shellintegration.Service }
+
+func (a shellStateAdapter) ReadVars(ctx context.Context, sessionID string, names []string) (map[string]string, error) {
+	vars, err := a.si.Query(ctx, sessionID, names)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(vars))
+	for k, v := range vars {
+		if v.Set {
+			out[k] = v.Value
+		}
+	}
+	return out, nil
+}
+
 // version is injected at build time via -ldflags "-X main.version=...".
 var version = "dev"
 
@@ -134,6 +155,7 @@ func main() {
 		Scrollback: scrollbackSvc,
 		Masker:     maskSvc,
 		Clients:    mcpClientRepo,
+		ShellState: shellStateAdapter{si: shellIntegrationSvc}, // B4: GetShellState's cwd/env probe source
 	})
 	shellIntegrationSvc.AddObserver(aiSvc) // D1: drive CommandHandle from OSC133 events
 

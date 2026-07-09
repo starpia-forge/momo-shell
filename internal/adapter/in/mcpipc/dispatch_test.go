@@ -56,6 +56,14 @@ func (f *fakeAIControlUseCase) RequestConnectionScope(clientID string, hostNames
 	panic("not used by dispatch's read-only scope")
 }
 
+func (f *fakeAIControlUseCase) GetShellState(clientID, sessionID string) (domain.ShellState, error) {
+	panic("not used by dispatch's read-only scope")
+}
+
+func (f *fakeAIControlUseCase) ResetShell(clientID, sessionID string) error {
+	panic("not used by dispatch's read-only scope")
+}
+
 var _ in.AIControlUseCase = (*fakeAIControlUseCase)(nil)
 
 // startDispatchSession wires Dispatch.HandleSession to one end of a
