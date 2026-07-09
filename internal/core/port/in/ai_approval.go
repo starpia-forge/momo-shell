@@ -14,7 +14,9 @@ import "momo-shell/internal/core/domain"
 // responder are different trust levels. Also carries client administration
 // (list/revoke, A8) -- the local user's side of managing who has been
 // paired, mirroring ShareUseCase bundling ListClients/RevokeClient alongside
-// RespondPairing.
+// RespondPairing. And the kill switch (KillControl, B2) -- another local-user
+// action, not an AI-facing one, so it belongs here rather than on
+// AIControlUseCase.
 type AIApprovalUseCase interface {
 	RespondConnectApproval(requestID string, approve bool) error
 	RespondControlApproval(requestID string, approve bool) error
@@ -22,6 +24,15 @@ type AIApprovalUseCase interface {
 	// RespondPairing answers a pending mcp:pair-request raised by an
 	// incoming MCP client's pair frame (HandlePair).
 	RespondPairing(requestID string, approve bool) error
+
+	// KillControl is the local user's emergency stop (US-1, doc 21): it
+	// revokes sessionID's delegation immediately (the safety guarantee)
+	// and best-effort cleans up the in-flight command by session origin --
+	// closes an AI-created session entirely, or interrupts (Ctrl-C) a
+	// borrowed user session while preserving the shell. Client-agnostic
+	// and user-forced, unlike ReleaseControl's voluntary/client-scoped
+	// release.
+	KillControl(sessionID string) error
 
 	// ListMCPClients returns every MCP client this instance has ever paired
 	// with, including revoked ones (audit trail, E3).

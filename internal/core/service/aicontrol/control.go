@@ -81,8 +81,7 @@ func (s *Service) RequestControl(clientID, sessionID string, scope domain.Contro
 
 // ReleaseControl implements in.AIControlUseCase: clientID voluntarily gives
 // up its delegation over sessionID. It does not touch any command the
-// session may be running -- see KillCommand (added once F2/signal delivery
-// lands) for that.
+// session may be running -- see KillControl for that.
 func (s *Service) ReleaseControl(clientID, sessionID string) error {
 	s.mu.Lock()
 	deleg, ok := s.delegations[sessionID]
@@ -101,6 +100,42 @@ func (s *Service) ReleaseControl(clientID, sessionID string) error {
 	s.mu.Lock()
 	delete(s.delegations, sessionID)
 	s.mu.Unlock()
+	return nil
+}
+
+// KillControl is the local user's emergency stop for a session under AI
+// control (US-1, doc 21's kill-switch decisions). Unlike ReleaseControl it
+// is user-forced and client-agnostic -- it does not check who holds the
+// delegation, only whether one exists.
+//
+// It always performs the safety-critical half first: revoke the delegation
+// (doc 21 §K1). That alone is the guarantee -- the moment it returns, the
+// AI's next RunCommand is rejected, regardless of what happens next. Only
+// afterward does it best-effort clean up the in-flight command by session
+// origin (doc 21 §K2): a fresh session ConnectHost opened for the AI is
+// closed entirely; an existing user session RequestControl merely borrowed
+// is sent a Ctrl-C to interrupt the running command while preserving the
+// shell. A cleanup error is not fatal -- the revoke already made the stop
+// button's safety guarantee, so it is not returned to the caller.
+func (s *Service) KillControl(sessionID string) error {
+	s.mu.Lock()
+	deleg, ok := s.delegations[sessionID]
+	if !ok {
+		s.mu.Unlock()
+		return ErrNotDelegated
+	}
+	aiCreated := deleg.AICreated
+
+	_ = deleg.TransitionTo(domain.DelegNone) // every state can reach None (delegation.go)
+	delete(s.delegations, sessionID)
+	delete(s.commands, sessionID)
+	s.mu.Unlock()
+
+	if aiCreated {
+		_ = s.sessions.Close(sessionID)
+	} else {
+		_ = s.sessions.Write(sessionID, []byte{0x03}) // Ctrl-C: interrupt the command, keep the shell
+	}
 	return nil
 }
 

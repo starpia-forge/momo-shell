@@ -57,6 +57,10 @@ type SessionCreator interface {
 	// (ListSessions' data source). session.Service.Snapshot already
 	// satisfies this.
 	Snapshot() []domain.Session
+	// Close tears down a single session (KillControl's cleanup step for
+	// an AI-created session, doc 21 §K2). session.Service.Close already
+	// satisfies this.
+	Close(sessionID string) error
 }
 
 // CommandResolver is the narrow slice of resolve.Service RunCommand
@@ -145,6 +149,7 @@ func (s *Service) ConnectHost(clientID, hostName string) (domain.SessionView, er
 	_ = deleg.TransitionTo(domain.DelegActive) // none->delegated is always legal (delegation.go)
 	now := time.Now()
 	deleg.GrantedAt, deleg.LastActAt = now, now
+	deleg.AICreated = true // fresh session opened for the AI -- KillControl may Close it entirely (doc 21 §K2)
 
 	s.mu.Lock()
 	s.delegations[info.ID] = deleg

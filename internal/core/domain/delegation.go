@@ -52,6 +52,15 @@ type Delegation struct {
 	GrantedAt time.Time
 	LastActAt time.Time // last-activity timestamp; auto-expiry is computed from this
 	ScopeID   string    // owning ConnectionScope (fan-out grant), "" if none
+
+	// AICreated records the session's origin for the kill switch's
+	// cleanup step (doc 21 §K2): true for a fresh session ConnectHost
+	// opened for the AI (safe to Close entirely), false for an existing
+	// user session RequestControl merely borrowed (must be interrupted,
+	// not closed, to preserve the user's shell). Defaults to false, the
+	// safe choice -- worst case an AI-created session is left orphaned
+	// rather than a user's shell being destroyed.
+	AICreated bool
 }
 
 // NewDelegation creates a delegation in the initial None state -- the

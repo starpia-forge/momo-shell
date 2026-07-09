@@ -36,7 +36,9 @@ type AIControlUseCase interface {
 	RequestControl(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error)
 	// ReleaseControl voluntarily gives up clientID's delegation over
 	// sessionID. It does not touch any command the session may be running
-	// -- that's KillCommand's job, added once signal delivery (F2) lands.
+	// -- unlike KillControl, this is the AI's own voluntary release, not
+	// the local user's forced stop (see in.AIApprovalUseCase.KillControl,
+	// doc 21's kill-switch decisions).
 	ReleaseControl(clientID, sessionID string) error
 
 	// RunCommand gates command through the 3-layer safety pipeline (doc 17
