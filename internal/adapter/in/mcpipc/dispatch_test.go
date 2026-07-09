@@ -17,17 +17,22 @@ import (
 )
 
 // fakeAIControlUseCase implements in.AIControlUseCase for dispatch tests.
-// The read-only slice (ListSessions/ListHosts/ReadScrollback) plus the
-// minimal control loop dispatch now exposes (RequestControl/RunCommand/
-// ReleaseControl) have usable injectable implementations -- the rest panic
-// if ever invoked, since dispatch does not reach them yet.
+// Every method dispatch exposes has an injectable func field; a test only
+// sets the fields for the tools it exercises (an unset field nil-panics,
+// surfacing an unexpected call).
 type fakeAIControlUseCase struct {
-	listSessionsFunc   func(clientID string) ([]domain.SessionView, error)
-	listHostsFunc      func(clientID string) ([]domain.HostRef, error)
-	readScrollbackFunc func(clientID, sessionID string, sinceSeq uint64) (domain.MaskedChunk, error)
-	requestControlFunc func(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error)
-	runCommandFunc     func(clientID, sessionID, command string) (domain.CommandHandle, error)
-	releaseControlFunc func(clientID, sessionID string) error
+	listSessionsFunc           func(clientID string) ([]domain.SessionView, error)
+	listHostsFunc              func(clientID string) ([]domain.HostRef, error)
+	readScrollbackFunc         func(clientID, sessionID string, sinceSeq uint64) (domain.MaskedChunk, error)
+	requestControlFunc         func(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error)
+	runCommandFunc             func(clientID, sessionID, command string) (domain.CommandHandle, error)
+	releaseControlFunc         func(clientID, sessionID string) error
+	connectHostFunc            func(clientID, hostName string) (domain.SessionView, error)
+	requestConnectionScopeFunc func(clientID string, hostNames []string) (domain.ConnectionScope, error)
+	getShellStateFunc          func(clientID, sessionID string) (domain.ShellState, error)
+	resetShellFunc             func(clientID, sessionID string) error
+	cancelCommandFunc          func(clientID, sessionID string) (domain.CommandHandle, error)
+	backgroundCommandFunc      func(clientID, sessionID string) (domain.CommandHandle, error)
 }
 
 func (f *fakeAIControlUseCase) ListSessions(clientID string) ([]domain.SessionView, error) {
@@ -43,7 +48,7 @@ func (f *fakeAIControlUseCase) ReadScrollback(clientID, sessionID string, sinceS
 }
 
 func (f *fakeAIControlUseCase) ConnectHost(clientID, hostName string) (domain.SessionView, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.connectHostFunc(clientID, hostName)
 }
 
 func (f *fakeAIControlUseCase) RequestControl(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error) {
@@ -59,23 +64,23 @@ func (f *fakeAIControlUseCase) RunCommand(clientID, sessionID, command string) (
 }
 
 func (f *fakeAIControlUseCase) RequestConnectionScope(clientID string, hostNames []string) (domain.ConnectionScope, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.requestConnectionScopeFunc(clientID, hostNames)
 }
 
 func (f *fakeAIControlUseCase) GetShellState(clientID, sessionID string) (domain.ShellState, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.getShellStateFunc(clientID, sessionID)
 }
 
 func (f *fakeAIControlUseCase) ResetShell(clientID, sessionID string) error {
-	panic("not used by dispatch's read-only scope")
+	return f.resetShellFunc(clientID, sessionID)
 }
 
 func (f *fakeAIControlUseCase) CancelCommand(clientID, sessionID string) (domain.CommandHandle, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.cancelCommandFunc(clientID, sessionID)
 }
 
 func (f *fakeAIControlUseCase) BackgroundCommand(clientID, sessionID string) (domain.CommandHandle, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.backgroundCommandFunc(clientID, sessionID)
 }
 
 var _ in.AIControlUseCase = (*fakeAIControlUseCase)(nil)
@@ -128,6 +133,8 @@ func TestHandleSession_ListToolsAdvertisesToolSurface(t *testing.T) {
 	for _, want := range []string{
 		"list_sessions", "list_hosts", "read_output",
 		"request_control", "run_command", "release_control",
+		"connect_host", "request_connection_scope", "get_shell_state",
+		"reset_shell", "cancel_command", "background_command",
 	} {
 		if !names[want] {
 			t.Errorf("tools/list missing %q, got %v", want, names)
@@ -373,6 +380,271 @@ func TestHandleSession_ReleaseControlToolForwardsSessionIDAndReturnsReleased(t *
 	decodeToolResult(t, res, &out)
 	if !out.Released {
 		t.Error("Released = false, want true")
+	}
+}
+
+func TestHandleSession_ConnectHostToolForwardsHostNameAndDecodesSession(t *testing.T) {
+	want := domain.SessionView{ID: "s9", Kind: domain.KindSSH, HostID: "h1", State: domain.StateConnecting, Controlled: true}
+	var gotClientID, gotHostName string
+	control := &fakeAIControlUseCase{
+		connectHostFunc: func(clientID, hostName string) (domain.SessionView, error) {
+			gotClientID, gotHostName = clientID, hostName
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "connect_host",
+		Arguments: map[string]any{"hostName": "prod-1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(connect_host) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotHostName != "prod-1" {
+		t.Errorf("ConnectHost(clientID, hostName) = (%q, %q), want (client-1, prod-1)", gotClientID, gotHostName)
+	}
+
+	var out connectHostOutput
+	decodeToolResult(t, res, &out)
+	if out.Session.ID != "s9" || !out.Session.Controlled {
+		t.Errorf("Session = %+v, want %+v", out.Session, want)
+	}
+}
+
+func TestHandleSession_ConnectHostToolSurfacesDenialAsError(t *testing.T) {
+	control := &fakeAIControlUseCase{
+		connectHostFunc: func(clientID, hostName string) (domain.SessionView, error) {
+			return domain.SessionView{}, errors.New("connect denied by human approver")
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "connect_host",
+		Arguments: map[string]any{"hostName": "prod-1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(connect_host) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true for a denied connect request")
+	}
+}
+
+func TestHandleSession_RequestConnectionScopeToolForwardsHostsAndFlattensNames(t *testing.T) {
+	want := domain.ConnectionScope{
+		ID:            "scope-1",
+		ClientID:      "client-1",
+		HostNames:     map[string]bool{"web-2": true, "db-1": true, "web-1": true},
+		MaxConcurrent: 3,
+	}
+	var gotClientID string
+	var gotHostNames []string
+	control := &fakeAIControlUseCase{
+		requestConnectionScopeFunc: func(clientID string, hostNames []string) (domain.ConnectionScope, error) {
+			gotClientID, gotHostNames = clientID, hostNames
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "request_connection_scope",
+		Arguments: map[string]any{"hostNames": []string{"web-1", "db-1", "web-2"}},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(request_connection_scope) error = %v", err)
+	}
+	if gotClientID != "client-1" {
+		t.Errorf("RequestConnectionScope clientID = %q, want client-1", gotClientID)
+	}
+	if strings.Join(gotHostNames, ",") != "web-1,db-1,web-2" {
+		t.Errorf("forwarded hostNames = %v, want [web-1 db-1 web-2] in order", gotHostNames)
+	}
+
+	var out requestConnectionScopeOutput
+	decodeToolResult(t, res, &out)
+	if out.ScopeID != "scope-1" || out.MaxConcurrent != 3 {
+		t.Errorf("scope = %+v, want ScopeID scope-1 / MaxConcurrent 3", out)
+	}
+	if strings.Join(out.HostNames, ",") != "db-1,web-1,web-2" {
+		t.Errorf("output hostNames = %v, want sorted [db-1 web-1 web-2]", out.HostNames)
+	}
+}
+
+func TestHandleSession_RequestConnectionScopeToolSurfacesDenialAsError(t *testing.T) {
+	control := &fakeAIControlUseCase{
+		requestConnectionScopeFunc: func(clientID string, hostNames []string) (domain.ConnectionScope, error) {
+			return domain.ConnectionScope{}, errors.New("connection scope denied by human approver")
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "request_connection_scope",
+		Arguments: map[string]any{"hostNames": []string{"prod-1"}},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(request_connection_scope) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true for a denied scope request")
+	}
+}
+
+func TestHandleSession_GetShellStateToolForwardsSessionIDAndDecodesState(t *testing.T) {
+	want := domain.ShellState{SessionID: "s1", Cwd: "/home/me", Env: map[string]string{"HOME": "/home/me"}}
+	var gotClientID, gotSessionID string
+	control := &fakeAIControlUseCase{
+		getShellStateFunc: func(clientID, sessionID string) (domain.ShellState, error) {
+			gotClientID, gotSessionID = clientID, sessionID
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "get_shell_state",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get_shell_state) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" {
+		t.Errorf("GetShellState(clientID, sessionID) = (%q, %q), want (client-1, s1)", gotClientID, gotSessionID)
+	}
+
+	var out getShellStateOutput
+	decodeToolResult(t, res, &out)
+	if out.ShellState.Cwd != "/home/me" || out.ShellState.Env["HOME"] != "/home/me" {
+		t.Errorf("ShellState = %+v, want %+v", out.ShellState, want)
+	}
+}
+
+func TestHandleSession_GetShellStateToolSurfacesNotDelegatedAsError(t *testing.T) {
+	control := &fakeAIControlUseCase{
+		getShellStateFunc: func(clientID, sessionID string) (domain.ShellState, error) {
+			return domain.ShellState{}, errors.New("aicontrol: session not delegated to this client")
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "get_shell_state",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get_shell_state) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true for a non-delegated session")
+	}
+}
+
+func TestHandleSession_ResetShellToolForwardsSessionIDAndReturnsReset(t *testing.T) {
+	var gotClientID, gotSessionID string
+	control := &fakeAIControlUseCase{
+		resetShellFunc: func(clientID, sessionID string) error {
+			gotClientID, gotSessionID = clientID, sessionID
+			return nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "reset_shell",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(reset_shell) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" {
+		t.Errorf("ResetShell(clientID, sessionID) = (%q, %q), want (client-1, s1)", gotClientID, gotSessionID)
+	}
+
+	var out resetShellOutput
+	decodeToolResult(t, res, &out)
+	if !out.Reset {
+		t.Error("Reset = false, want true")
+	}
+}
+
+func TestHandleSession_CancelCommandToolForwardsSessionIDAndDecodesHandle(t *testing.T) {
+	want := *domain.NewCommandHandle("s1", "sleep 100")
+	var gotClientID, gotSessionID string
+	control := &fakeAIControlUseCase{
+		cancelCommandFunc: func(clientID, sessionID string) (domain.CommandHandle, error) {
+			gotClientID, gotSessionID = clientID, sessionID
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "cancel_command",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(cancel_command) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" {
+		t.Errorf("CancelCommand(clientID, sessionID) = (%q, %q), want (client-1, s1)", gotClientID, gotSessionID)
+	}
+
+	var out cancelCommandOutput
+	decodeToolResult(t, res, &out)
+	if out.Handle.SessionID != "s1" || out.Handle.State != domain.CmdRunning {
+		t.Errorf("Handle = %+v, want a running handle for s1", out.Handle)
+	}
+}
+
+func TestHandleSession_CancelCommandToolSurfacesNoActiveCommandAsError(t *testing.T) {
+	control := &fakeAIControlUseCase{
+		cancelCommandFunc: func(clientID, sessionID string) (domain.CommandHandle, error) {
+			return domain.CommandHandle{}, errors.New("aicontrol: no active command")
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "cancel_command",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(cancel_command) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true when there is no active command")
+	}
+}
+
+func TestHandleSession_BackgroundCommandToolForwardsSessionIDAndDecodesHandle(t *testing.T) {
+	want := domain.CommandHandle{SessionID: "s1", Command: "sleep 100", State: domain.CmdBackground, Seq: 2}
+	var gotClientID, gotSessionID string
+	control := &fakeAIControlUseCase{
+		backgroundCommandFunc: func(clientID, sessionID string) (domain.CommandHandle, error) {
+			gotClientID, gotSessionID = clientID, sessionID
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "background_command",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(background_command) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" {
+		t.Errorf("BackgroundCommand(clientID, sessionID) = (%q, %q), want (client-1, s1)", gotClientID, gotSessionID)
+	}
+
+	var out backgroundCommandOutput
+	decodeToolResult(t, res, &out)
+	if out.Handle.State != domain.CmdBackground {
+		t.Errorf("Handle.State = %q, want %q", out.Handle.State, domain.CmdBackground)
 	}
 }
 

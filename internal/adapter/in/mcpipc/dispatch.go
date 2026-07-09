@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"sort"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -23,11 +24,12 @@ const (
 
 // Dispatch is the real SessionHandler (A6): it hosts one mcp.Server per
 // authenticated connection, mapping MCP tools/resources to
-// in.AIControlUseCase under the connection's clientID (doc 20 D3). The
-// read-only slice (ListSessions/ListHosts/ReadScrollback) plus the minimal
-// control loop (RequestControl/RunCommand/ReleaseControl) are exposed here
-// -- connect_host, fan-out scope requests, get_shell_state/reset_shell, and
-// cancel/background remain unexposed for a later slice.
+// in.AIControlUseCase under the connection's clientID (doc 20 D3). The full
+// AIControlUseCase surface is now exposed as MCP tools: the read-only slice
+// (ListSessions/ListHosts/ReadScrollback), the control loop
+// (RequestControl/RunCommand/ReleaseControl), and the remaining session
+// operations -- connect_host, request_connection_scope (fan-out), get_shell_
+// state/reset_shell, and cancel_command/background_command.
 type Dispatch struct {
 	control in.AIControlUseCase
 }
@@ -103,6 +105,59 @@ type releaseControlOutput struct {
 	Released bool `json:"released"`
 }
 
+type connectHostInput struct {
+	HostName string `json:"hostName"`
+}
+
+type connectHostOutput struct {
+	Session domain.SessionView `json:"session"`
+}
+
+type requestConnectionScopeInput struct {
+	HostNames []string `json:"hostNames"`
+}
+
+// requestConnectionScopeOutput re-projects domain.ConnectionScope: its
+// HostNames is a map[string]bool (all true) that would serialize as a JSON
+// object, so it is flattened to a sorted array an AI consumer can read.
+type requestConnectionScopeOutput struct {
+	ScopeID       string   `json:"scopeId"`
+	HostNames     []string `json:"hostNames"`
+	MaxConcurrent int      `json:"maxConcurrent"`
+}
+
+type getShellStateInput struct {
+	SessionID string `json:"sessionId"`
+}
+
+type getShellStateOutput struct {
+	ShellState domain.ShellState `json:"shellState"`
+}
+
+type resetShellInput struct {
+	SessionID string `json:"sessionId"`
+}
+
+type resetShellOutput struct {
+	Reset bool `json:"reset"`
+}
+
+type cancelCommandInput struct {
+	SessionID string `json:"sessionId"`
+}
+
+type cancelCommandOutput struct {
+	Handle domain.CommandHandle `json:"handle"`
+}
+
+type backgroundCommandInput struct {
+	SessionID string `json:"sessionId"`
+}
+
+type backgroundCommandOutput struct {
+	Handle domain.CommandHandle `json:"handle"`
+}
+
 func (d *Dispatch) registerTools(server *mcp.Server, clientID string) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_sessions",
@@ -172,6 +227,82 @@ func (d *Dispatch) registerTools(server *mcp.Server, clientID string) {
 			return nil, releaseControlOutput{}, err
 		}
 		out := releaseControlOutput{Released: true}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "connect_host",
+		Description: "Open a fresh SSH session to a saved host by name (from list_hosts). Credentials never cross this boundary -- the custodian fills them. Blocks for human approval (up to 60s) unless a request_connection_scope grant already covers the host.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in connectHostInput) (*mcp.CallToolResult, connectHostOutput, error) {
+		session, err := d.control.ConnectHost(clientID, in.HostName)
+		if err != nil {
+			return nil, connectHostOutput{}, err
+		}
+		out := connectHostOutput{Session: session}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "request_connection_scope",
+		Description: "Batch pre-authorize connect_host over a named host set (fan-out). Blocks for one human approval (up to 60s); afterwards connect_host to those hosts auto-grants up to the returned concurrent-session cap.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in requestConnectionScopeInput) (*mcp.CallToolResult, requestConnectionScopeOutput, error) {
+		scope, err := d.control.RequestConnectionScope(clientID, in.HostNames)
+		if err != nil {
+			return nil, requestConnectionScopeOutput{}, err
+		}
+		hostNames := make([]string, 0, len(scope.HostNames))
+		for name := range scope.HostNames {
+			hostNames = append(hostNames, name)
+		}
+		sort.Strings(hostNames)
+		out := requestConnectionScopeOutput{ScopeID: scope.ID, HostNames: hostNames, MaxConcurrent: scope.MaxConcurrent}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_shell_state",
+		Description: "Snapshot a delegated session's shell state (cwd and key env vars) via an on-demand probe.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in getShellStateInput) (*mcp.CallToolResult, getShellStateOutput, error) {
+		state, err := d.control.GetShellState(clientID, in.SessionID)
+		if err != nil {
+			return nil, getShellStateOutput{}, err
+		}
+		out := getShellStateOutput{ShellState: state}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "reset_shell",
+		Description: "Reset a delegated session's shell to a clean state (interrupt the current line, return to the home directory).",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in resetShellInput) (*mcp.CallToolResult, resetShellOutput, error) {
+		if err := d.control.ResetShell(clientID, in.SessionID); err != nil {
+			return nil, resetShellOutput{}, err
+		}
+		out := resetShellOutput{Reset: true}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cancel_command",
+		Description: "Interrupt the in-flight command in a delegated session (sends Ctrl-C). Returns the running command's handle; its terminal state follows asynchronously.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in cancelCommandInput) (*mcp.CallToolResult, cancelCommandOutput, error) {
+		handle, err := d.control.CancelCommand(clientID, in.SessionID)
+		if err != nil {
+			return nil, cancelCommandOutput{}, err
+		}
+		out := cancelCommandOutput{Handle: handle}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "background_command",
+		Description: "Send the in-flight command in a delegated session to the background (Ctrl-Z then bg). Returns the handle in its new background terminal state.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in backgroundCommandInput) (*mcp.CallToolResult, backgroundCommandOutput, error) {
+		handle, err := d.control.BackgroundCommand(clientID, in.SessionID)
+		if err != nil {
+			return nil, backgroundCommandOutput{}, err
+		}
+		out := backgroundCommandOutput{Handle: handle}
 		return textResult(out), out, nil
 	})
 }
