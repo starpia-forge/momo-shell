@@ -39,6 +39,12 @@ type Verdict struct {
 	// target, or static analysis failed).
 	GuardedCmd string
 	Reasons    []string
+	// Analysis is the parsed command this Verdict was classified from --
+	// zero-valued (empty Commands) when static analysis failed (unsupported
+	// dialect, parse error). Exposed for D4a's interactive-command detector
+	// (aicontrol.detectInteractive), which needs the same parsed verb/args
+	// data classify already consumed, rather than re-parsing.
+	Analysis out.CommandAnalysis
 }
 
 // AutoRunnable reports whether a command may execute without approval --
@@ -77,5 +83,6 @@ func (s *Service) Resolve(command, dialect string) Verdict {
 	}
 	v := classify(analysis)
 	v.GuardedCmd = buildGuardedCommand(strings.TrimSpace(command), analysis)
+	v.Analysis = analysis
 	return v
 }

@@ -64,6 +64,10 @@ func (s *Service) RunCommand(clientID, sessionID, command string) (domain.Comman
 
 	verdict := s.resolver.Resolve(command, dialectFromShell(shell))
 
+	if hint, ok := detectInteractive(verdict.Analysis); ok {
+		return domain.CommandHandle{}, &InteractiveCommandError{Verb: hint.Verb, Suggestion: hint.Suggestion}
+	}
+
 	toRun := command
 	if verdict.GuardedCmd != "" {
 		toRun = verdict.GuardedCmd
