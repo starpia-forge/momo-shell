@@ -52,6 +52,10 @@ func (f *fakeAIControlUseCase) RunCommand(clientID, sessionID, command string) (
 	panic("not used by dispatch's read-only scope")
 }
 
+func (f *fakeAIControlUseCase) RequestConnectionScope(clientID string, hostNames []string) (domain.ConnectionScope, error) {
+	panic("not used by dispatch's read-only scope")
+}
+
 var _ in.AIControlUseCase = (*fakeAIControlUseCase)(nil)
 
 // startDispatchSession wires Dispatch.HandleSession to one end of a

@@ -20,6 +20,10 @@ import "momo-shell/internal/core/domain"
 type AIApprovalUseCase interface {
 	RespondConnectApproval(requestID string, approve bool) error
 	RespondControlApproval(requestID string, approve bool) error
+	// RespondConnectionScopeApproval answers a pending
+	// mcp:connection-scope-approval request raised by RequestConnectionScope
+	// (fan-out batch grant, doc 17 §5.2/FR-10).
+	RespondConnectionScopeApproval(requestID string, approve bool) error
 	RespondCommandApproval(requestID string, approve bool) error
 	// RespondPairing answers a pending mcp:pair-request raised by an
 	// incoming MCP client's pair frame (HandlePair).

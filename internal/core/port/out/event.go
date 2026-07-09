@@ -95,6 +95,15 @@ func TopicMCPControlApproval() string {
 	return "mcp:control-approval"
 }
 
+// TopicMCPConnectionScopeApproval notifies the frontend of a pending
+// RequestConnectionScope batch grant request (fan-out over a named host
+// set, doc 17 §5.2/FR-10) awaiting the local user's approve/deny decision
+// via RespondConnectionScopeApproval. Separate from TopicMCPConnectApproval
+// since a scope grant covers many hosts in one dialog, not one.
+func TopicMCPConnectionScopeApproval() string {
+	return "mcp:connection-scope-approval"
+}
+
 // TopicMCPCommandApproval notifies the frontend of a pending RunCommand
 // request (risk medium/high/uncertain) awaiting the local user's
 // approve/deny decision via RespondCommandApproval. Separate from the

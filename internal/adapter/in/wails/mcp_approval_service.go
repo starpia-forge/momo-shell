@@ -18,11 +18,11 @@ type MCPClientDTO struct {
 }
 
 // MCPApprovalService is the Wails-bound facade over in.AIApprovalUseCase's
-// MCP-facing approve/deny decisions (connect/control/command grants and
-// client pairing), client administration (list/revoke), and the control
-// kill switch (KillControl). It only passes calls through -- no business
-// logic -- mirroring ShareService's RespondPairing/ListClients/RevokeClient
-// convention.
+// MCP-facing approve/deny decisions (connect/control/command/connection-scope
+// grants and client pairing), client administration (list/revoke), and the
+// control kill switch (KillControl). It only passes calls through -- no
+// business logic -- mirroring ShareService's
+// RespondPairing/ListClients/RevokeClient convention.
 type MCPApprovalService struct {
 	uc in.AIApprovalUseCase
 }
@@ -37,6 +37,10 @@ func (s *MCPApprovalService) RespondConnectApproval(requestID string, approve bo
 
 func (s *MCPApprovalService) RespondControlApproval(requestID string, approve bool) error {
 	return s.uc.RespondControlApproval(requestID, approve)
+}
+
+func (s *MCPApprovalService) RespondConnectionScopeApproval(requestID string, approve bool) error {
+	return s.uc.RespondConnectionScopeApproval(requestID, approve)
 }
 
 func (s *MCPApprovalService) RespondCommandApproval(requestID string, approve bool) error {

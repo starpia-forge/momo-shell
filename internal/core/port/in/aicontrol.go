@@ -25,8 +25,19 @@ type AIControlUseCase interface {
 	// SSH session against it, blocking for a human grant decision first
 	// (design doc 17 §5.2, path A -- every connect_host call is a fresh
 	// delegation). Credentials never cross this boundary: the caller only
-	// ever supplies a name.
+	// ever supplies a name. If clientID holds an active ConnectionScope
+	// (RequestConnectionScope) covering hostName and under its concurrent
+	// cap, the grant is automatic -- no approval prompt.
 	ConnectHost(clientID, hostName string) (domain.SessionView, error)
+
+	// RequestConnectionScope is the optional fan-out pre-authorization
+	// (design doc 17 §2.3/§5.2, FR-10): a human approves one batch grant
+	// over hostNames, after which ConnectHost calls to hosts inside the
+	// scope auto-delegate (up to the scope's concurrent-session cap)
+	// instead of prompting individually. Hosts outside the scope, or
+	// requests once the cap is reached, still fall back to ConnectHost's
+	// normal per-call approval.
+	RequestConnectionScope(clientID string, hostNames []string) (domain.ConnectionScope, error)
 
 	// RequestControl delegates an already-open session to clientID under
 	// scope, blocking for a human grant decision. A session already

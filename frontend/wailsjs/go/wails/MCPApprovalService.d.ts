@@ -10,6 +10,8 @@ export function RespondCommandApproval(arg1:string,arg2:boolean):Promise<void>;
 
 export function RespondConnectApproval(arg1:string,arg2:boolean):Promise<void>;
 
+export function RespondConnectionScopeApproval(arg1:string,arg2:boolean):Promise<void>;
+
 export function RespondControlApproval(arg1:string,arg2:boolean):Promise<void>;
 
 export function RespondPairing(arg1:string,arg2:boolean):Promise<void>;

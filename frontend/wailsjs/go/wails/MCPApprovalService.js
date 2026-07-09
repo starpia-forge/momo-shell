@@ -18,6 +18,10 @@ export function RespondConnectApproval(arg1, arg2) {
   return window['go']['wails']['MCPApprovalService']['RespondConnectApproval'](arg1, arg2);
 }
 
+export function RespondConnectionScopeApproval(arg1, arg2) {
+  return window['go']['wails']['MCPApprovalService']['RespondConnectionScopeApproval'](arg1, arg2);
+}
+
 export function RespondControlApproval(arg1, arg2) {
   return window['go']['wails']['MCPApprovalService']['RespondControlApproval'](arg1, arg2);
 }
