@@ -181,6 +181,8 @@ func (s *Service) ConnectHost(clientID, hostName string) (domain.SessionView, er
 	s.delegations[info.ID] = deleg
 	s.mu.Unlock()
 
+	s.publishDelegation(info.ID, clientID, "delegated", "granted", deleg.AICreated)
+
 	// State is the creation-time invariant CreateSSH documents (always
 	// Connecting, dial happens in background), not a live query -- there is
 	// no live session-state accessor yet (that's ListSessions/A4's gap).

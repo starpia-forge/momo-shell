@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { disposeSession, useSessionStore } from '../../../entities/session'
 import { useHostStore, type Host } from '../../../entities/host'
 import { DestinationBar } from '../../../features/file-upload'
+import { MCPApprovalDialog } from '../../../features/mcp-approval'
+import { DelegationBadge, DelegationPanel } from '../../../features/mcp-control'
 import { MCPPairApprovalDialog } from '../../../features/mcp-pairing'
 import { PairApprovalDialog } from '../../../features/peer-pairing'
 import { HostKeyPrompt } from '../../../features/session-connect'
@@ -140,7 +142,16 @@ export function WorkspacePage() {
 
   return (
     <div className="workspace flex flex-col h-screen w-screen bg-canvas text-fg">
-      <TabBar onCloseTab={handleCloseTab} onPaneDrop={handlePaneDrop} trailing={<TransferBadge />} />
+      <TabBar
+        onCloseTab={handleCloseTab}
+        onPaneDrop={handlePaneDrop}
+        trailing={
+          <>
+            <TransferBadge />
+            <DelegationBadge />
+          </>
+        }
+      />
       <div className="flex-1 flex min-h-0">
         {screen === 'settings' ? (
           <SettingsPage />
@@ -175,9 +186,11 @@ export function WorkspacePage() {
       </div>
       <StatusBar sessionId={activeTab?.sessionId ?? null} />
       <TransferCenter />
+      <DelegationPanel />
       <HostKeyPrompt />
       <PairApprovalDialog />
       <MCPPairApprovalDialog />
+      <MCPApprovalDialog />
       <DestinationBar />
     </div>
   )

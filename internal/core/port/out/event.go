@@ -148,3 +148,14 @@ func TopicMCPPairRequestResolved() string {
 func TopicMCPShellState() string {
 	return "mcp:shell-state"
 }
+
+// TopicMCPDelegation notifies the frontend of a delegation lifecycle
+// transition (grant/release/kill/expire) for the control-tab badge/panel
+// (design doc 17 §5.1: "mcp:delegation 이벤트 → 통제 탭 배지/테두리", B5a).
+// Fires from every delegation-mutating path: ConnectHost/RequestControl
+// (grant), ReleaseControl (release), KillControl (kill), and SweepExpired
+// (expire) -- including fan-out auto-grants (ConnectionScope), which have
+// no separate approval event to piggyback on.
+func TopicMCPDelegation() string {
+	return "mcp:delegation"
+}

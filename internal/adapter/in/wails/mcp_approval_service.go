@@ -71,6 +71,34 @@ func (s *MCPApprovalService) RevokeClient(clientID string) error {
 	return s.uc.RevokeMCPClient(clientID)
 }
 
+// DelegationDTO is the JSON-facing response DTO for an active delegation
+// (B5a's control-panel snapshot). Unlike domain.Delegation, it omits
+// State/Scope/LastActAt/ScopeID -- ListDelegations only ever returns active
+// delegations (the panel doesn't need the FSM substate), and the panel's
+// scope/expiry display is deferred to B5b.
+type DelegationDTO struct {
+	SessionID string `json:"sessionId"`
+	ClientID  string `json:"clientId"`
+	AICreated bool   `json:"aiCreated"`
+	GrantedAt int64  `json:"grantedAt"`
+}
+
+func (s *MCPApprovalService) ListDelegations() ([]DelegationDTO, error) {
+	delegations, err := s.uc.ListDelegations()
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]DelegationDTO, len(delegations))
+	for i, d := range delegations {
+		dtos[i] = delegationToDTO(d)
+	}
+	return dtos, nil
+}
+
+func delegationToDTO(d domain.Delegation) DelegationDTO {
+	return DelegationDTO{SessionID: d.SessionID, ClientID: d.ClientID, AICreated: d.AICreated, GrantedAt: d.GrantedAt.Unix()}
+}
+
 func mcpClientToDTO(c domain.MCPClient) MCPClientDTO {
 	dto := MCPClientDTO{ID: c.ClientID, Name: c.Name, PairedAt: c.PairedAt.Unix(), Revoked: c.Revoked}
 	if c.LastSeenAt != nil {

@@ -6,6 +6,8 @@ export function KillControl(arg1:string):Promise<void>;
 
 export function ListClients():Promise<Array<wails.MCPClientDTO>>;
 
+export function ListDelegations():Promise<Array<wails.DelegationDTO>>;
+
 export function RespondCommandApproval(arg1:string,arg2:boolean):Promise<void>;
 
 export function RespondConnectApproval(arg1:string,arg2:boolean):Promise<void>;

@@ -294,6 +294,24 @@
     "reject": "拒否",
     "approve": "承認"
   },
+  "mcpApproval": {
+    "connectTitle": "AI接続リクエスト",
+    "connectBody": "AIクライアントがホスト「{{hostName}}」への接続をリクエストしています。",
+    "controlTitle": "AI制御リクエスト",
+    "controlBody": "AIクライアントが既存のセッション({{sessionId}})の制御を引き継ごうとしています。",
+    "scopeTitle": "AI一括接続リクエスト",
+    "scopeBody": "AIクライアントが{{count}}件のホストへの接続をリクエストしています: {{hostNames}}。",
+    "commandTitle": "AIコマンド承認",
+    "commandUncertain": "不確実 -- 動的評価が必要な場合があります",
+    "commandGuarded": "ガード挿入済みコマンド(実際に実行される内容)",
+    "reject": "拒否",
+    "approve": "承認"
+  },
+  "delegation": {
+    "badgeLabel": "{{count}}件制御中",
+    "kill": "強制解除",
+    "tabIndicator": "AI制御中"
+  },
   "shareErrors": {
     "lockout": "しばらくしてから再試行してください (60秒)",
     "certChanged": "ピアの証明書が変更されました。再度ペアリングしてください",

@@ -294,6 +294,24 @@
     "reject": "거절",
     "approve": "승인"
   },
+  "mcpApproval": {
+    "connectTitle": "AI 연결 요청",
+    "connectBody": "AI 클라이언트가 호스트 \"{{hostName}}\"에 연결하려고 합니다.",
+    "controlTitle": "AI 통제 요청",
+    "controlBody": "AI 클라이언트가 기존 세션({{sessionId}})의 통제권을 가져가려고 합니다.",
+    "scopeTitle": "AI 일괄 연결 요청",
+    "scopeBody": "AI 클라이언트가 호스트 {{count}}개에 연결하려고 합니다: {{hostNames}}.",
+    "commandTitle": "AI 명령 승인",
+    "commandUncertain": "불확실 -- 동적 평가가 필요할 수 있음",
+    "commandGuarded": "가드가 삽입된 명령(실제 실행됨)",
+    "reject": "거절",
+    "approve": "승인"
+  },
+  "delegation": {
+    "badgeLabel": "{{count}}개 통제 중",
+    "kill": "회수",
+    "tabIndicator": "AI 통제 중"
+  },
   "shareErrors": {
     "lockout": "잠시 후 다시 시도하세요 (60초)",
     "certChanged": "피어의 인증서가 변경되었습니다. 다시 페어링하세요",

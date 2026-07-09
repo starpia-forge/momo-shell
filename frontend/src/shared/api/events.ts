@@ -15,6 +15,11 @@ export const topics = {
   sharePeersUpdated: () => `share:peers-updated`,
   mcpPairRequest: () => `mcp:pair-request`,
   mcpPairRequestResolved: () => `mcp:pair-request-resolved`,
+  mcpConnectApproval: () => `mcp:connect-approval`,
+  mcpControlApproval: () => `mcp:control-approval`,
+  mcpConnectionScopeApproval: () => `mcp:connection-scope-approval`,
+  mcpCommandApproval: () => `mcp:cmd-approval`,
+  mcpDelegation: () => `mcp:delegation`,
 }
 
 export interface SessionStatePayload {
@@ -103,6 +108,62 @@ export interface MCPPairRequestPayload {
  * mirror. */
 export interface MCPPairRequestResolvedPayload {
   requestId: string
+}
+
+/** Published when connect_host is awaiting the local user's approve/deny
+ * decision via respondConnectApproval (no active ConnectionScope covers the
+ * requested host, so this isn't an auto-grant). */
+export interface MCPConnectApprovalPayload {
+  requestId: string
+  clientId: string
+  hostName: string
+}
+
+/** Published when RequestControl (taking over an existing, human-opened
+ * session) is awaiting the local user's approve/deny decision via
+ * respondControlApproval. */
+export interface MCPControlApprovalPayload {
+  requestId: string
+  clientId: string
+  sessionId: string
+}
+
+/** Published when a fan-out RequestConnectionScope batch grant is awaiting
+ * the local user's approve/deny decision via
+ * respondConnectionScopeApproval -- one dialog covers every host in the
+ * batch. */
+export interface MCPConnectionScopeApprovalPayload {
+  requestId: string
+  clientId: string
+  hostNames: string[]
+}
+
+/** Published when a run_command call resolved to medium/high risk (or an
+ * uncertain static analysis) and is awaiting the local user's approve/deny
+ * decision via respondCommandApproval. guardedCmd is the actual string that
+ * will execute if approved (inline-guarded); command is the original for
+ * display. */
+export interface MCPCommandApprovalPayload {
+  requestId: string
+  clientId: string
+  sessionId: string
+  command: string
+  risk: string
+  uncertain: boolean
+  reasons: string[]
+  guardedCmd: string
+}
+
+/** Published on every delegation lifecycle transition (grant/release/
+ * kill/expire) so the frontend's control panel can stay in sync without
+ * polling -- state is "delegated" on grant, "none" on every kind of
+ * teardown (reason distinguishes released/killed/expired/granted). */
+export interface MCPDelegationPayload {
+  sessionId: string
+  clientId: string
+  state: 'delegated' | 'none'
+  reason: 'granted' | 'released' | 'killed' | 'expired'
+  aiCreated: boolean
 }
 
 // subscribe wraps EventsOn with a typed callback and returns the unsubscribe

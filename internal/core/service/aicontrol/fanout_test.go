@@ -132,15 +132,23 @@ func TestConnectHost_WithinScope_AutoApprovesWithoutPrompt(t *testing.T) {
 	host := domain.Host{ID: "host-1", Name: "web-1"}
 	svc, pub, _ := newTestService(host)
 	scope := grantScope(t, svc, pub, "client-1", []string{"web-1"})
-	eventsBefore := len(pub.all())
 
 	view, err := svc.ConnectHost("client-1", "web-1")
 
 	if err != nil {
 		t.Fatalf("ConnectHost() error = %v", err)
 	}
-	if len(pub.all()) != eventsBefore {
-		t.Error("expected no new approval event for a connect within an active scope")
+	for _, e := range pub.all() {
+		if _, ok := e.payload.(connectApprovalPayload); ok {
+			t.Error("expected no mcp:connect-approval prompt for a connect within an active scope")
+		}
+	}
+	// The auto-grant itself still publishes mcp:delegation (B5a) -- the
+	// fan-out path has no approval dialog to piggyback on, so this is the
+	// only signal the frontend gets for an auto-approved session.
+	payload := lastDelegationPayload(t, pub)
+	if payload.SessionID != view.ID || payload.State != "delegated" || payload.Reason != "granted" {
+		t.Errorf("payload = %+v, want SessionID=%s State=delegated Reason=granted", payload, view.ID)
 	}
 
 	svc.mu.Lock()

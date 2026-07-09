@@ -10,6 +10,10 @@ export function ListClients() {
   return window['go']['wails']['MCPApprovalService']['ListClients']();
 }
 
+export function ListDelegations() {
+  return window['go']['wails']['MCPApprovalService']['ListDelegations']();
+}
+
 export function RespondCommandApproval(arg1, arg2) {
   return window['go']['wails']['MCPApprovalService']['RespondCommandApproval'](arg1, arg2);
 }

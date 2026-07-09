@@ -45,4 +45,9 @@ type AIApprovalUseCase interface {
 	// the next AuthClient call rejects its token. An already-authenticated
 	// connection is not force-closed by this call.
 	RevokeMCPClient(clientID string) error
+
+	// ListDelegations returns every currently active delegation, for the
+	// frontend's control panel to seed its store on load (B5a) --
+	// mcp:delegation only reports transitions from that point forward.
+	ListDelegations() ([]domain.Delegation, error)
 }

@@ -239,7 +239,7 @@ func TestReleaseControl_NotDelegatedIsRejected(t *testing.T) {
 }
 
 func TestSweepExpired_ReapsOnlyExpiredDelegations(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, pub, _ := newTestService()
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	fresh := domain.NewDelegation("sess-fresh", "client-1", domain.ControlScope{})
@@ -275,5 +275,10 @@ func TestSweepExpired_ReapsOnlyExpiredDelegations(t *testing.T) {
 	}
 	if stale.State != domain.DelegExpired {
 		t.Errorf("stale.State = %v, want %v", stale.State, domain.DelegExpired)
+	}
+
+	payload := lastDelegationPayload(t, pub)
+	if payload.SessionID != "sess-stale" || payload.State != "none" || payload.Reason != "expired" {
+		t.Errorf("payload = %+v, want SessionID=sess-stale State=none Reason=expired", payload)
 	}
 }

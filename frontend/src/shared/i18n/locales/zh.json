@@ -294,6 +294,24 @@
     "reject": "拒绝",
     "approve": "批准"
   },
+  "mcpApproval": {
+    "connectTitle": "AI 连接请求",
+    "connectBody": "AI 客户端请求连接到主机 \"{{hostName}}\"。",
+    "controlTitle": "AI 控制请求",
+    "controlBody": "AI 客户端请求接管现有会话（{{sessionId}}）的控制权。",
+    "scopeTitle": "AI 批量连接请求",
+    "scopeBody": "AI 客户端请求连接到 {{count}} 台主机：{{hostNames}}。",
+    "commandTitle": "AI 命令批准",
+    "commandUncertain": "不确定 -- 可能需要动态求值",
+    "commandGuarded": "已插入防护的命令（实际执行内容）",
+    "reject": "拒绝",
+    "approve": "批准"
+  },
+  "delegation": {
+    "badgeLabel": "{{count}} 个受控",
+    "kill": "终止",
+    "tabIndicator": "AI 控制中"
+  },
   "shareErrors": {
     "lockout": "请稍后重试（60秒）",
     "certChanged": "对方的证书已更改，请重新配对",

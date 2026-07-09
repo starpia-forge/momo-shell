@@ -12,6 +12,24 @@ export namespace wails {
 	        this.version = source["version"];
 	    }
 	}
+	export class DelegationDTO {
+	    sessionId: string;
+	    clientId: string;
+	    aiCreated: boolean;
+	    grantedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DelegationDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sessionId = source["sessionId"];
+	        this.clientId = source["clientId"];
+	        this.aiCreated = source["aiCreated"];
+	        this.grantedAt = source["grantedAt"];
+	    }
+	}
 	export class HistoryEntryDTO {
 	    id: number;
 	    hostId?: string;

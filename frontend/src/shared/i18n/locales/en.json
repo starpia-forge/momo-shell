@@ -297,6 +297,24 @@
     "reject": "Reject",
     "approve": "Approve"
   },
+  "mcpApproval": {
+    "connectTitle": "AI Connect Request",
+    "connectBody": "An AI client wants to connect to host \"{{hostName}}\".",
+    "controlTitle": "AI Control Request",
+    "controlBody": "An AI client wants to take control of an existing session ({{sessionId}}).",
+    "scopeTitle": "AI Fan-out Connect Request",
+    "scopeBody": "An AI client wants to connect to {{count}} hosts: {{hostNames}}.",
+    "commandTitle": "AI Command Approval",
+    "commandUncertain": "Uncertain -- may require dynamic evaluation",
+    "commandGuarded": "Guarded command (actually executed)",
+    "reject": "Reject",
+    "approve": "Approve"
+  },
+  "delegation": {
+    "badgeLabel": "{{count}} controlled",
+    "kill": "Kill",
+    "tabIndicator": "AI-controlled"
+  },
   "shareErrors": {
     "lockout": "Try again in a moment (60s)",
     "certChanged": "The peer's certificate has changed. Please pair again",

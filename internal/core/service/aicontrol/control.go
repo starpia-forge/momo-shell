@@ -76,6 +76,7 @@ func (s *Service) RequestControl(clientID, sessionID string, scope domain.Contro
 	s.delegations[sessionID] = deleg
 	s.mu.Unlock()
 
+	s.publishDelegation(sessionID, clientID, "delegated", "granted", deleg.AICreated)
 	return *deleg, nil
 }
 
@@ -100,6 +101,8 @@ func (s *Service) ReleaseControl(clientID, sessionID string) error {
 	s.mu.Lock()
 	delete(s.delegations, sessionID)
 	s.mu.Unlock()
+
+	s.publishDelegation(sessionID, clientID, "none", "released", deleg.AICreated)
 	return nil
 }
 
@@ -125,11 +128,14 @@ func (s *Service) KillControl(sessionID string) error {
 		return ErrNotDelegated
 	}
 	aiCreated := deleg.AICreated
+	clientID := deleg.ClientID
 
 	_ = deleg.TransitionTo(domain.DelegNone) // every state can reach None (delegation.go)
 	delete(s.delegations, sessionID)
 	delete(s.commands, sessionID)
 	s.mu.Unlock()
+
+	s.publishDelegation(sessionID, clientID, "none", "killed", aiCreated)
 
 	if aiCreated {
 		_ = s.sessions.Close(sessionID)
@@ -197,18 +203,25 @@ func (s *Service) RespondControlApproval(requestID string, approve bool) error {
 // start any timer itself. Callers decide when/how often to invoke it;
 // wiring a periodic call lands with whichever phase starts
 // aicontrol.Service's lifecycle (e.g. A7's composition-root wiring), since
-// nothing owns starting/stopping such a goroutine yet.
+// nothing owns starting/stopping such a goroutine yet. Publishes
+// mcp:delegation(reason=expired) for each reaped delegation (B5a) so the
+// frontend's control panel drops it without polling.
 func (s *Service) SweepExpired(now time.Time) []string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	var reaped []string
+	var notify []*domain.Delegation
 	for id, d := range s.delegations {
 		if d.IsExpired(now, delegationExpiryTimeout) {
 			_ = d.TransitionTo(domain.DelegExpired)
 			delete(s.delegations, id)
 			reaped = append(reaped, id)
+			notify = append(notify, d)
 		}
+	}
+	s.mu.Unlock()
+
+	for _, d := range notify {
+		s.publishDelegation(d.SessionID, d.ClientID, "none", "expired", d.AICreated)
 	}
 	return reaped
 }

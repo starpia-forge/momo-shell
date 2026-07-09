@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useTabStore, type Tab } from '../model/store'
 import { useSessionStore, type SessionState } from '../../../entities/session'
 import { useHostStore } from '../../../entities/host'
+import { useDelegationStore } from '../../../features/mcp-control'
 import { cn } from '../../../shared/lib/cn'
 import { decodePaneDrag, isPaneDrag, type PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { IconButton, StatusDot, type DotStatus } from '../../../shared/ui'
@@ -44,6 +45,7 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
   const showSftp = useTabStore((s) => s.showSftp)
   const sessions = useSessionStore((s) => s.sessions)
   const hosts = useHostStore((s) => s.hosts)
+  const delegations = useDelegationStore((s) => s.delegations)
 
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
@@ -176,6 +178,13 @@ export function TabBar({ onCloseTab, onPaneDrop, trailing }: TabBarProps) {
               onMouseDown={(e) => handleMiddleClick(e, tab)}
             >
               <StatusDot status={DOT_STATUS[state]} />
+              {delegations[tab.sessionId] && (
+                <span
+                  className="flex-none w-1.75 h-1.75 rounded-full bg-accent"
+                  title={t('delegation.tabIndicator')}
+                  aria-label={t('delegation.tabIndicator')}
+                />
+              )}
               <div className="min-w-0 flex-1 leading-tight">
                 <div className={cn('text-[12.5px] overflow-hidden text-ellipsis whitespace-nowrap', active && 'font-bold')}>
                   {tab.title}
