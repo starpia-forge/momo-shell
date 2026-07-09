@@ -23,10 +23,11 @@ const (
 
 // Dispatch is the real SessionHandler (A6): it hosts one mcp.Server per
 // authenticated connection, mapping MCP tools/resources to
-// in.AIControlUseCase under the connection's clientID (doc 20 D3). This
-// cycle's scope is the read-only slice (ListSessions/ListHosts/
-// ReadScrollback) -- control/connect/run tools are added once A7/A8 make
-// their human-approval flows end-to-end testable.
+// in.AIControlUseCase under the connection's clientID (doc 20 D3). The
+// read-only slice (ListSessions/ListHosts/ReadScrollback) plus the minimal
+// control loop (RequestControl/RunCommand/ReleaseControl) are exposed here
+// -- connect_host, fan-out scope requests, get_shell_state/reset_shell, and
+// cancel/background remain unexposed for a later slice.
 type Dispatch struct {
 	control in.AIControlUseCase
 }
@@ -74,6 +75,34 @@ type readOutputInput struct {
 	SinceSeq  uint64 `json:"sinceSeq,omitempty"`
 }
 
+type requestControlInput struct {
+	SessionID  string `json:"sessionId"`
+	HostOnly   bool   `json:"hostOnly,omitempty"`
+	PathPrefix string `json:"pathPrefix,omitempty"`
+	ReadOnly   bool   `json:"readOnly,omitempty"`
+}
+
+type requestControlOutput struct {
+	Delegation domain.Delegation `json:"delegation"`
+}
+
+type runCommandInput struct {
+	SessionID string `json:"sessionId"`
+	Command   string `json:"command"`
+}
+
+type runCommandOutput struct {
+	Handle domain.CommandHandle `json:"handle"`
+}
+
+type releaseControlInput struct {
+	SessionID string `json:"sessionId"`
+}
+
+type releaseControlOutput struct {
+	Released bool `json:"released"`
+}
+
 func (d *Dispatch) registerTools(server *mcp.Server, clientID string) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_sessions",
@@ -108,6 +137,42 @@ func (d *Dispatch) registerTools(server *mcp.Server, clientID string) {
 			return nil, domain.MaskedChunk{}, err
 		}
 		return textResult(chunk), chunk, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "request_control",
+		Description: "Request control delegation over an existing session, optionally scoped (hostOnly/pathPrefix/readOnly). Blocks for human approval (up to 60s) unless already delegated.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in requestControlInput) (*mcp.CallToolResult, requestControlOutput, error) {
+		scope := domain.ControlScope{HostOnly: in.HostOnly, PathPrefix: in.PathPrefix, ReadOnly: in.ReadOnly}
+		deleg, err := d.control.RequestControl(clientID, in.SessionID, scope)
+		if err != nil {
+			return nil, requestControlOutput{}, err
+		}
+		out := requestControlOutput{Delegation: deleg}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "run_command",
+		Description: "Inject a command into a delegated session. Low-risk commands auto-run; higher-risk or uncertain commands block for human approval (up to 60s); interactive commands (editors/pagers/monitors/REPLs/prompting package managers) are rejected with a non-interactive alternative suggestion instead of running.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in runCommandInput) (*mcp.CallToolResult, runCommandOutput, error) {
+		handle, err := d.control.RunCommand(clientID, in.SessionID, in.Command)
+		if err != nil {
+			return nil, runCommandOutput{}, err
+		}
+		out := runCommandOutput{Handle: handle}
+		return textResult(out), out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "release_control",
+		Description: "Voluntarily release this client's control delegation over a session.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in releaseControlInput) (*mcp.CallToolResult, releaseControlOutput, error) {
+		if err := d.control.ReleaseControl(clientID, in.SessionID); err != nil {
+			return nil, releaseControlOutput{}, err
+		}
+		out := releaseControlOutput{Released: true}
+		return textResult(out), out, nil
 	})
 }
 

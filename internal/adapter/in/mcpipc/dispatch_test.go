@@ -3,7 +3,9 @@ package mcpipc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,17 +13,21 @@ import (
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/in"
+	"momo-shell/internal/core/service/aicontrol"
 )
 
 // fakeAIControlUseCase implements in.AIControlUseCase for dispatch tests.
-// Only the read-only slice this cycle's dispatch actually calls
-// (ListSessions/ListHosts/ReadScrollback) has a usable implementation --
-// the rest panic if ever invoked, since Dispatch's read-only scope must
-// never reach them.
+// The read-only slice (ListSessions/ListHosts/ReadScrollback) plus the
+// minimal control loop dispatch now exposes (RequestControl/RunCommand/
+// ReleaseControl) have usable injectable implementations -- the rest panic
+// if ever invoked, since dispatch does not reach them yet.
 type fakeAIControlUseCase struct {
 	listSessionsFunc   func(clientID string) ([]domain.SessionView, error)
 	listHostsFunc      func(clientID string) ([]domain.HostRef, error)
 	readScrollbackFunc func(clientID, sessionID string, sinceSeq uint64) (domain.MaskedChunk, error)
+	requestControlFunc func(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error)
+	runCommandFunc     func(clientID, sessionID, command string) (domain.CommandHandle, error)
+	releaseControlFunc func(clientID, sessionID string) error
 }
 
 func (f *fakeAIControlUseCase) ListSessions(clientID string) ([]domain.SessionView, error) {
@@ -41,15 +47,15 @@ func (f *fakeAIControlUseCase) ConnectHost(clientID, hostName string) (domain.Se
 }
 
 func (f *fakeAIControlUseCase) RequestControl(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.requestControlFunc(clientID, sessionID, scope)
 }
 
 func (f *fakeAIControlUseCase) ReleaseControl(clientID, sessionID string) error {
-	panic("not used by dispatch's read-only scope")
+	return f.releaseControlFunc(clientID, sessionID)
 }
 
 func (f *fakeAIControlUseCase) RunCommand(clientID, sessionID, command string) (domain.CommandHandle, error) {
-	panic("not used by dispatch's read-only scope")
+	return f.runCommandFunc(clientID, sessionID, command)
 }
 
 func (f *fakeAIControlUseCase) RequestConnectionScope(clientID string, hostNames []string) (domain.ConnectionScope, error) {
@@ -106,7 +112,7 @@ func startDispatchSession(t *testing.T, control in.AIControlUseCase, clientID st
 	return session, done
 }
 
-func TestHandleSession_ListToolsAdvertisesReadOnlySlice(t *testing.T) {
+func TestHandleSession_ListToolsAdvertisesToolSurface(t *testing.T) {
 	control := &fakeAIControlUseCase{}
 	session, _ := startDispatchSession(t, control, "client-1")
 
@@ -119,7 +125,10 @@ func TestHandleSession_ListToolsAdvertisesReadOnlySlice(t *testing.T) {
 	for _, tool := range res.Tools {
 		names[tool.Name] = true
 	}
-	for _, want := range []string{"list_sessions", "list_hosts", "read_output"} {
+	for _, want := range []string{
+		"list_sessions", "list_hosts", "read_output",
+		"request_control", "run_command", "release_control",
+	} {
 		if !names[want] {
 			t.Errorf("tools/list missing %q, got %v", want, names)
 		}
@@ -205,6 +214,165 @@ func TestHandleSession_ReadOutputToolForwardsSessionIDAndSinceSeq(t *testing.T) 
 	decodeToolResult(t, res, &out)
 	if out.Data != "hello" || out.NextSeq != 42 {
 		t.Errorf("MaskedChunk = %+v, want %+v", out, want)
+	}
+}
+
+func TestHandleSession_RequestControlToolForwardsScopeAndDecodesDelegation(t *testing.T) {
+	want := domain.Delegation{SessionID: "s1", ClientID: "client-1", State: domain.DelegActive}
+	var gotClientID, gotSessionID string
+	var gotScope domain.ControlScope
+	control := &fakeAIControlUseCase{
+		requestControlFunc: func(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error) {
+			gotClientID, gotSessionID, gotScope = clientID, sessionID, scope
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "request_control",
+		Arguments: map[string]any{"sessionId": "s1", "hostOnly": true, "pathPrefix": "/srv", "readOnly": true},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(request_control) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" {
+		t.Errorf("RequestControl(clientID, sessionID) = (%q, %q), want (client-1, s1)", gotClientID, gotSessionID)
+	}
+	wantScope := domain.ControlScope{HostOnly: true, PathPrefix: "/srv", ReadOnly: true}
+	if gotScope != wantScope {
+		t.Errorf("scope = %+v, want %+v", gotScope, wantScope)
+	}
+
+	var out requestControlOutput
+	decodeToolResult(t, res, &out)
+	if out.Delegation.SessionID != "s1" || out.Delegation.State != domain.DelegActive {
+		t.Errorf("Delegation = %+v, want %+v", out.Delegation, want)
+	}
+}
+
+func TestHandleSession_RequestControlToolSurfacesDenialAsError(t *testing.T) {
+	control := &fakeAIControlUseCase{
+		requestControlFunc: func(clientID, sessionID string, scope domain.ControlScope) (domain.Delegation, error) {
+			return domain.Delegation{}, errors.New("control denied by human approver")
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "request_control",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(request_control) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true for a denied control request")
+	}
+}
+
+func TestHandleSession_RunCommandToolForwardsCommandAndDecodesHandle(t *testing.T) {
+	want := *domain.NewCommandHandle("s1", "ls -la")
+	var gotClientID, gotSessionID, gotCommand string
+	control := &fakeAIControlUseCase{
+		runCommandFunc: func(clientID, sessionID, command string) (domain.CommandHandle, error) {
+			gotClientID, gotSessionID, gotCommand = clientID, sessionID, command
+			return want, nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "run_command",
+		Arguments: map[string]any{"sessionId": "s1", "command": "ls -la"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(run_command) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" || gotCommand != "ls -la" {
+		t.Errorf("RunCommand(clientID, sessionID, command) = (%q, %q, %q), want (client-1, s1, \"ls -la\")", gotClientID, gotSessionID, gotCommand)
+	}
+
+	var out runCommandOutput
+	decodeToolResult(t, res, &out)
+	if out.Handle.SessionID != "s1" || out.Handle.State != domain.CmdRunning {
+		t.Errorf("Handle = %+v, want %+v", out.Handle, want)
+	}
+}
+
+func TestHandleSession_RunCommandToolSurfacesInteractiveRejectionWithSuggestion(t *testing.T) {
+	rejectErr := &aicontrol.InteractiveCommandError{Verb: "vim", Suggestion: "write the file non-interactively instead"}
+	control := &fakeAIControlUseCase{
+		runCommandFunc: func(clientID, sessionID, command string) (domain.CommandHandle, error) {
+			return domain.CommandHandle{}, rejectErr
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "run_command",
+		Arguments: map[string]any{"sessionId": "s1", "command": "vim notes.txt"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(run_command) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true for a rejected interactive command")
+	}
+	text, ok := res.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatalf("Content[0] = %T, want *mcp.TextContent", res.Content[0])
+	}
+	if !strings.Contains(text.Text, "vim") || !strings.Contains(text.Text, "write the file non-interactively instead") {
+		t.Errorf("error text = %q, want it to mention the verb and the suggestion", text.Text)
+	}
+}
+
+func TestHandleSession_RunCommandToolSurfacesDeniedAsError(t *testing.T) {
+	control := &fakeAIControlUseCase{
+		runCommandFunc: func(clientID, sessionID, command string) (domain.CommandHandle, error) {
+			return domain.CommandHandle{}, errors.New("command denied by human approver")
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "run_command",
+		Arguments: map[string]any{"sessionId": "s1", "command": "rm -rf /"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(run_command) error = %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("result.IsError = false, want true for a denied command")
+	}
+}
+
+func TestHandleSession_ReleaseControlToolForwardsSessionIDAndReturnsReleased(t *testing.T) {
+	var gotClientID, gotSessionID string
+	control := &fakeAIControlUseCase{
+		releaseControlFunc: func(clientID, sessionID string) error {
+			gotClientID, gotSessionID = clientID, sessionID
+			return nil
+		},
+	}
+	session, _ := startDispatchSession(t, control, "client-1")
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "release_control",
+		Arguments: map[string]any{"sessionId": "s1"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(release_control) error = %v", err)
+	}
+	if gotClientID != "client-1" || gotSessionID != "s1" {
+		t.Errorf("ReleaseControl(clientID, sessionID) = (%q, %q), want (client-1, s1)", gotClientID, gotSessionID)
+	}
+
+	var out releaseControlOutput
+	decodeToolResult(t, res, &out)
+	if !out.Released {
+		t.Error("Released = false, want true")
 	}
 }
 
