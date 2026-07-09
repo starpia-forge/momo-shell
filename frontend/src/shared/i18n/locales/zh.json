@@ -304,6 +304,11 @@
     "commandTitle": "AI 命令批准",
     "commandUncertain": "不确定 -- 可能需要动态求值",
     "commandGuarded": "已插入防护的命令（实际执行内容）",
+    "commandOn": "运行位置：{{host}}",
+    "commandReasons": "风险原因",
+    "risk_low": "低",
+    "risk_medium": "中",
+    "risk_high": "高",
     "reject": "拒绝",
     "approve": "批准"
   },

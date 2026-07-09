@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Chip } from '../../../shared/ui'
+import { useHostStore } from '../../../entities/host'
+import { useSessionStore } from '../../../entities/session'
 import {
   respondCommandApproval,
   respondConnectApproval,
@@ -47,9 +49,17 @@ export function MCPApprovalDialog() {
   }, [])
 
   const requests = useApprovalQueueStore((s) => s.requests)
+  const sessions = useSessionStore((s) => s.sessions)
+  const hosts = useHostStore((s) => s.hosts)
   const entry = Object.entries(requests)[0]
   if (!entry) return null
   const [requestId, request] = entry
+
+  // Command-approval context (host/cwd) -- DelegationPanel.tsx's label-resolution
+  // pattern mirrored (B5b), so an approver can see where a risky command would run.
+  const cmdSession = request.kind === 'command' ? sessions[request.payload.sessionId] : undefined
+  const cmdHost = cmdSession?.hostId ? hosts[cmdSession.hostId] : undefined
+  const cmdLabel = cmdHost?.name ?? cmdSession?.shell ?? (request.kind === 'command' ? request.payload.sessionId : '')
 
   async function respond(approve: boolean) {
     try {
@@ -93,9 +103,13 @@ export function MCPApprovalDialog() {
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
               <Chip tone={request.payload.risk === 'high' ? 'red' : request.payload.risk === 'medium' ? 'neutral' : 'green'}>
-                {request.payload.risk}
+                {t(`mcpApproval.risk_${request.payload.risk}`, { defaultValue: request.payload.risk })}
               </Chip>
               {request.payload.uncertain && <Chip tone="red">{t('mcpApproval.commandUncertain')}</Chip>}
+            </div>
+            <div className="text-[11px] text-fg3">
+              <span>{t('mcpApproval.commandOn', { host: cmdLabel })}</span>
+              {cmdSession?.cwd && <span className="ml-1.5 font-mono">{cmdSession.cwd}</span>}
             </div>
             <code className="block px-2.5 py-2 rounded-md bg-inputbg text-[12px] font-mono whitespace-pre-wrap break-all">
               {request.payload.command}
@@ -109,11 +123,14 @@ export function MCPApprovalDialog() {
               </div>
             )}
             {request.payload.reasons.length > 0 && (
-              <ul className="m-0 pl-4.5 text-[12px] text-fg2 leading-relaxed">
-                {request.payload.reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
+              <div className="text-[11px] text-fg3">
+                <div>{t('mcpApproval.commandReasons')}</div>
+                <ul className="m-0 pl-4.5 text-[12px] text-fg2 leading-relaxed">
+                  {request.payload.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}

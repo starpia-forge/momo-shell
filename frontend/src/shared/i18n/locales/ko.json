@@ -304,6 +304,11 @@
     "commandTitle": "AI 명령 승인",
     "commandUncertain": "불확실 -- 동적 평가가 필요할 수 있음",
     "commandGuarded": "가드가 삽입된 명령(실제 실행됨)",
+    "commandOn": "실행 위치: {{host}}",
+    "commandReasons": "위험 근거",
+    "risk_low": "낮음",
+    "risk_medium": "중간",
+    "risk_high": "높음",
     "reject": "거절",
     "approve": "승인"
   },

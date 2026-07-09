@@ -304,6 +304,11 @@
     "commandTitle": "AIコマンド承認",
     "commandUncertain": "不確実 -- 動的評価が必要な場合があります",
     "commandGuarded": "ガード挿入済みコマンド(実際に実行される内容)",
+    "commandOn": "実行先: {{host}}",
+    "commandReasons": "リスクの根拠",
+    "risk_low": "低",
+    "risk_medium": "中",
+    "risk_high": "高",
     "reject": "拒否",
     "approve": "承認"
   },

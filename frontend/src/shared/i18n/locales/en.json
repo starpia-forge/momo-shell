@@ -307,6 +307,11 @@
     "commandTitle": "AI Command Approval",
     "commandUncertain": "Uncertain -- may require dynamic evaluation",
     "commandGuarded": "Guarded command (actually executed)",
+    "commandOn": "Runs on: {{host}}",
+    "commandReasons": "Risk reasons",
+    "risk_low": "Low",
+    "risk_medium": "Medium",
+    "risk_high": "High",
     "reject": "Reject",
     "approve": "Approve"
   },
