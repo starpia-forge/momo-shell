@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="build/appicon.png" alt="Momo Shell icon" width="128" />
+</p>
+
 # Momo Shell
 
 A cross-platform GUI terminal for Windows, macOS, and Linux that brings local
