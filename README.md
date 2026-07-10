@@ -1,8 +1,8 @@
 <p style="text-align: left;">
-  <img src="build/appicon.png" alt="Momo Shell icon" width="128" />
+  <img src="build/appicon.png" alt="MomoShell icon" width="128" />
 </p>
 
-# Momo Shell
+# MomoShell
 
 A cross-platform GUI terminal for Windows, macOS, and Linux that brings local
 and SSH shell work into a single app. The goal is to make everyday shell tasks —

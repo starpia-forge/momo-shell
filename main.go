@@ -223,7 +223,7 @@ func main() {
 	auditService := wailsfacade.NewAuditService(auditSvc) // E5: frontend-only audit-panel read path, not MCP-exposed
 
 	err = wailsapp.Run(&options.App{
-		Title:     "momo-shell",
+		Title:     "MomoShell",
 		Frameless: true,
 		Width:     1024,
 		Height:    768,
