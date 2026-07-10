@@ -422,6 +422,36 @@ func TestBootstrap_FullLifecycle(t *testing.T) {
 	}
 }
 
+func TestBootstrap_SSH_StripsEchoedCommandPrefix(t *testing.T) {
+	// Reproduces the "printf '" leak: the remote PTY echoes the injected
+	// command line, and the sentinel sits mid-line, preceded by the
+	// echoed shell prompt + the injection template's own literal prefix
+	// (e.g. bash's "printf '"). That partial line must never reach the
+	// terminal, even though SSH must still release a preceding complete
+	// MOTD line.
+	inj := &fakeInjector{shellOK: false}
+	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
+	svc.Attach(testSessionID, domain.KindSSH)
+	nonce := extractNonce(inj.lastWrite())
+	if nonce == "" {
+		t.Fatal("failed to extract nonce from injected script")
+	}
+
+	motd := []byte("Last login: Fri Jul 10 22:15:54 2026 from 127.0.0.1\r\n")
+	if got := svc.OnOutput(testSessionID, motd); len(got) != 0 {
+		t.Fatalf("expected MOTD to be buffered pending the sentinel, got %q", got)
+	}
+
+	echo := []byte("starpia@DESKTOP:~$ printf 'momostart_" + nonce + "\nNOISE\n")
+	got := svc.OnOutput(testSessionID, echo)
+	if !bytes.Equal(got, motd) {
+		t.Fatalf("expected only the complete MOTD line released, got %q want %q", got, motd)
+	}
+	if bytes.Contains(got, []byte("printf '")) {
+		t.Fatalf("echoed injection prefix leaked into rendered output: %q", got)
+	}
+}
+
 func TestBootstrap_GivesUpAfterMaxSentinelWait(t *testing.T) {
 	// SSH: immediate injection, so phase is already phaseWaitingSentinel by
 	// the time OnOutput is fed noise below (local injection is readiness-

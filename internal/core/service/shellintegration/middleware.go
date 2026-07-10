@@ -30,7 +30,9 @@ const (
 	// phaseWaitingSentinel: hook script was written; watching raw output
 	// for this session's own "momostart_<nonce>" text before suppressing
 	// anything, so real content already in flight (e.g. an SSH banner/MOTD
-	// arriving concurrently) is never swallowed.
+	// arriving concurrently) is never swallowed. The partial line the
+	// sentinel is found on is trimmed regardless (it's this injection's own
+	// echoed prefix), so only complete preceding lines are ever released.
 	phaseWaitingSentinel
 	// phaseSuppressing: sentinel seen; every byte is discarded (not
 	// rendered, no events dispatched) until the matching hookinstalled
@@ -255,6 +257,16 @@ func (s *Service) stepLocked(st *sessionState, chunk []byte) (rendered []byte, n
 		if idx >= 0 {
 			before := append([]byte{}, st.scratch[:idx]...)
 			if st.discardEcho {
+				before = nil
+			} else if nl := bytes.LastIndexByte(before, '\n'); nl >= 0 {
+				// The partial line the sentinel sits on is always this
+				// injection's own echoed prefix (e.g. bash's "printf '")
+				// plus a pre-injection prompt fragment that gets redrawn
+				// once hooks are confirmed -- trim it, keeping only
+				// complete preceding lines (e.g. a concurrently-arriving
+				// SSH MOTD).
+				before = before[:nl+1]
+			} else {
 				before = nil
 			}
 			rest := st.scratch[idx:]
