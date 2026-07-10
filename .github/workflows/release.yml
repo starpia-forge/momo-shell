@@ -73,7 +73,11 @@ jobs:
 
       - name: Install NSIS (Windows installer packaging)
         if: runner.os == 'Windows'
-        run: choco install nsis -y --no-progress
+        run: |
+          choco install nsis -y --no-progress
+          # choco updates the registry PATH, but steps in this job already have
+          # their env snapshotted; append to GITHUB_PATH so later steps see it.
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\NSIS"
 
       - name: Install Wails CLI
         shell: bash
@@ -86,7 +90,13 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             EXTRA_FLAGS="-nsis"
           fi
-          wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=v${APP_VERSION}" $EXTRA_FLAGS
+          TAGS=""
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            # ubuntu-latest (24.04) only ships webkit2gtk-4.1; without this tag
+            # Wails still looks for the removed webkit2gtk-4.0 pkg-config module.
+            TAGS="-tags webkit2_41"
+          fi
+          wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=v${APP_VERSION}" $TAGS $EXTRA_FLAGS
 
       - name: Build momo-mcp CLI
         shell: bash
