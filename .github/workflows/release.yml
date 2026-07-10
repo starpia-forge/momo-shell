@@ -160,6 +160,6 @@ jobs:
 
       - uses: cycjimmy/semantic-release-action@v4
         with:
-          dry_run: true # TEMP: safe first-run test, no real release. Revert to false to go live.
+          dry_run: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
