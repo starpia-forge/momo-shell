@@ -237,7 +237,8 @@
   },
   "rightDock": {
     "history": "History",
-    "files": "Files"
+    "files": "Files",
+    "audit": "Audit"
   },
   "hostForm": {
     "authPassword": "Password",
@@ -322,6 +323,25 @@
     "cmdTui": "TUI",
     "cmdDone": "exit {{exitCode}}",
     "scopeCap": "{{active}}/{{max}} sessions"
+  },
+  "auditPanel": {
+    "title": "Audit Log",
+    "filterAllClients": "All clients",
+    "filterAllDecisions": "All decisions",
+    "filterClient": "Client filter",
+    "filterDecision": "Decision filter",
+    "filterPlaceholder": "Search commands...",
+    "empty": "No audit events",
+    "kind_connect": "Connect",
+    "kind_command": "Command",
+    "kind_control": "Control",
+    "replayTitle": "Replay",
+    "guardedCmd": "Guarded command (actually executed)",
+    "approvedBy": "Approved by {{approver}}",
+    "autoRun": "Auto-run (no approver)",
+    "loadOutput": "Load output",
+    "noOutput": "No output (not captured, or retention expired)",
+    "unmaskHint": "Click to reveal original"
   },
   "shareErrors": {
     "lockout": "Try again in a moment (60s)",

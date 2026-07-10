@@ -12,6 +12,60 @@ export namespace wails {
 	        this.version = source["version"];
 	    }
 	}
+	export class AuditEventDTO {
+	    id: number;
+	    timestamp: number;
+	    clientId: string;
+	    sessionId: string;
+	    kind: string;
+	    target?: string;
+	    originalCmd?: string;
+	    guardedCmd?: string;
+	    risk?: string;
+	    uncertain?: boolean;
+	    reasons?: string[];
+	    approver?: string;
+	    decision: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuditEventDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.timestamp = source["timestamp"];
+	        this.clientId = source["clientId"];
+	        this.sessionId = source["sessionId"];
+	        this.kind = source["kind"];
+	        this.target = source["target"];
+	        this.originalCmd = source["originalCmd"];
+	        this.guardedCmd = source["guardedCmd"];
+	        this.risk = source["risk"];
+	        this.uncertain = source["uncertain"];
+	        this.reasons = source["reasons"];
+	        this.approver = source["approver"];
+	        this.decision = source["decision"];
+	    }
+	}
+	export class AuditOutputSegmentDTO {
+	    text?: string;
+	    redacted: boolean;
+	    type?: string;
+	    value?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuditOutputSegmentDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.text = source["text"];
+	        this.redacted = source["redacted"];
+	        this.type = source["type"];
+	        this.value = source["value"];
+	    }
+	}
 	export class ConnectionScopeDTO {
 	    scopeId: string;
 	    clientId: string;

@@ -8,6 +8,7 @@
 package audit
 
 import (
+	"sort"
 	"time"
 
 	"momo-shell/internal/core/domain"
@@ -21,12 +22,13 @@ import (
 const outputRetention = 30 * 24 * time.Hour
 
 type Service struct {
-	repo   out.AuditRepository
-	cipher *cipherBox
+	repo    out.AuditRepository
+	cipher  *cipherBox
+	scanner out.SecretScanner
 }
 
-func New(repo out.AuditRepository, secrets out.SecretStore) *Service {
-	return &Service{repo: repo, cipher: newCipherBox(secrets)}
+func New(repo out.AuditRepository, secrets out.SecretStore, scanner out.SecretScanner) *Service {
+	return &Service{repo: repo, cipher: newCipherBox(secrets), scanner: scanner}
 }
 
 // Record returns the new row's id so a caller (aicontrol's capture tap) can
@@ -73,4 +75,51 @@ func (s *Service) LoadOutput(auditID int64) ([]byte, error) {
 func (s *Service) PurgeOutputsBefore(now time.Time) error {
 	_, err := s.repo.ClearOutputsBefore(now.Add(-outputRetention).Unix())
 	return err
+}
+
+// LoadOutputSegments loads auditID's decrypted original output (LoadOutput)
+// and splits it at s.scanner's hit boundaries into alternating plain/redacted
+// runs (E5b: the audit panel's default masked render, with Value preserved
+// per-run for the panel's per-item unmask). Splicing happens here, on the
+// []byte, before any string conversion -- out.SecretHit offsets are byte
+// offsets, and splicing after a []byte->string/UTF-16 conversion (as the
+// frontend would have to) can land mid-rune on multibyte output. Returns an
+// empty (nil) slice, not an error, when LoadOutput itself reports no capture.
+func (s *Service) LoadOutputSegments(auditID int64) ([]domain.AuditOutputSegment, error) {
+	raw, err := s.LoadOutput(auditID)
+	if err != nil || raw == nil {
+		return nil, err
+	}
+	hits := s.scanner.Scan(raw)
+	return splice(raw, hits), nil
+}
+
+// splice renders text as alternating non-redacted/redacted
+// domain.AuditOutputSegments per hits -- the same start-offset-sorted,
+// non-overlapping walk as mask.redact, but producing structured segments
+// (with the original Value kept) instead of collapsing straight to a
+// [REDACTED:type] string.
+func splice(text []byte, hits []out.SecretHit) []domain.AuditOutputSegment {
+	if len(hits) == 0 {
+		return []domain.AuditOutputSegment{{Text: string(text)}}
+	}
+	sorted := append([]out.SecretHit(nil), hits...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Start < sorted[j].Start })
+
+	var segments []domain.AuditOutputSegment
+	last := 0
+	for _, h := range sorted {
+		if h.Start < last {
+			continue // defensive -- hits shouldn't overlap, but never write out-of-order
+		}
+		if h.Start > last {
+			segments = append(segments, domain.AuditOutputSegment{Text: string(text[last:h.Start])})
+		}
+		segments = append(segments, domain.AuditOutputSegment{Redacted: true, Type: h.Type, Value: h.Value})
+		last = h.End
+	}
+	if last < len(text) {
+		segments = append(segments, domain.AuditOutputSegment{Text: string(text[last:])})
+	}
+	return segments
 }

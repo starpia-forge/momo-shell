@@ -234,7 +234,8 @@
   },
   "rightDock": {
     "history": "履歴",
-    "files": "ファイル"
+    "files": "ファイル",
+    "audit": "監査"
   },
   "hostForm": {
     "authPassword": "パスワード",
@@ -319,6 +320,25 @@
     "cmdTui": "TUI",
     "cmdDone": "終了コード {{exitCode}}",
     "scopeCap": "{{active}}/{{max}} セッション"
+  },
+  "auditPanel": {
+    "title": "監査ログ",
+    "filterAllClients": "すべてのクライアント",
+    "filterAllDecisions": "すべての判定",
+    "filterClient": "クライアントフィルター",
+    "filterDecision": "判定フィルター",
+    "filterPlaceholder": "コマンドを検索...",
+    "empty": "監査イベントがありません",
+    "kind_connect": "接続",
+    "kind_command": "コマンド",
+    "kind_control": "制御",
+    "replayTitle": "リプレイ",
+    "guardedCmd": "ガード挿入済みコマンド(実際に実行される内容)",
+    "approvedBy": "承認者: {{approver}}",
+    "autoRun": "自動実行(承認者なし)",
+    "loadOutput": "出力を読み込む",
+    "noOutput": "出力なし(未キャプチャまたは保存期限切れ)",
+    "unmaskHint": "クリックして元の内容を表示"
   },
   "shareErrors": {
     "lockout": "しばらくしてから再試行してください (60秒)",

@@ -49,3 +49,18 @@ type AuditEvent struct {
 	Approver    string
 	Decision    string
 }
+
+// AuditOutputSegment is one run of a command's E3-b captured original output,
+// split at out.SecretHit boundaries (E5b: the audit panel's replay view
+// renders [REDACTED:type] markers over the true output rather than the raw
+// secret, with Value available for the panel's per-item unmask). A
+// non-redacted run carries only Text; a redacted run carries Type and the
+// original Value, mirroring mask.redact's marker format but without
+// discarding the underlying secret -- the audit trail preserves originals
+// (FR-6) even though the default render masks them.
+type AuditOutputSegment struct {
+	Text     string
+	Redacted bool
+	Type     string
+	Value    string
+}

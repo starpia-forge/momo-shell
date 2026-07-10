@@ -234,7 +234,8 @@
   },
   "rightDock": {
     "history": "历史记录",
-    "files": "文件"
+    "files": "文件",
+    "audit": "审计"
   },
   "hostForm": {
     "authPassword": "密码",
@@ -319,6 +320,25 @@
     "cmdTui": "TUI",
     "cmdDone": "退出码 {{exitCode}}",
     "scopeCap": "{{active}}/{{max}} 会话"
+  },
+  "auditPanel": {
+    "title": "审计日志",
+    "filterAllClients": "所有客户端",
+    "filterAllDecisions": "所有决定",
+    "filterClient": "客户端筛选",
+    "filterDecision": "决定筛选",
+    "filterPlaceholder": "搜索命令...",
+    "empty": "暂无审计记录",
+    "kind_connect": "连接",
+    "kind_command": "命令",
+    "kind_control": "控制",
+    "replayTitle": "回放",
+    "guardedCmd": "已插入防护的命令（实际执行内容）",
+    "approvedBy": "批准人：{{approver}}",
+    "autoRun": "自动执行（无批准人）",
+    "loadOutput": "加载输出",
+    "noOutput": "无输出（未捕获或保留期已过）",
+    "unmaskHint": "点击查看原始内容"
   },
   "shareErrors": {
     "lockout": "请稍后重试（60秒）",

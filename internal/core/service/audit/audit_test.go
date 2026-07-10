@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"momo-shell/internal/adapter/out/secretscan"
 	"momo-shell/internal/core/domain"
 )
 
@@ -58,7 +59,7 @@ func (f *fakeRepo) ClearOutputsBefore(cutoffUnix int64) (int64, error) {
 
 func TestService_RecordQuery(t *testing.T) {
 	repo := &fakeRepo{}
-	svc := New(repo, newFakeSecretStore())
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
 
 	if _, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindConnect, Decision: "granted"}); err != nil {
 		t.Fatalf("Record() error = %v", err)
@@ -91,7 +92,7 @@ func TestService_RecordQuery(t *testing.T) {
 // plaintext output) and that LoadOutput decrypts it back correctly.
 func TestService_AttachLoadRoundtrip(t *testing.T) {
 	repo := &fakeRepo{}
-	svc := New(repo, newFakeSecretStore())
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
 
 	id, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindCommand, Decision: "auto"})
 	if err != nil {
@@ -125,7 +126,7 @@ func TestService_AttachLoadRoundtrip(t *testing.T) {
 // hasn't sealed yet) reports (nil, nil) rather than an error.
 func TestService_LoadOutput_NoneAttachedReturnsNil(t *testing.T) {
 	repo := &fakeRepo{}
-	svc := New(repo, newFakeSecretStore())
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
 
 	id, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindCommand})
 	if err != nil {
@@ -142,7 +143,7 @@ func TestService_LoadOutput_NoneAttachedReturnsNil(t *testing.T) {
 // capture past outputRetention while the decision row survives.
 func TestService_PurgeOutputsBefore(t *testing.T) {
 	repo := &fakeRepo{}
-	svc := New(repo, newFakeSecretStore())
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
 
 	oldID, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindCommand, Timestamp: time.Unix(1000, 0)})
 	if err != nil {
@@ -161,5 +162,84 @@ func TestService_PurgeOutputsBefore(t *testing.T) {
 	}
 	if len(repo.events) != 1 {
 		t.Fatalf("expected the decision row to survive purge, got %d events", len(repo.events))
+	}
+}
+
+// TestService_LoadOutputSegments_RedactsAndPreservesValue confirms E5b's
+// splice runs the byte-offset walk on the decrypted []byte before any string
+// conversion -- the surrounding text is valid multibyte UTF-8 (Korean), so a
+// rune-index (rather than byte-offset) splice would corrupt it.
+func TestService_LoadOutputSegments_RedactsAndPreservesValue(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
+
+	id, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindCommand})
+	if err != nil {
+		t.Fatalf("Record() error = %v", err)
+	}
+
+	const secret = "AKIAABCDEFGHIJKLMNOP"
+	plaintext := []byte("안녕 " + secret + " 감사")
+	if err := svc.AttachOutput(id, plaintext); err != nil {
+		t.Fatalf("AttachOutput() error = %v", err)
+	}
+
+	segments, err := svc.LoadOutputSegments(id)
+	if err != nil {
+		t.Fatalf("LoadOutputSegments() error = %v", err)
+	}
+	if len(segments) != 3 {
+		t.Fatalf("LoadOutputSegments() returned %d segments, want 3: %+v", len(segments), segments)
+	}
+	if segments[0].Redacted || segments[0].Text != "안녕 " {
+		t.Fatalf("segments[0] = %+v, want plain %q", segments[0], "안녕 ")
+	}
+	if !segments[1].Redacted || segments[1].Type != "aws-access-key-id" || segments[1].Value != secret {
+		t.Fatalf("segments[1] = %+v, want redacted aws-access-key-id with value %q", segments[1], secret)
+	}
+	if segments[2].Redacted || segments[2].Text != " 감사" {
+		t.Fatalf("segments[2] = %+v, want plain %q", segments[2], " 감사")
+	}
+}
+
+// TestService_LoadOutputSegments_NoHitsReturnsSinglePlainSegment confirms
+// output with nothing to redact still round-trips as one Text-only segment
+// rather than an empty slice.
+func TestService_LoadOutputSegments_NoHitsReturnsSinglePlainSegment(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
+
+	id, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindCommand})
+	if err != nil {
+		t.Fatalf("Record() error = %v", err)
+	}
+	if err := svc.AttachOutput(id, []byte("$ echo hi\nhi\n")); err != nil {
+		t.Fatalf("AttachOutput() error = %v", err)
+	}
+
+	segments, err := svc.LoadOutputSegments(id)
+	if err != nil {
+		t.Fatalf("LoadOutputSegments() error = %v", err)
+	}
+	if len(segments) != 1 || segments[0].Redacted || segments[0].Text != "$ echo hi\nhi\n" {
+		t.Fatalf("LoadOutputSegments() = %+v, want a single plain segment", segments)
+	}
+}
+
+// TestService_LoadOutputSegments_NoCaptureReturnsNil mirrors
+// TestService_LoadOutput_NoneAttachedReturnsNil -- no capture means no
+// segments, not an error.
+func TestService_LoadOutputSegments_NoCaptureReturnsNil(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := New(repo, newFakeSecretStore(), secretscan.New())
+
+	id, err := svc.Record(domain.AuditEvent{SessionID: "s1", Kind: domain.AuditKindCommand})
+	if err != nil {
+		t.Fatalf("Record() error = %v", err)
+	}
+
+	segments, err := svc.LoadOutputSegments(id)
+	if err != nil || segments != nil {
+		t.Fatalf("LoadOutputSegments() = (%v, %v), want (nil, nil)", segments, err)
 	}
 }

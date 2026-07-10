@@ -8,13 +8,14 @@ interface RightDockProps {
   historyPanel: ReactNode
   filesPanel: ReactNode
   sharePanel: ReactNode
+  auditPanel: ReactNode
 }
 
-/** Hosts HISTORY, FILES, and SHARE as mutually-exclusive panels behind a
- * always-visible icon rail -- the rail stays put (46px) whether or not the
+/** Hosts HISTORY, FILES, SHARE, and AUDIT as mutually-exclusive panels behind
+ * a always-visible icon rail -- the rail stays put (46px) whether or not the
  * 300px panel is open, so it never fights the terminal for who owns that
  * strip of the window. */
-export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockProps) {
+export function RightDock({ historyPanel, filesPanel, sharePanel, auditPanel }: RightDockProps) {
   const { t } = useTranslation()
   const open = useRightDockStore((s) => s.open)
   const active = useRightDockStore((s) => s.active)
@@ -23,14 +24,20 @@ export function RightDock({ historyPanel, filesPanel, sharePanel }: RightDockPro
     { tab: 'history', glyph: '≡', label: t('rightDock.history') },
     { tab: 'files', glyph: '▤', label: t('rightDock.files') },
     { tab: 'share', glyph: '⇡', label: t('settings.sharing.title') },
+    { tab: 'audit', glyph: '⚖', label: t('rightDock.audit') },
   ]
+
+  const PANEL: Record<RightDockTab, ReactNode> = {
+    history: historyPanel,
+    files: filesPanel,
+    share: sharePanel,
+    audit: auditPanel,
+  }
 
   return (
     <div className="flex-none flex h-full border-l border-line">
       {open && (
-        <div className="w-75 flex-none flex flex-col bg-surface border-r border-line text-fg min-h-0">
-          {active === 'history' ? historyPanel : active === 'files' ? filesPanel : sharePanel}
-        </div>
+        <div className="w-75 flex-none flex flex-col bg-surface border-r border-line text-fg min-h-0">{PANEL[active]}</div>
       )}
       <div className="w-11.5 flex-none flex flex-col items-center pt-3.5 gap-2 bg-surface">
         {RAIL.map((r) => (

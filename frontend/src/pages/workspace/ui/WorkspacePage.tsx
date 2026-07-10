@@ -12,6 +12,7 @@ import type { PaneDragPayload } from '../../../shared/lib/paneDnd'
 import { HomePage } from '../../home'
 import { SettingsPage } from '../../settings'
 import { SftpPage } from '../../sftp'
+import { AuditPanel } from '../../../widgets/audit-panel'
 import { FileBrowserPanel } from '../../../widgets/file-browser'
 import { HistoryPanel } from '../../../widgets/history-panel'
 import { HostSidebar } from '../../../widgets/host-sidebar'
@@ -180,6 +181,7 @@ export function WorkspacePage() {
               }
               filesPanel={<FileBrowserPanel sessionId={activeTab?.sessionId ?? null} isSSH={activeTab?.kind === 'ssh'} />}
               sharePanel={<SharePanel />}
+              auditPanel={<AuditPanel />}
             />
           </>
         )}

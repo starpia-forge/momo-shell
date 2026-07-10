@@ -149,7 +149,7 @@ func main() {
 	})
 
 	resolverSvc := resolve.New(resolve.Deps{Parser: shparse.New()})
-	auditSvc := audit.New(auditRepo, secretStore)
+	auditSvc := audit.New(auditRepo, secretStore, secretScanner)
 	// E3-b: captures each command's original output in isolation from
 	// scrollbackSvc's shared ring (see capture package doc for why), sealing
 	// it to the command's audit row once RunCommand/lifecycle.go/
@@ -216,6 +216,7 @@ func main() {
 	localFSService := wailsfacade.NewLocalFSService(localfsSvc)
 	fileDropRelay := wailsfacade.NewFileDropRelay(publisher)
 	mcpApprovalService := wailsfacade.NewMCPApprovalService(aiSvc)
+	auditService := wailsfacade.NewAuditService(auditSvc) // E5: frontend-only audit-panel read path, not MCP-exposed
 
 	err = wailsapp.Run(&options.App{
 		Title:     "momo-shell",
@@ -279,6 +280,7 @@ func main() {
 			settingsService,
 			localFSService,
 			mcpApprovalService,
+			auditService,
 		},
 	})
 

@@ -234,7 +234,8 @@
   },
   "rightDock": {
     "history": "히스토리",
-    "files": "파일"
+    "files": "파일",
+    "audit": "감사"
   },
   "hostForm": {
     "authPassword": "비밀번호",
@@ -319,6 +320,25 @@
     "cmdTui": "TUI",
     "cmdDone": "종료 코드 {{exitCode}}",
     "scopeCap": "{{active}}/{{max}} 세션"
+  },
+  "auditPanel": {
+    "title": "감사 로그",
+    "filterAllClients": "모든 클라이언트",
+    "filterAllDecisions": "모든 결정",
+    "filterClient": "클라이언트 필터",
+    "filterDecision": "결정 필터",
+    "filterPlaceholder": "명령어 검색...",
+    "empty": "감사 기록이 없습니다",
+    "kind_connect": "연결",
+    "kind_command": "명령",
+    "kind_control": "통제",
+    "replayTitle": "리플레이",
+    "guardedCmd": "가드가 삽입된 명령(실제 실행됨)",
+    "approvedBy": "승인: {{approver}}",
+    "autoRun": "자동 실행(승인자 없음)",
+    "loadOutput": "출력 보기",
+    "noOutput": "출력 없음(미캡처 또는 보존기한 만료)",
+    "unmaskHint": "클릭하여 원본 보기"
   },
   "shareErrors": {
     "lockout": "잠시 후 다시 시도하세요 (60초)",
