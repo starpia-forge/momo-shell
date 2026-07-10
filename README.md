@@ -1,4 +1,4 @@
-<p align="center">
+<p style="text-align: left;">
   <img src="build/appicon.png" alt="Momo Shell icon" width="128" />
 </p>
 
