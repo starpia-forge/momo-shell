@@ -68,13 +68,23 @@ func (s *Service) RunCommand(clientID, sessionID, command string) (domain.Comman
 		return domain.CommandHandle{}, &InteractiveCommandError{Verb: hint.Verb, Suggestion: hint.Suggestion}
 	}
 
+	// D5a: a context-hop verb (ssh/su/sudo -i/-s/docker exec/kubectl exec)
+	// leaves the delegated session's custody, so it always needs human
+	// approval even when the static risk verdict would auto-run it -- a
+	// demotion, not a reject (contrast detectInteractive above).
+	demoted := false
+	if hint, ok := detectHop(verdict.Analysis); ok {
+		verdict.Reasons = append(verdict.Reasons, hint.Reason)
+		demoted = true
+	}
+
 	toRun := command
 	if verdict.GuardedCmd != "" {
 		toRun = verdict.GuardedCmd
 	}
 
 	decision, approver := "auto", ""
-	if !verdict.AutoRunnable() {
+	if demoted || !verdict.AutoRunnable() {
 		approved, err := s.awaitCommandApproval(clientID, sessionID, command, verdict)
 		if err != nil {
 			s.recordCommandAudit(clientID, sessionID, command, verdict, "custodian", "timeout")
