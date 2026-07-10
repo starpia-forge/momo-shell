@@ -24,10 +24,12 @@ type OutputMasker interface {
 // ReadScrollback implements in.AIControlUseCase: it projects sessionID's
 // scrollback since sinceSeq to an AI client, secret-masked (mask.Apply) and
 // trust-framed (frame.Wrap, doc 17 §11 / E4) so the client treats the remote
-// bytes as untrusted data, not instructions. Authorization ("control or read
-// grant", doc 17 §7.2) is enforced at the A6 dispatch boundary once a client
-// is authenticated -- clientID is accepted here (matching in.AIControlUseCase)
-// but not yet consulted; it is reserved for the audit trail (E3).
+// bytes as untrusted data, not instructions. Authorization is pairing
+// (connection-level token auth, AuthClient) -- read/control are split
+// (doc 20 D2): pairing grants read across all sessions, control is the
+// separate per-session delegation gate RunCommand enforces. clientID is
+// accepted here (matching in.AIControlUseCase) but not consulted for
+// authorization; it is reserved for the audit trail (E3).
 func (s *Service) ReadScrollback(clientID, sessionID string, sinceSeq uint64) (domain.MaskedChunk, error) {
 	data, next := s.scrollback.ReadSince(sessionID, sinceSeq)
 	if len(data) == 0 {
