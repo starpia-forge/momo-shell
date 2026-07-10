@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/out"
@@ -67,6 +68,14 @@ func (f *fakeInjector) lastWrite() []byte {
 // templates, without depending on the adapter package.
 type fakeBuilder struct {
 	unsupported out.ShellDialect
+
+	// spawnDialect gates SpawnArgs the same way unsupported gates
+	// HookScript/ProbeScript: "" means every dialect declines (matches the
+	// real Builder's bash/unknown behavior), so tests must opt a dialect in.
+	spawnDialect out.ShellDialect
+
+	mu          sync.Mutex
+	spawnCalled bool // records whether SpawnArgs was invoked at all
 }
 
 func (b *fakeBuilder) HookScript(dialect out.ShellDialect, nonce string) ([]byte, error) {
@@ -81,6 +90,22 @@ func (b *fakeBuilder) ProbeScript(dialect out.ShellDialect, nonce string, vars [
 		return nil, errors.New("fakeBuilder: unsupported dialect")
 	}
 	return []byte("PROBE:" + nonce + ":" + strings.Join(vars, ",")), nil
+}
+
+func (b *fakeBuilder) SpawnArgs(dialect out.ShellDialect, nonce string) ([]string, error) {
+	b.mu.Lock()
+	b.spawnCalled = true
+	b.mu.Unlock()
+	if b.spawnDialect == "" || dialect != b.spawnDialect {
+		return nil, errors.New("fakeBuilder: no spawn-time injection for dialect")
+	}
+	return []string{"-EncodedCommand", "SPAWN:" + nonce}, nil
+}
+
+func (b *fakeBuilder) spawnWasCalled() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.spawnCalled
 }
 
 func extractNonce(script []byte) string {
@@ -159,8 +184,16 @@ func TestAttach_KnownLocalDialect_InjectsHookScript(t *testing.T) {
 
 	svc.Attach(testSessionID, domain.KindLocal)
 
+	// Local injection is gated on readiness (see phaseWaitingReady): Attach
+	// must not write immediately.
+	if inj.writeCount() != 0 {
+		t.Fatalf("expected no WriteRaw before the readiness gate fires, got %d", inj.writeCount())
+	}
+
+	svc.fireReady(testSessionID, svc.get(testSessionID))
+
 	if inj.writeCount() != 1 {
-		t.Fatalf("expected exactly 1 WriteRaw call, got %d", inj.writeCount())
+		t.Fatalf("expected exactly 1 WriteRaw call after fireReady, got %d", inj.writeCount())
 	}
 	if !bytes.Contains(inj.lastWrite(), []byte("momostart_")) {
 		t.Fatalf("expected the injected script to contain the momostart sentinel, got %q", inj.lastWrite())
@@ -220,15 +253,114 @@ func TestOnOutput_UnattachedSession_PassesThrough(t *testing.T) {
 	}
 }
 
-// --- Bootstrap: MOTD preserved, injection noise suppressed, then active ---
+// --- Readiness gate: local injection is deferred until startup output settles ---
 
-func TestBootstrap_FullLifecycle(t *testing.T) {
+func TestReadinessGate_LocalDefersInjection(t *testing.T) {
+	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
+	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
+
+	svc.Attach(testSessionID, domain.KindLocal)
+	if inj.writeCount() != 0 {
+		t.Fatalf("expected no WriteRaw before the readiness gate fires, got %d", inj.writeCount())
+	}
+
+	svc.fireReady(testSessionID, svc.get(testSessionID))
+	if inj.writeCount() != 1 {
+		t.Fatalf("expected exactly 1 WriteRaw call after fireReady, got %d", inj.writeCount())
+	}
+	if !bytes.Contains(inj.lastWrite(), []byte("momostart_")) {
+		t.Fatalf("expected the injected script to contain the momostart sentinel, got %q", inj.lastWrite())
+	}
+}
+
+func TestReadinessGate_DiscardsInjectedEcho(t *testing.T) {
 	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
 	obs := &recordingObserver{}
 	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
 	svc.AddObserver(obs)
 
 	svc.Attach(testSessionID, domain.KindLocal)
+	svc.fireReady(testSessionID, svc.get(testSessionID))
+	nonce := extractNonce(inj.lastWrite())
+	if nonce == "" {
+		t.Fatal("failed to extract nonce from injected script")
+	}
+
+	// Unlike SSH (TestBootstrap_FullLifecycle), a local session has nothing
+	// legitimate to preserve before the sentinel -- the injection's own
+	// (possibly garbled) echo must be fully discarded, not rendered.
+	echo := []byte(`Write-Host "PS> momostart_` + nonce + "\nNOISE\n")
+	if got := svc.OnOutput(testSessionID, echo); len(got) != 0 {
+		t.Fatalf("expected the local injection echo to be discarded, got %q", got)
+	}
+
+	hookInstalled := []byte("\x1b]1337;momo;hookinstalled;" + nonce + "\x07")
+	if got := svc.OnOutput(testSessionID, hookInstalled); len(got) != 0 {
+		t.Fatalf("expected the hookinstalled marker itself to be stripped, got %q", got)
+	}
+
+	if got := svc.OnOutput(testSessionID, []byte("\x1b]133;A\x07")); len(got) != 0 {
+		t.Fatalf("expected the prompt marker to be stripped from rendered output, got %q", got)
+	}
+	if !svc.AtPrompt(testSessionID) {
+		t.Fatal("expected AtPrompt=true once hooks are confirmed installed")
+	}
+}
+
+func TestReadinessGate_FiresAfterOutputSettles(t *testing.T) {
+	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
+	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}, ReadyDebounce: 2 * time.Millisecond, ReadyDeadline: 20 * time.Millisecond})
+
+	svc.Attach(testSessionID, domain.KindLocal)
+	if inj.writeCount() != 0 {
+		t.Fatalf("expected no WriteRaw immediately after Attach, got %d", inj.writeCount())
+	}
+
+	banner := []byte("PowerShell 7.4.0\n")
+	if got := svc.OnOutput(testSessionID, banner); !bytes.Equal(got, banner) {
+		t.Fatalf("expected startup output to pass through untouched while waiting, got %q want %q", got, banner)
+	}
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for inj.writeCount() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if inj.writeCount() != 1 {
+		t.Fatalf("expected the debounce timer to fire and inject once output settled, got %d WriteRaw calls", inj.writeCount())
+	}
+}
+
+func TestReadinessGate_DetachStopsTimer(t *testing.T) {
+	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
+	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
+
+	svc.Attach(testSessionID, domain.KindLocal)
+	st := svc.get(testSessionID)
+
+	svc.Detach(testSessionID)
+
+	// A timer fire racing (or arriving after) Detach must be a no-op: the
+	// phase flip in Detach is what fireReady's own guard checks.
+	svc.fireReady(testSessionID, st)
+	if inj.writeCount() != 0 {
+		t.Fatalf("expected no WriteRaw after Detach, got %d", inj.writeCount())
+	}
+}
+
+// --- Bootstrap: MOTD preserved, injection noise suppressed, then active ---
+
+func TestBootstrap_FullLifecycle(t *testing.T) {
+	// SSH (not local): this scenario exercises the "content already in
+	// flight before our sentinel echoes back" release path (MOTD), which
+	// only applies to the immediate-injection path -- local injection is
+	// readiness-gated (see TestReadinessGate_* below) and discards its
+	// pre-sentinel echo instead of releasing it.
+	inj := &fakeInjector{shellOK: false}
+	obs := &recordingObserver{}
+	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
+	svc.AddObserver(obs)
+
+	svc.Attach(testSessionID, domain.KindSSH)
 	nonce := extractNonce(inj.lastWrite())
 	if nonce == "" {
 		t.Fatal("failed to extract nonce from injected script")
@@ -291,9 +423,12 @@ func TestBootstrap_FullLifecycle(t *testing.T) {
 }
 
 func TestBootstrap_GivesUpAfterMaxSentinelWait(t *testing.T) {
-	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
+	// SSH: immediate injection, so phase is already phaseWaitingSentinel by
+	// the time OnOutput is fed noise below (local injection is readiness-
+	// gated and wouldn't have written/entered phaseWaitingSentinel yet).
+	inj := &fakeInjector{shellOK: false}
 	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
-	svc.Attach(testSessionID, domain.KindLocal)
+	svc.Attach(testSessionID, domain.KindSSH)
 
 	// Feed output that never contains our sentinel (e.g. WriteRaw silently
 	// failed to reach a real shell) past the give-up threshold.
@@ -314,9 +449,11 @@ func TestBootstrap_GivesUpAfterMaxSentinelWait(t *testing.T) {
 // --- Reinject ---
 
 func TestReinject_ResetsStateAndSendsNewNonce(t *testing.T) {
-	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
+	// SSH: immediate injection, so the first WriteRaw has already happened
+	// by the time Reinject is called (local injection is readiness-gated).
+	inj := &fakeInjector{shellOK: false}
 	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
-	svc.Attach(testSessionID, domain.KindLocal)
+	svc.Attach(testSessionID, domain.KindSSH)
 	firstNonce := extractNonce(inj.lastWrite())
 
 	if err := svc.Reinject(testSessionID); err != nil {
@@ -349,11 +486,14 @@ func TestReinject_UnattachedSession(t *testing.T) {
 // --- Alt-screen ---
 
 func TestAltScreen_ObserverFiresOnceOnEnterAndExit(t *testing.T) {
-	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
+	// SSH: immediate injection, so the hook script is already written and
+	// its nonce extractable right after Attach (local injection is
+	// readiness-gated).
+	inj := &fakeInjector{shellOK: false}
 	obs := &recordingObserver{}
 	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
 	svc.AddObserver(obs)
-	svc.Attach(testSessionID, domain.KindLocal)
+	svc.Attach(testSessionID, domain.KindSSH)
 	nonce := extractNonce(inj.lastWrite())
 	svc.OnOutput(testSessionID, []byte("momostart_"+nonce+"\n"))
 	svc.OnOutput(testSessionID, []byte("\x1b]1337;momo;hookinstalled;"+nonce+"\x07"))

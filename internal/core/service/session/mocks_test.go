@@ -178,13 +178,27 @@ func (f *fakeStream) resizeCalls() [][2]int {
 type fakeOpener struct {
 	stream *fakeStream
 	err    error
+
+	mu       sync.Mutex
+	lastArgs []string // records the args Open was last called with
 }
 
 func (o *fakeOpener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
+	o.mu.Lock()
+	o.lastArgs = append([]string{}, args...)
+	o.mu.Unlock()
 	if o.err != nil {
 		return nil, "", o.err
 	}
 	return o.stream, shell, nil
+}
+
+func (o *fakeOpener) Resolve(shell string) string { return shell }
+
+func (o *fakeOpener) getLastArgs() []string {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.lastArgs
 }
 
 // openerFunc hands back a fresh stream (by calling next) on every Open call,
@@ -197,6 +211,45 @@ func (f openerFunc) Open(shell string, args, env []string, cwd string, cols, row
 		return nil, "", err
 	}
 	return s, shell, nil
+}
+
+func (f openerFunc) Resolve(shell string) string { return shell }
+
+// fakeBootstrapper records PrepareSpawn/DiscardSpawn calls and hands back a
+// caller-supplied args slice (or ok=false if none was configured), so tests
+// can assert both that CreateLocal consults it and that its returned args
+// reach Open.
+type fakeBootstrapper struct {
+	mu   sync.Mutex
+	args []string // returned by PrepareSpawn when ok is true
+	ok   bool
+
+	prepared []string // sessionIDs PrepareSpawn was called with
+	shells   []string // shellPaths PrepareSpawn was called with
+	discards []string // sessionIDs DiscardSpawn was called with
+}
+
+func (b *fakeBootstrapper) PrepareSpawn(sessionID, shellPath string) ([]string, bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.prepared = append(b.prepared, sessionID)
+	b.shells = append(b.shells, shellPath)
+	if !b.ok {
+		return nil, false
+	}
+	return b.args, true
+}
+
+func (b *fakeBootstrapper) DiscardSpawn(sessionID string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.discards = append(b.discards, sessionID)
+}
+
+func (b *fakeBootstrapper) snapshot() (prepared, shells, discards []string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return append([]string{}, b.prepared...), append([]string{}, b.shells...), append([]string{}, b.discards...)
 }
 
 // recordingPublisher records every Publish call and can be told to panic

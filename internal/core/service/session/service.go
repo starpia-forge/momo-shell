@@ -45,15 +45,16 @@ type Service struct {
 	mu       sync.Mutex
 	sessions map[string]*liveSession
 
-	localOpener out.LocalTerminalOpener
-	sshOpener   out.SSHTerminalOpener
-	hostRepo    out.HostRepository
-	secrets     out.SecretStore
-	knownHosts  out.KnownHostsRepository
-	pub         out.EventPublisher
-	taps        []CommandTap
-	middlewares []OutputMiddleware
-	wg          sync.WaitGroup
+	localOpener       out.LocalTerminalOpener
+	sshOpener         out.SSHTerminalOpener
+	hostRepo          out.HostRepository
+	secrets           out.SecretStore
+	knownHosts        out.KnownHostsRepository
+	pub               out.EventPublisher
+	taps              []CommandTap
+	middlewares       []OutputMiddleware
+	localBootstrapper LocalBootstrapper
+	wg                sync.WaitGroup
 }
 
 // liveSession tracks one session's runtime state. For a local session,
@@ -147,12 +148,28 @@ func New(deps Deps) *Service {
 }
 
 func (s *Service) CreateLocal(opts in.LocalOpts) (domain.SessionInfo, error) {
-	stream, resolvedShell, err := s.localOpener.Open(opts.Shell, nil, opts.Env, opts.Cwd, opts.Cols, opts.Rows)
+	id := uuid.NewString()
+
+	// Consult the bootstrapper before Open so a PowerShell-dialect session
+	// can be spawned with its shell-integration hooks pre-installed via
+	// process args, instead of typed into the running shell afterward (see
+	// LocalBootstrapper's doc comment for why that matters for ConPTY).
+	var args []string
+	if s.localBootstrapper != nil {
+		resolved := s.localOpener.Resolve(opts.Shell)
+		if a, ok := s.localBootstrapper.PrepareSpawn(id, resolved); ok {
+			args = a
+		}
+	}
+
+	stream, resolvedShell, err := s.localOpener.Open(opts.Shell, args, opts.Env, opts.Cwd, opts.Cols, opts.Rows)
 	if err != nil {
+		if s.localBootstrapper != nil {
+			s.localBootstrapper.DiscardSpawn(id)
+		}
 		return domain.SessionInfo{}, err
 	}
 
-	id := uuid.NewString()
 	sess := domain.NewSession(id, domain.KindLocal, resolvedShell, opts.Cols, opts.Rows)
 	_ = sess.TransitionTo(domain.StateRunning)
 

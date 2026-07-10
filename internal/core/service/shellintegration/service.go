@@ -13,9 +13,20 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"momo-shell/internal/core/domain"
 	"momo-shell/internal/core/port/out"
+)
+
+// Default readiness-gate timings for local session injection (see Attach's
+// phaseWaitingReady handling in middleware.go): defaultReadyDebounce is how
+// long startup output must be quiet before the hook script is written;
+// defaultReadyDeadline caps the total wait for pathologically chatty
+// startup output.
+const (
+	defaultReadyDebounce = 500 * time.Millisecond
+	defaultReadyDeadline = 2500 * time.Millisecond
 )
 
 // ErrSessionNotFound is returned by Reinject/AtPrompt-adjacent operations
@@ -53,6 +64,13 @@ type Observer interface {
 type Deps struct {
 	Shell   ShellInjector
 	Builder out.ShellScriptBuilder
+
+	// ReadyDebounce/ReadyDeadline override the readiness-gate timings for
+	// local session injection (see defaultReadyDebounce/defaultReadyDeadline).
+	// Zero uses the default -- tests needing a fast, deterministic real
+	// timer set these directly instead of driving the debounce with sleeps.
+	ReadyDebounce time.Duration
+	ReadyDeadline time.Duration
 }
 
 // Service implements session.OutputMiddleware (see middleware.go) to
@@ -63,8 +81,19 @@ type Service struct {
 	shell   ShellInjector
 	builder out.ShellScriptBuilder
 
+	readyDebounce time.Duration
+	readyDeadline time.Duration
+
 	mu       sync.Mutex
 	sessions map[string]*sessionState
+
+	// pendingSpawn holds a nonce per sessionID between PrepareSpawn (called
+	// by session.Service.CreateLocal before the ConPTY process exists) and
+	// Attach (called right after) -- Attach takes and clears the entry to
+	// enter phaseActive immediately, skipping the typed-injection path
+	// entirely for sessions whose hooks were already spawn-installed.
+	// Guarded by mu, same as sessions.
+	pendingSpawn map[string]string
 
 	// observers is append-only, composition-root wiring (see AddObserver) --
 	// read without a lock from the pump goroutine, matching
@@ -81,12 +110,55 @@ type Service struct {
 }
 
 func New(deps Deps) *Service {
-	return &Service{
-		shell:    deps.Shell,
-		builder:  deps.Builder,
-		sessions: make(map[string]*sessionState),
-		probes:   make(map[string]chan string),
+	readyDebounce := deps.ReadyDebounce
+	if readyDebounce <= 0 {
+		readyDebounce = defaultReadyDebounce
 	}
+	readyDeadline := deps.ReadyDeadline
+	if readyDeadline <= 0 {
+		readyDeadline = defaultReadyDeadline
+	}
+	return &Service{
+		shell:         deps.Shell,
+		builder:       deps.Builder,
+		readyDebounce: readyDebounce,
+		readyDeadline: readyDeadline,
+		sessions:      make(map[string]*sessionState),
+		pendingSpawn:  make(map[string]string),
+		probes:        make(map[string]chan string),
+	}
+}
+
+// PrepareSpawn returns the process-launch args that pre-install shell-
+// integration hooks for shellPath's dialect, and stashes a nonce for the
+// matching Attach(sessionID, ...) call (expected right after the caller's
+// Open succeeds) to pick up -- implements session.LocalBootstrapper. ok is
+// false when the dialect has no spawn-time strategy (session.CreateLocal
+// falls back to Open with no extra args, and Attach's normal runtime-
+// injection path runs as before).
+func (s *Service) PrepareSpawn(sessionID, shellPath string) (args []string, ok bool) {
+	dialect := resolveDialect(shellPath)
+	if dialect != out.DialectPowerShell {
+		return nil, false
+	}
+	nonce := newNonce()
+	args, err := s.builder.SpawnArgs(dialect, nonce)
+	if err != nil {
+		return nil, false
+	}
+	s.mu.Lock()
+	s.pendingSpawn[sessionID] = nonce
+	s.mu.Unlock()
+	return args, true
+}
+
+// DiscardSpawn clears a PrepareSpawn stash for sessionID whose Open never
+// happened (e.g. the process failed to launch) -- implements
+// session.LocalBootstrapper. A no-op if nothing is pending.
+func (s *Service) DiscardSpawn(sessionID string) {
+	s.mu.Lock()
+	delete(s.pendingSpawn, sessionID)
+	s.mu.Unlock()
 }
 
 // AddObserver registers o to be notified of shell-integration lifecycle
@@ -117,7 +189,11 @@ func (s *Service) AtPrompt(sessionID string) bool {
 // for a session whose hooks were lost (su/exec/nested ssh into a shell
 // that never got the runtime injection). Returns ErrSessionNotFound if this
 // service was never Attach-ed to sessionID, or an error if the session's
-// dialect is unknown (nothing to reinject).
+// dialect is unknown (nothing to reinject) or is local PowerShell (typing
+// the hook into a running ConPTY desyncs its screen buffer from the
+// frontend's -- see powershellHookTemplate's doc comment; a lost hook on
+// that dialect requires restarting the session, which re-enters via
+// PrepareSpawn instead).
 func (s *Service) Reinject(sessionID string) error {
 	st := s.get(sessionID)
 	if st == nil {
@@ -129,6 +205,9 @@ func (s *Service) Reinject(sessionID string) error {
 	st.mu.Unlock()
 	if dialect == out.DialectUnknown {
 		return errors.New("shellintegration: dialect unknown for this session, nothing to reinject")
+	}
+	if dialect == out.DialectPowerShell {
+		return errors.New("shellintegration: cannot reinject into a local PowerShell session (would desync the terminal) -- restart the session instead")
 	}
 
 	nonce := newNonce()

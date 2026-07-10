@@ -41,3 +41,10 @@ func (b *Builder) ProbeScript(dialect out.ShellDialect, nonce string, vars []str
 		return nil, fmt.Errorf("shellintegration: unsupported dialect %q", dialect)
 	}
 }
+
+func (b *Builder) SpawnArgs(dialect out.ShellDialect, nonce string) ([]string, error) {
+	if dialect != out.DialectPowerShell {
+		return nil, fmt.Errorf("shellintegration: no spawn-time injection for dialect %q", dialect)
+	}
+	return powershellSpawnArgs(nonce), nil
+}

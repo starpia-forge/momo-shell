@@ -22,6 +22,12 @@ type TerminalStream interface {
 // actually running instead of the empty/auto-detect request they made.
 type LocalTerminalOpener interface {
 	Open(shell string, args, env []string, cwd string, cols, rows int) (stream TerminalStream, resolvedShell string, err error)
+	// Resolve reports the shell Open would launch for this request (pure,
+	// no side effects) -- lets a caller pick a dialect-specific spawn
+	// strategy before Open runs. Contract: Open(Resolve(x), ...) must
+	// report resolvedShell == Resolve(x); shellintegration's dialect
+	// selection depends on this equality.
+	Resolve(shell string) string
 }
 
 // HostKeyDecision is the user's response to an unrecognized SSH host key

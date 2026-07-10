@@ -15,10 +15,13 @@ import (
 // bootstrapToPrompt drives svc through Attach + the full bootstrap sequence
 // (sentinel -> hookinstalled -> a real prompt_start) so testSessionID ends
 // up phaseActive with AtPrompt()==true -- the precondition Query requires.
-// Mirrors TestBootstrap_FullLifecycle's manual sequence.
+// Mirrors TestBootstrap_FullLifecycle's manual sequence. Uses KindSSH so
+// injection happens synchronously (Query's own gating logic, not the
+// readiness gate, is what these tests exercise -- see TestReadinessGate_*
+// in middleware_test.go for the local-injection-deferral behavior).
 func bootstrapToPrompt(t *testing.T, svc *Service, inj *fakeInjector) {
 	t.Helper()
-	svc.Attach(testSessionID, domain.KindLocal)
+	svc.Attach(testSessionID, domain.KindSSH)
 	nonce := extractNonce(inj.lastWrite())
 	if nonce == "" {
 		t.Fatal("failed to extract nonce from injected hook script")
@@ -93,7 +96,7 @@ func TestQuery_RoundTrip_DecodesFourStates(t *testing.T) {
 func TestQuery_NotAtPrompt_ReturnsErrorWithoutInjecting(t *testing.T) {
 	inj := &fakeInjector{shell: "/bin/bash", kind: domain.KindLocal, shellOK: true}
 	svc := New(Deps{Shell: inj, Builder: &fakeBuilder{}})
-	svc.Attach(testSessionID, domain.KindLocal) // bootstrap not completed -- not phaseActive yet
+	svc.Attach(testSessionID, domain.KindSSH) // bootstrap not completed -- not phaseActive yet
 
 	_, err := svc.Query(context.Background(), testSessionID, []string{"FOO"})
 	if !errors.Is(err, ErrNotAtPrompt) {

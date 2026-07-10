@@ -32,4 +32,13 @@ type ShellScriptBuilder interface {
 	// (.claudedocs/plan/19-mcp-s4-shellintegration-spike.md §3). Does not
 	// disturb $?/$LASTEXITCODE or shell history.
 	ProbeScript(dialect ShellDialect, nonce string, vars []string) ([]byte, error)
+
+	// SpawnArgs returns the process-launch arguments that install the same
+	// OSC133 hooks as HookScript, but at spawn time instead of by typing
+	// into the running shell -- for shells whose PTY host repaints via
+	// absolute cursor addressing (ConPTY/PowerShell), typing+suppressing an
+	// ~800-byte line desyncs the host's screen buffer from the terminal
+	// frontend's. Returns an error for dialects with no spawn-time
+	// injection strategy; callers fall back to HookScript.
+	SpawnArgs(dialect ShellDialect, nonce string) ([]string, error)
 }

@@ -20,10 +20,16 @@ type Opener struct{}
 
 func NewOpener() *Opener { return &Opener{} }
 
-func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
+// Resolve reports the shell Open would launch for shell ("" auto-detects).
+func (o *Opener) Resolve(shell string) string {
 	if shell == "" {
-		shell = resolveShell(os.Getenv("SHELL"), runtime.GOOS)
+		return resolveShell(os.Getenv("SHELL"), runtime.GOOS)
 	}
+	return shell
+}
+
+func (o *Opener) Open(shell string, args, env []string, cwd string, cols, rows int) (out.TerminalStream, string, error) {
+	shell = o.Resolve(shell)
 
 	cmd := exec.Command(shell, args...)
 	cmd.Dir = cwd

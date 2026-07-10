@@ -125,6 +125,10 @@ func main() {
 		Builder: shellintegrationscripts.New(),
 	})
 	sessionSvc.AddMiddleware(shellIntegrationSvc)
+	// Spawn-time hook injection for local PowerShell (ConPTY desyncs if
+	// hooks are typed+suppressed instead -- see LocalBootstrapper's doc
+	// comment) -- same two-phase wiring as AddMiddleware above.
+	sessionSvc.SetLocalBootstrapper(shellIntegrationSvc)
 
 	// AI-control wiring (doc 20 D1-D4, A-track): scrollback capture feeds
 	// ReadScrollback's egress (masked via custodian+secretscan), resolve
