@@ -40,6 +40,26 @@ func newTestServiceWithResolverAndAudit(verdict resolve.Verdict) (*Service, *fak
 	return svc, sessions, audit
 }
 
+// newTestServiceWithResolverAuditAndCapture is newTestServiceWithResolverAndAudit
+// plus a wired fakeCapture, for tests asserting E3-b's Begin/End wiring at
+// the arm/lifecycle sites. Kept separate for the same reason as that
+// helper: every other test continues to exercise the nil-capture no-op path
+// unmodified.
+func newTestServiceWithResolverAuditAndCapture(verdict resolve.Verdict) (*Service, *fakeSessionCreator, *fakeAuditRecorder, *fakeCapture) {
+	sessions := &fakeSessionCreator{}
+	audit := &fakeAuditRecorder{}
+	capture := &fakeCapture{}
+	svc := New(Deps{
+		Hosts:     newFakeHostRepo(),
+		Sessions:  sessions,
+		Publisher: &recordingPublisher{},
+		Resolver:  &fakeResolver{verdict: verdict},
+		Audit:     audit,
+		Capture:   capture,
+	})
+	return svc, sessions, audit, capture
+}
+
 // seedDelegation installs an already-active delegation directly (bypassing
 // RequestControl's approval flow -- RunCommand only needs the map entry to
 // already exist). lastActAt lets a test assert RunCommand bumps it forward.
@@ -352,6 +372,73 @@ func TestRunCommand_RecordsAuditOnApprovalTimeout(t *testing.T) {
 	}
 	if e := events[0]; e.Decision != "timeout" || e.Approver != "custodian" {
 		t.Errorf("audit event = %+v, want decision=timeout approver=custodian", e)
+	}
+}
+
+// TestRunCommand_ArmsCaptureWithAuditID confirms E3-b's capture tap is
+// begun at the same point the command handle is armed, linked to the exact
+// audit row RunCommand just recorded for the executed decision.
+func TestRunCommand_ArmsCaptureWithAuditID(t *testing.T) {
+	svc, sessions, audit, capture := newTestServiceWithResolverAuditAndCapture(resolve.Verdict{Risk: resolve.RiskLow})
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	if _, err := svc.RunCommand("client-1", "sess-1", "echo hi"); err != nil {
+		t.Fatalf("RunCommand() error = %v", err)
+	}
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	wantID := events[0].ID
+
+	begins := capture.allBegins()
+	if len(begins) != 1 {
+		t.Fatalf("capture.Begin calls = %d, want 1", len(begins))
+	}
+	if begins[0].sessionID != "sess-1" || begins[0].auditID != wantID {
+		t.Errorf("capture.Begin(%q, %d), want (\"sess-1\", %d)", begins[0].sessionID, begins[0].auditID, wantID)
+	}
+}
+
+// TestRunCommand_DeniedCommandNeverArmsCapture confirms a rejected command
+// never begins a capture -- RunCommand returns before the arm site for
+// every non-executed decision (timeout/rejected).
+func TestRunCommand_DeniedCommandNeverArmsCapture(t *testing.T) {
+	svc, sessions, _, capture := newTestServiceWithResolverAuditAndCapture(resolve.Verdict{Risk: resolve.RiskHigh})
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RunCommand("client-1", "sess-1", "rm -rf /")
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	var requestID string
+	for time.Now().Before(deadline) {
+		svc.mu.Lock()
+		for id := range svc.pending {
+			requestID = id
+		}
+		svc.mu.Unlock()
+		if requestID != "" {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if requestID == "" {
+		t.Fatal("timed out waiting for a pending command approval")
+	}
+	if err := svc.RespondCommandApproval(requestID, false); err != nil {
+		t.Fatalf("RespondCommandApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	if begins := capture.allBegins(); len(begins) != 0 {
+		t.Errorf("capture.Begin calls = %d, want 0 for a denied command", len(begins))
 	}
 }
 

@@ -48,6 +48,14 @@ func (s *Service) OnCommandEnd(sessionID string, exitCode int) {
 	_ = h.TransitionTo(domain.CmdDone) // running/tui -> done are both legal
 	snapshot := *h
 	s.mu.Unlock()
+
+	if s.capture != nil {
+		// E3-b: flag the in-flight capture as finished. This does not seal
+		// it yet -- the seal happens on the next OnOutput call, which (for
+		// the chunk that triggered this very callback) is guaranteed to
+		// follow within the same pump iteration. See capture package doc.
+		s.capture.End(sessionID)
+	}
 	s.publishCommandState(snapshot)
 }
 

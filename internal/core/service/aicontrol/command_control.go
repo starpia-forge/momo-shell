@@ -92,6 +92,14 @@ func (s *Service) BackgroundCommand(clientID, sessionID string) (domain.CommandH
 	snapshot := *h
 	s.mu.Unlock()
 
+	if s.capture != nil {
+		// E3-b: unlike CancelCommand, nothing else drives this command's
+		// lifecycle to a terminal state (OnCommandEnd never fires for a
+		// backgrounded command), so this is the only point that can flag
+		// its capture as finished. Output the backgrounded job produces
+		// later belongs to no command (documented limitation).
+		s.capture.End(sessionID)
+	}
 	s.publishCommandState(snapshot)
 	return snapshot, nil
 }

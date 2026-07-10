@@ -329,16 +329,22 @@ func (p *recordingPublisher) all() []recordedEvent {
 
 // fakeAuditRecorder is a hand-rolled AuditRecorder recording every Record
 // call (recordingPublisher's mirror), for asserting E3's emission points.
+// Record returns an incrementing id (audit_repo.AuditRepo.Append's
+// LastInsertId mirror) so E3-b tests can assert RunCommand hands the right
+// id to the capture tap.
 type fakeAuditRecorder struct {
 	mu     sync.Mutex
 	events []domain.AuditEvent
+	nextID int64
 }
 
-func (r *fakeAuditRecorder) Record(e domain.AuditEvent) error {
+func (r *fakeAuditRecorder) Record(e domain.AuditEvent) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.nextID++
+	e.ID = r.nextID
 	r.events = append(r.events, e)
-	return nil
+	return r.nextID, nil
 }
 
 func (r *fakeAuditRecorder) all() []domain.AuditEvent {
@@ -346,5 +352,48 @@ func (r *fakeAuditRecorder) all() []domain.AuditEvent {
 	defer r.mu.Unlock()
 	out := make([]domain.AuditEvent, len(r.events))
 	copy(out, r.events)
+	return out
+}
+
+// fakeCapture is a hand-rolled CaptureController recording every Begin/End
+// call (fakeAuditRecorder's mirror), for asserting E3-b's aicontrol-side
+// wiring -- the capture package's own tests cover the byte-level capture
+// and sealing behavior.
+type fakeCapture struct {
+	mu     sync.Mutex
+	begins []fakeCaptureBegin
+	ends   []string
+}
+
+type fakeCaptureBegin struct {
+	sessionID string
+	auditID   int64
+}
+
+func (c *fakeCapture) Begin(sessionID string, auditID int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.begins = append(c.begins, fakeCaptureBegin{sessionID: sessionID, auditID: auditID})
+}
+
+func (c *fakeCapture) End(sessionID string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.ends = append(c.ends, sessionID)
+}
+
+func (c *fakeCapture) allBegins() []fakeCaptureBegin {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]fakeCaptureBegin, len(c.begins))
+	copy(out, c.begins)
+	return out
+}
+
+func (c *fakeCapture) allEnds() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]string, len(c.ends))
+	copy(out, c.ends)
 	return out
 }

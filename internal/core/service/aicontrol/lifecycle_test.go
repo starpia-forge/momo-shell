@@ -108,6 +108,26 @@ func TestLifecycleCallbacks_IgnoreUnknownSession(t *testing.T) {
 	}
 }
 
+// TestOnCommandEnd_EndsCapture confirms OnCommandEnd flags the E3-b capture
+// as finished (lifecycle.go's End call). The capture package's own tests
+// cover the actual seal-on-next-OnOutput behavior; this only asserts the
+// wiring reaches it with the right sessionID.
+func TestOnCommandEnd_EndsCapture(t *testing.T) {
+	svc, sessions, _, capture := newTestServiceWithResolverAuditAndCapture(resolve.Verdict{Risk: resolve.RiskLow})
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	if _, err := svc.RunCommand("client-1", "sess-1", "echo hi"); err != nil {
+		t.Fatalf("RunCommand() error = %v", err)
+	}
+
+	svc.OnCommandEnd("sess-1", 0)
+
+	if ends := capture.allEnds(); len(ends) != 1 || ends[0] != "sess-1" {
+		t.Errorf("capture.End calls = %+v, want [\"sess-1\"]", ends)
+	}
+}
+
 func TestLifecycleCallbacks_IgnoreAlreadyDoneSession(t *testing.T) {
 	svc, pub, sessions := newTestServiceWithResolver(resolve.Verdict{Risk: resolve.RiskLow})
 	sessions.sessionShellFunc = existingSession("sess-1")

@@ -7,7 +7,7 @@ import (
 
 // schemaVersion tracks applied migrations via PRAGMA user_version so Open
 // is idempotent across app restarts.
-const schemaVersion = 5
+const schemaVersion = 6
 
 func migrate(db *sql.DB) error {
 	var version int
@@ -37,6 +37,11 @@ func migrate(db *sql.DB) error {
 	}
 	if version < 5 {
 		if err := migrateV5(db); err != nil {
+			return err
+		}
+	}
+	if version < 6 {
+		if err := migrateV6(db); err != nil {
 			return err
 		}
 	}
@@ -209,4 +214,70 @@ func migrateV5(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+// migrateV6 adds mcp_audit.output_ref (doc 17 §10, E3-b): the encrypted
+// original terminal output produced during a command's lifecycle, captured
+// by the capture tap and sealed by audit.Service's AES-256-GCM cipher. NULL
+// means no capture is attached -- every connect/control event, and any
+// command event whose capture hasn't been sealed yet or has aged out of
+// audit.Service.PurgeOutputsBefore's retention window. Deliberately kept out
+// of auditColumns/scanAuditEvent so List/Query can never surface it -- it is
+// reached only via AuditRepo.LoadOutput(id), never through the replay path
+// the AI-facing MCP surface uses.
+//
+// Unlike every migrateVN before it, this is a bare ALTER TABLE ADD COLUMN,
+// not CREATE TABLE IF NOT EXISTS -- so it isn't naturally idempotent the
+// way the others are. A db whose schema is already fully current but whose
+// user_version was reset to an earlier value (exactly what the other
+// migration tests in this file do to simulate an old db, without touching
+// mcp_audit) would otherwise hit "duplicate column name" on replay. The
+// column-existence check below makes it idempotent to match its siblings.
+func migrateV6(db *sql.DB) error {
+	has, err := columnExists(db, "mcp_audit", "output_ref")
+	if err != nil {
+		return fmt.Errorf("sqlite: migrate v6: %w", err)
+	}
+	if has {
+		return nil
+	}
+
+	stmts := []string{
+		`ALTER TABLE mcp_audit ADD COLUMN output_ref BLOB`,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("sqlite: migrate v6: %w", err)
+		}
+	}
+	return nil
+}
+
+// columnExists reports whether table has a column named column, via
+// PRAGMA table_info -- SQLite has no "ADD COLUMN IF NOT EXISTS".
+func columnExists(db *sql.DB, table, column string) (bool, error) {
+	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			ctype     string
+			notNull   int
+			dfltValue any
+			pk        int
+		)
+		if err := rows.Scan(&cid, &name, &ctype, &notNull, &dfltValue, &pk); err != nil {
+			return false, err
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
 }

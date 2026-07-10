@@ -86,6 +86,18 @@ type CommandResolver interface {
 	Resolve(command, dialect string) resolve.Verdict
 }
 
+// CaptureController is the narrow, core-defined interface RunCommand/
+// lifecycle.go/command_control.go need from the E3-b output-capture tap --
+// consumer-side (SessionCreator's pattern). capture.Service satisfies it
+// structurally.
+type CaptureController interface {
+	// Begin arms a fresh capture for sessionID linked to auditID.
+	Begin(sessionID string, auditID int64)
+	// End flags sessionID's in-flight capture as finished (capture.Service
+	// defers the actual seal -- see that package's doc for why).
+	End(sessionID string)
+}
+
 // Deps are the out-ports/collaborators Service needs.
 type Deps struct {
 	Hosts      out.HostRepository // reused directly -- already a port, no wrapper needed (cf. session.Deps.HostRepo)
@@ -97,6 +109,7 @@ type Deps struct {
 	Clients    out.MCPClientRepository // callbacks.go's token store (A4a) -- may be nil until A7 wires a real repo; unused until then
 	ShellState ShellStateReader        // GetShellState's cwd/env probe source (state.go, B4) -- main.go adapts shellintegration.Service.Query to this
 	Audit      AuditRecorder           // audit trail sink (doc 18 E3) -- nil-tolerant like Masker/Clients; recordAudit no-ops until wired
+	Capture    CaptureController       // E3-b output-capture tap -- nil-tolerant like Audit; RunCommand/lifecycle.go/command_control.go no-op until wired
 }
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
@@ -114,6 +127,7 @@ type Service struct {
 	clients    out.MCPClientRepository
 	shellState ShellStateReader
 	audit      AuditRecorder
+	capture    CaptureController
 
 	mu          sync.Mutex
 	pending     map[string]chan bool               // requestID -> approval channel (share.Service.pending mirror; connect/control/command/pair/scope requests all share this map, keyed by uuid so there's no collision)
@@ -133,6 +147,7 @@ func New(deps Deps) *Service {
 		clients:     deps.Clients,
 		shellState:  deps.ShellState,
 		audit:       deps.Audit,
+		capture:     deps.Capture,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
 		commands:    make(map[string]*domain.CommandHandle),

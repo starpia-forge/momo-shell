@@ -29,6 +29,7 @@ import (
 	"momo-shell/internal/core/service/aicontrol"
 	"momo-shell/internal/core/service/aicontrol/resolve"
 	"momo-shell/internal/core/service/audit"
+	"momo-shell/internal/core/service/capture"
 	"momo-shell/internal/core/service/custodian"
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
@@ -148,7 +149,14 @@ func main() {
 	})
 
 	resolverSvc := resolve.New(resolve.Deps{Parser: shparse.New()})
-	auditSvc := audit.New(auditRepo)
+	auditSvc := audit.New(auditRepo, secretStore)
+	// E3-b: captures each command's original output in isolation from
+	// scrollbackSvc's shared ring (see capture package doc for why), sealing
+	// it to the command's audit row once RunCommand/lifecycle.go/
+	// command_control.go drive its Begin/End. AddTap must happen before any
+	// session exists (same window as scrollbackSvc.AddTap above).
+	captureSvc := capture.New(auditSvc)
+	sessionSvc.AddTap(captureSvc)
 
 	aiSvc := aicontrol.New(aicontrol.Deps{
 		Hosts:      hostRepo,
@@ -160,6 +168,7 @@ func main() {
 		Clients:    mcpClientRepo,
 		ShellState: shellStateAdapter{si: shellIntegrationSvc}, // B4: GetShellState's cwd/env probe source
 		Audit:      auditSvc,                                  // doc 18 E3: AI-control decision audit trail
+		Capture:    captureSvc,                                // E3-b: original-output capture tap
 	})
 	shellIntegrationSvc.AddObserver(aiSvc) // D1: drive CommandHandle from OSC133 events
 
@@ -239,6 +248,9 @@ func main() {
 					select {
 					case <-sweepTicker.C:
 						aiSvc.SweepExpired(time.Now())
+						if err := auditSvc.PurgeOutputsBefore(time.Now()); err != nil {
+							log.Printf("audit: purge expired outputs: %v", err)
+						}
 					case <-sweepDone:
 						return
 					}

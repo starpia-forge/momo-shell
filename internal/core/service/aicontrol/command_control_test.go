@@ -157,3 +157,49 @@ func TestBackgroundCommand_NoActiveCommandRejected(t *testing.T) {
 		t.Error("expected no write without an in-flight command")
 	}
 }
+
+// newTestServiceForControlWithCapture is newTestService plus a wired
+// fakeCapture, for tests asserting E3-b's Begin/End wiring at
+// CancelCommand/BackgroundCommand's sites.
+func newTestServiceForControlWithCapture() (*Service, *fakeSessionCreator, *fakeCapture) {
+	sessions := &fakeSessionCreator{}
+	capture := &fakeCapture{}
+	svc := New(Deps{Hosts: newFakeHostRepo(), Sessions: sessions, Publisher: &recordingPublisher{}, Capture: capture})
+	return svc, sessions, capture
+}
+
+// TestBackgroundCommand_EndsCapture confirms BackgroundCommand flags the
+// E3-b capture as finished -- unlike CancelCommand, nothing else drives a
+// backgrounded command to a terminal state (OnCommandEnd never fires for
+// it), so this is the only signal capture gets.
+func TestBackgroundCommand_EndsCapture(t *testing.T) {
+	svc, _, capture := newTestServiceForControlWithCapture()
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+	svc.commands["sess-1"] = domain.NewCommandHandle("sess-1", "sleep 100")
+
+	if _, err := svc.BackgroundCommand("client-1", "sess-1"); err != nil {
+		t.Fatalf("BackgroundCommand() error = %v", err)
+	}
+
+	if ends := capture.allEnds(); len(ends) != 1 || ends[0] != "sess-1" {
+		t.Errorf("capture.End calls = %+v, want [\"sess-1\"]", ends)
+	}
+}
+
+// TestCancelCommand_DoesNotEndCapture confirms CancelCommand itself leaves
+// the capture alone -- it relies on the real OnCommandEnd (driven by the
+// shell-integration Observer once the interrupt lands) to end it, mirroring
+// how CancelCommand doesn't touch the CommandHandle FSM directly either.
+func TestCancelCommand_DoesNotEndCapture(t *testing.T) {
+	svc, _, capture := newTestServiceForControlWithCapture()
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+	svc.commands["sess-1"] = domain.NewCommandHandle("sess-1", "sleep 100")
+
+	if _, err := svc.CancelCommand("client-1", "sess-1"); err != nil {
+		t.Fatalf("CancelCommand() error = %v", err)
+	}
+
+	if ends := capture.allEnds(); len(ends) != 0 {
+		t.Errorf("capture.End calls = %d, want 0 (CancelCommand relies on the real OnCommandEnd)", len(ends))
+	}
+}

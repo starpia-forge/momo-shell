@@ -166,3 +166,75 @@ func TestMigrate_V4ToV5AddsMCPAudit(t *testing.T) {
 		t.Fatalf("table mcp_audit not queryable after migration: %v", err)
 	}
 }
+
+// TestMigrate_V5ToV6AddsOutputRef simulates an existing v5 database
+// (schema_version=5, mcp_audit without output_ref) being opened by the
+// current code. Unlike the other cases, migrateV6's ALTER TABLE ADD COLUMN
+// isn't reversible with a DROP TABLE -- dropping and recreating would lose
+// the existing decision rows the additive column is meant to preserve -- so
+// this rebuilds the v5-shaped table (migrateV5's CREATE TABLE, minus
+// output_ref) with a sample row, then asserts the v6 migration adds the
+// column without disturbing that row.
+func TestMigrate_V5ToV6AddsOutputRef(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.db")
+
+	db, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if _, err := db.Exec("PRAGMA user_version = 5"); err != nil {
+		t.Fatalf("reset schema version: %v", err)
+	}
+	if _, err := db.Exec("DROP TABLE IF EXISTS mcp_audit"); err != nil {
+		t.Fatalf("drop mcp_audit: %v", err)
+	}
+	if _, err := db.Exec(`CREATE TABLE mcp_audit (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		ts INTEGER NOT NULL,
+		client_id TEXT NOT NULL,
+		session_id TEXT NOT NULL,
+		kind TEXT NOT NULL,
+		target TEXT NOT NULL DEFAULT '',
+		original_cmd TEXT NOT NULL DEFAULT '',
+		guarded_cmd TEXT NOT NULL DEFAULT '',
+		resolve_json TEXT NOT NULL DEFAULT '',
+		approver TEXT NOT NULL DEFAULT '',
+		decision TEXT NOT NULL DEFAULT ''
+	)`); err != nil {
+		t.Fatalf("create v5-shaped mcp_audit: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO mcp_audit (ts, client_id, session_id, kind, decision) VALUES (1000, 'client-1', 'session-1', 'command', 'auto')`); err != nil {
+		t.Fatalf("seed v5 row: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() (reopen) error = %v", err)
+	}
+	defer reopened.Close()
+
+	var version int
+	if err := reopened.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("read schema version: %v", err)
+	}
+	if version != schemaVersion {
+		t.Fatalf("schema version = %d, want %d", version, schemaVersion)
+	}
+
+	var (
+		clientID  string
+		outputRef []byte
+	)
+	if err := reopened.QueryRow("SELECT client_id, output_ref FROM mcp_audit WHERE session_id = 'session-1'").Scan(&clientID, &outputRef); err != nil {
+		t.Fatalf("query pre-existing row after migration: %v", err)
+	}
+	if clientID != "client-1" {
+		t.Fatalf("client_id = %q, want %q (pre-existing row must survive the additive migration)", clientID, "client-1")
+	}
+	if outputRef != nil {
+		t.Fatalf("output_ref = %v, want nil for a row that predates capture", outputRef)
+	}
+}

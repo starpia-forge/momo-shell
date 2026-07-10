@@ -100,8 +100,9 @@ func (s *Service) RunCommand(clientID, sessionID, command string) (domain.Comman
 	// an audit append would otherwise leave an executed command with no
 	// audit row -- exactly the failure this trail exists to prevent. The
 	// audit bar is the decision (command/resolve/approver/timestamp), not
-	// the execution outcome.
-	s.recordCommandAudit(clientID, sessionID, command, verdict, approver, decision)
+	// the execution outcome. auditID (0 if unrecorded, e.g. Audit is nil)
+	// links the E3-b output capture armed below to this exact row.
+	auditID := s.recordCommandAudit(clientID, sessionID, command, verdict, approver, decision)
 
 	if err := s.sessions.Write(sessionID, []byte(toRun+lineTerminator)); err != nil {
 		return domain.CommandHandle{}, err
@@ -109,12 +110,17 @@ func (s *Service) RunCommand(clientID, sessionID, command string) (domain.Comman
 
 	// Injection succeeded: bump delegation activity and arm the execution
 	// lifecycle (D1) -- lifecycle.go's Observer callbacks drive it onward.
+	// Also arm E3-b's capture tap here, at the same point, linked to
+	// auditID; lifecycle.go's OnCommandEnd (or BackgroundCommand) seals it.
 	h := domain.NewCommandHandle(sessionID, toRun)
 	s.mu.Lock()
 	if d, ok := s.delegations[sessionID]; ok {
 		d.LastActAt = time.Now()
 	}
 	s.commands[sessionID] = h // a new command replaces any prior handle for this session
+	if s.capture != nil && auditID > 0 {
+		s.capture.Begin(sessionID, auditID)
+	}
 	snapshot := *h
 	s.mu.Unlock()
 
