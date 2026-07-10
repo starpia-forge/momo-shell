@@ -96,6 +96,7 @@ type Deps struct {
 	Masker     OutputMasker            // ReadScrollback's secret-redaction layer (mask.Service satisfies it structurally)
 	Clients    out.MCPClientRepository // callbacks.go's token store (A4a) -- may be nil until A7 wires a real repo; unused until then
 	ShellState ShellStateReader        // GetShellState's cwd/env probe source (state.go, B4) -- main.go adapts shellintegration.Service.Query to this
+	Audit      AuditRecorder           // audit trail sink (doc 18 E3) -- nil-tolerant like Masker/Clients; recordAudit no-ops until wired
 }
 
 // Service implements the AI-control connect flow (in.AIControlUseCase's
@@ -112,6 +113,7 @@ type Service struct {
 	masker     OutputMasker
 	clients    out.MCPClientRepository
 	shellState ShellStateReader
+	audit      AuditRecorder
 
 	mu          sync.Mutex
 	pending     map[string]chan bool               // requestID -> approval channel (share.Service.pending mirror; connect/control/command/pair/scope requests all share this map, keyed by uuid so there's no collision)
@@ -130,6 +132,7 @@ func New(deps Deps) *Service {
 		masker:      deps.Masker,
 		clients:     deps.Clients,
 		shellState:  deps.ShellState,
+		audit:       deps.Audit,
 		pending:     make(map[string]chan bool),
 		delegations: make(map[string]*domain.Delegation),
 		commands:    make(map[string]*domain.CommandHandle),
@@ -158,9 +161,11 @@ func (s *Service) ConnectHost(clientID, hostName string) (domain.SessionView, er
 	if !autoApprove {
 		approved, err := s.awaitConnectApproval(clientID, hostName)
 		if err != nil {
+			s.recordConnectAudit(clientID, "", hostName, "custodian", "timeout")
 			return domain.SessionView{}, err
 		}
 		if !approved {
+			s.recordConnectAudit(clientID, "", hostName, "custodian", "rejected")
 			return domain.SessionView{}, ErrConnectDenied
 		}
 	}
@@ -182,6 +187,11 @@ func (s *Service) ConnectHost(clientID, hostName string) (domain.SessionView, er
 	s.mu.Unlock()
 
 	s.publishDelegation(info.ID, clientID, "delegated", "granted", deleg.AICreated)
+	if autoApprove {
+		s.recordConnectAudit(clientID, info.ID, hostName, "", "auto")
+	} else {
+		s.recordConnectAudit(clientID, info.ID, hostName, "custodian", "granted")
+	}
 
 	// State is the creation-time invariant CreateSSH documents (always
 	// Connecting, dial happens in background), not a live query -- there is

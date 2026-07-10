@@ -73,15 +73,25 @@ func (s *Service) RunCommand(clientID, sessionID, command string) (domain.Comman
 		toRun = verdict.GuardedCmd
 	}
 
+	decision, approver := "auto", ""
 	if !verdict.AutoRunnable() {
 		approved, err := s.awaitCommandApproval(clientID, sessionID, command, verdict)
 		if err != nil {
+			s.recordCommandAudit(clientID, sessionID, command, verdict, "custodian", "timeout")
 			return domain.CommandHandle{}, err
 		}
 		if !approved {
+			s.recordCommandAudit(clientID, sessionID, command, verdict, "custodian", "rejected")
 			return domain.CommandHandle{}, ErrCommandDenied
 		}
+		decision, approver = "approved", "custodian"
 	}
+	// Recorded at the decision, not after Write: a crash between Write and
+	// an audit append would otherwise leave an executed command with no
+	// audit row -- exactly the failure this trail exists to prevent. The
+	// audit bar is the decision (command/resolve/approver/timestamp), not
+	// the execution outcome.
+	s.recordCommandAudit(clientID, sessionID, command, verdict, approver, decision)
 
 	if err := s.sessions.Write(sessionID, []byte(toRun+lineTerminator)); err != nil {
 		return domain.CommandHandle{}, err

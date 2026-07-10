@@ -22,6 +22,24 @@ func newTestServiceWithResolver(verdict resolve.Verdict) (*Service, *recordingPu
 	return svc, pub, sessions
 }
 
+// newTestServiceWithResolverAndAudit is newTestServiceWithResolver plus a
+// wired fakeAuditRecorder, for tests asserting E3's emission points. Kept
+// separate (rather than changing newTestServiceWithResolver's signature) so
+// every other RunCommand test continues to exercise the nil-audit no-op
+// path unmodified.
+func newTestServiceWithResolverAndAudit(verdict resolve.Verdict) (*Service, *fakeSessionCreator, *fakeAuditRecorder) {
+	sessions := &fakeSessionCreator{}
+	audit := &fakeAuditRecorder{}
+	svc := New(Deps{
+		Hosts:     newFakeHostRepo(),
+		Sessions:  sessions,
+		Publisher: &recordingPublisher{},
+		Resolver:  &fakeResolver{verdict: verdict},
+		Audit:     audit,
+	})
+	return svc, sessions, audit
+}
+
 // seedDelegation installs an already-active delegation directly (bypassing
 // RequestControl's approval flow -- RunCommand only needs the map entry to
 // already exist). lastActAt lets a test assert RunCommand bumps it forward.
@@ -212,6 +230,128 @@ func TestRunCommand_SessionGoneIsRejected(t *testing.T) {
 
 	if !errors.Is(err, ErrSessionNotFound) {
 		t.Fatalf("RunCommand() error = %v, want ErrSessionNotFound", err)
+	}
+}
+
+func TestRunCommand_RecordsAuditOnAutoRun(t *testing.T) {
+	svc, sessions, audit := newTestServiceWithResolverAndAudit(resolve.Verdict{Risk: resolve.RiskLow})
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	if _, err := svc.RunCommand("client-1", "sess-1", "echo hi"); err != nil {
+		t.Fatalf("RunCommand() error = %v", err)
+	}
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	e := events[0]
+	if e.Kind != domain.AuditKindCommand || e.Decision != "auto" || e.Approver != "" || e.OriginalCmd != "echo hi" || e.SessionID != "sess-1" {
+		t.Errorf("audit event = %+v, want kind=command decision=auto approver=\"\"", e)
+	}
+}
+
+func TestRunCommand_RecordsAuditOnApproved(t *testing.T) {
+	verdict := resolve.Verdict{Risk: resolve.RiskMedium, GuardedCmd: "guarded"}
+	svc, sessions, audit := newTestServiceWithResolverAndAudit(verdict)
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RunCommand("client-1", "sess-1", "rm -rf $X")
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	var requestID string
+	for time.Now().Before(deadline) {
+		svc.mu.Lock()
+		for id := range svc.pending {
+			requestID = id
+		}
+		svc.mu.Unlock()
+		if requestID != "" {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if requestID == "" {
+		t.Fatal("timed out waiting for a pending command approval")
+	}
+	if err := svc.RespondCommandApproval(requestID, true); err != nil {
+		t.Fatalf("RespondCommandApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	e := events[0]
+	if e.Decision != "approved" || e.Approver != "custodian" || e.GuardedCmd != "guarded" {
+		t.Errorf("audit event = %+v, want decision=approved approver=custodian guardedCmd=guarded", e)
+	}
+}
+
+func TestRunCommand_RecordsAuditOnDenied(t *testing.T) {
+	svc, sessions, audit := newTestServiceWithResolverAndAudit(resolve.Verdict{Risk: resolve.RiskHigh})
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RunCommand("client-1", "sess-1", "rm -rf /")
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	var requestID string
+	for time.Now().Before(deadline) {
+		svc.mu.Lock()
+		for id := range svc.pending {
+			requestID = id
+		}
+		svc.mu.Unlock()
+		if requestID != "" {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if requestID == "" {
+		t.Fatal("timed out waiting for a pending command approval")
+	}
+	if err := svc.RespondCommandApproval(requestID, false); err != nil {
+		t.Fatalf("RespondCommandApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	if e := events[0]; e.Decision != "rejected" || e.Approver != "custodian" {
+		t.Errorf("audit event = %+v, want decision=rejected approver=custodian", e)
+	}
+}
+
+func TestRunCommand_RecordsAuditOnApprovalTimeout(t *testing.T) {
+	withShrunkCommandApprovalTimeout(t, 20*time.Millisecond)
+	svc, sessions, audit := newTestServiceWithResolverAndAudit(resolve.Verdict{Uncertain: true})
+	sessions.sessionShellFunc = existingSession("sess-1")
+	seedDelegation(svc, "sess-1", "client-1", time.Now())
+
+	if _, err := svc.RunCommand("client-1", "sess-1", "$(some_func)"); !errors.Is(err, ErrCommandApprovalTimeout) {
+		t.Fatalf("RunCommand() error = %v, want ErrCommandApprovalTimeout", err)
+	}
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	if e := events[0]; e.Decision != "timeout" || e.Approver != "custodian" {
+		t.Errorf("audit event = %+v, want decision=timeout approver=custodian", e)
 	}
 }
 

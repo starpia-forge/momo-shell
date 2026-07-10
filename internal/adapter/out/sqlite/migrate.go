@@ -7,7 +7,7 @@ import (
 
 // schemaVersion tracks applied migrations via PRAGMA user_version so Open
 // is idempotent across app restarts.
-const schemaVersion = 4
+const schemaVersion = 5
 
 func migrate(db *sql.DB) error {
 	var version int
@@ -32,6 +32,11 @@ func migrate(db *sql.DB) error {
 	}
 	if version < 4 {
 		if err := migrateV4(db); err != nil {
+			return err
+		}
+	}
+	if version < 5 {
+		if err := migrateV5(db); err != nil {
 			return err
 		}
 	}
@@ -167,6 +172,40 @@ func migrateV4(db *sql.DB) error {
 	for _, stmt := range stmts {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("sqlite: migrate v4: %w", err)
+		}
+	}
+	return nil
+}
+
+// migrateV5 adds mcp_audit, the AI-control decision audit trail (doc 20 E3):
+// every connect/command/control decision aicontrol makes, with its resolve
+// verdict, approver, and timestamp. id is the replay order (US-5) rather
+// than ts, since ts has only second granularity and a connect immediately
+// followed by a command can otherwise tie. output_ref (doc 17 §10's
+// encrypted, retention-bounded original-output capture) is deliberately
+// absent -- it is a separate sub-system (E3-b) that lands as an additive
+// column in a later migration.
+func migrateV5(db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS mcp_audit (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts INTEGER NOT NULL,
+			client_id TEXT NOT NULL,
+			session_id TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			target TEXT NOT NULL DEFAULT '',
+			original_cmd TEXT NOT NULL DEFAULT '',
+			guarded_cmd TEXT NOT NULL DEFAULT '',
+			resolve_json TEXT NOT NULL DEFAULT '',
+			approver TEXT NOT NULL DEFAULT '',
+			decision TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_session ON mcp_audit(session_id, id)`,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("sqlite: migrate v5: %w", err)
 		}
 	}
 	return nil

@@ -326,3 +326,25 @@ func (p *recordingPublisher) all() []recordedEvent {
 	copy(out, p.events)
 	return out
 }
+
+// fakeAuditRecorder is a hand-rolled AuditRecorder recording every Record
+// call (recordingPublisher's mirror), for asserting E3's emission points.
+type fakeAuditRecorder struct {
+	mu     sync.Mutex
+	events []domain.AuditEvent
+}
+
+func (r *fakeAuditRecorder) Record(e domain.AuditEvent) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, e)
+	return nil
+}
+
+func (r *fakeAuditRecorder) all() []domain.AuditEvent {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]domain.AuditEvent, len(r.events))
+	copy(out, r.events)
+	return out
+}

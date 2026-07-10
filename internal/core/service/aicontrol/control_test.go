@@ -31,6 +31,16 @@ func waitForControlApprovalRequest(t *testing.T, pub *recordingPublisher) string
 	return ""
 }
 
+// newTestServiceForControlWithAudit is newTestService plus a wired
+// fakeAuditRecorder, for tests asserting E3's control-flow emission points.
+func newTestServiceForControlWithAudit() (*Service, *recordingPublisher, *fakeSessionCreator, *fakeAuditRecorder) {
+	pub := &recordingPublisher{}
+	sessions := &fakeSessionCreator{}
+	audit := &fakeAuditRecorder{}
+	svc := New(Deps{Hosts: newFakeHostRepo(), Sessions: sessions, Publisher: pub, Audit: audit})
+	return svc, pub, sessions, audit
+}
+
 func existingSession(sessionID string) func(id string) (string, domain.SessionKind, bool) {
 	return func(id string) (string, domain.SessionKind, bool) {
 		if id == sessionID {
@@ -235,6 +245,104 @@ func TestReleaseControl_NotDelegatedIsRejected(t *testing.T) {
 
 	if err := svc.ReleaseControl("client-1", "sess-1"); !errors.Is(err, ErrNotDelegated) {
 		t.Fatalf("ReleaseControl() error = %v, want ErrNotDelegated", err)
+	}
+}
+
+func TestRequestControl_RecordsAuditOnGrant(t *testing.T) {
+	svc, pub, sessions, audit := newTestServiceForControlWithAudit()
+	sessions.sessionShellFunc = existingSession("sess-1")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RequestControl("client-1", "sess-1", domain.ControlScope{})
+	}()
+	requestID := waitForControlApprovalRequest(t, pub)
+	if err := svc.RespondControlApproval(requestID, true); err != nil {
+		t.Fatalf("RespondControlApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	e := events[0]
+	if e.Kind != domain.AuditKindControl || e.Decision != "granted" || e.Approver != "custodian" || e.SessionID != "sess-1" {
+		t.Errorf("audit event = %+v, want kind=control decision=granted approver=custodian sessionID=sess-1", e)
+	}
+}
+
+func TestRequestControl_RecordsAuditOnDenied(t *testing.T) {
+	svc, pub, sessions, audit := newTestServiceForControlWithAudit()
+	sessions.sessionShellFunc = existingSession("sess-1")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RequestControl("client-1", "sess-1", domain.ControlScope{})
+	}()
+	requestID := waitForControlApprovalRequest(t, pub)
+	if err := svc.RespondControlApproval(requestID, false); err != nil {
+		t.Fatalf("RespondControlApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	if e := events[0]; e.Decision != "rejected" || e.Approver != "custodian" {
+		t.Errorf("audit event = %+v, want decision=rejected approver=custodian", e)
+	}
+}
+
+func TestRequestControl_RecordsAuditOnTimeout(t *testing.T) {
+	withShrunkControlApprovalTimeout(t, 20*time.Millisecond)
+	svc, _, sessions, audit := newTestServiceForControlWithAudit()
+	sessions.sessionShellFunc = existingSession("sess-1")
+
+	if _, err := svc.RequestControl("client-1", "sess-1", domain.ControlScope{}); !errors.Is(err, ErrControlApprovalTimeout) {
+		t.Fatalf("RequestControl() error = %v, want ErrControlApprovalTimeout", err)
+	}
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	if e := events[0]; e.Decision != "timeout" || e.Approver != "custodian" {
+		t.Errorf("audit event = %+v, want decision=timeout approver=custodian", e)
+	}
+}
+
+func TestReleaseControl_RecordsAudit(t *testing.T) {
+	svc, pub, sessions, audit := newTestServiceForControlWithAudit()
+	sessions.sessionShellFunc = existingSession("sess-1")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RequestControl("client-1", "sess-1", domain.ControlScope{})
+	}()
+	requestID := waitForControlApprovalRequest(t, pub)
+	if err := svc.RespondControlApproval(requestID, true); err != nil {
+		t.Fatalf("RespondControlApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	if err := svc.ReleaseControl("client-1", "sess-1"); err != nil {
+		t.Fatalf("ReleaseControl() error = %v", err)
+	}
+
+	events := audit.all()
+	if len(events) != 2 { // granted, then released
+		t.Fatalf("audit events = %d, want 2", len(events))
+	}
+	if e := events[1]; e.Decision != "released" || e.Approver != "" {
+		t.Errorf("audit event = %+v, want decision=released approver=\"\"", e)
 	}
 }
 

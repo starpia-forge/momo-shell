@@ -46,6 +46,20 @@ func newTestService(hosts ...domain.Host) (*Service, *recordingPublisher, *fakeS
 	return svc, pub, sessions
 }
 
+// newTestServiceWithAudit is newTestService plus a wired fakeAuditRecorder,
+// for tests asserting E3's ConnectHost emission points.
+func newTestServiceWithAudit(hosts ...domain.Host) (*Service, *recordingPublisher, *fakeAuditRecorder) {
+	pub := &recordingPublisher{}
+	sessions := &fakeSessionCreator{
+		createFunc: func(opts in.SSHOpts) (domain.SessionInfo, error) {
+			return domain.SessionInfo{ID: "sess-1", Kind: domain.KindSSH, HostID: opts.HostID}, nil
+		},
+	}
+	audit := &fakeAuditRecorder{}
+	svc := New(Deps{Hosts: newFakeHostRepo(hosts...), Sessions: sessions, Publisher: pub, Audit: audit})
+	return svc, pub, audit
+}
+
 func TestConnectHost_ApproveOpensSessionWithDelegation(t *testing.T) {
 	host := domain.Host{ID: "host-1", Name: "web-1"}
 	svc, pub, _ := newTestService(host)
@@ -186,5 +200,74 @@ func TestConnectHost_CreateSSHFailurePropagates(t *testing.T) {
 
 	if !errors.Is(connectErr, wantErr) {
 		t.Fatalf("ConnectHost() error = %v, want %v", connectErr, wantErr)
+	}
+}
+
+func TestConnectHost_RecordsAuditOnGrant(t *testing.T) {
+	host := domain.Host{ID: "host-1", Name: "web-1"}
+	svc, pub, audit := newTestServiceWithAudit(host)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.ConnectHost("client-1", "web-1")
+	}()
+	requestID := waitForConnectApprovalRequest(t, pub)
+	if err := svc.RespondConnectApproval(requestID, true); err != nil {
+		t.Fatalf("RespondConnectApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	e := events[0]
+	if e.Kind != domain.AuditKindConnect || e.Decision != "granted" || e.Approver != "custodian" || e.Target != "web-1" || e.SessionID != "sess-1" {
+		t.Errorf("audit event = %+v, want kind=connect decision=granted approver=custodian target=web-1 sessionID=sess-1", e)
+	}
+}
+
+func TestConnectHost_RecordsAuditOnDenied(t *testing.T) {
+	host := domain.Host{ID: "host-1", Name: "web-1"}
+	svc, pub, audit := newTestServiceWithAudit(host)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.ConnectHost("client-1", "web-1")
+	}()
+	requestID := waitForConnectApprovalRequest(t, pub)
+	if err := svc.RespondConnectApproval(requestID, false); err != nil {
+		t.Fatalf("RespondConnectApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	if e := events[0]; e.Decision != "rejected" || e.Approver != "custodian" || e.SessionID != "" || e.Target != "web-1" {
+		t.Errorf("audit event = %+v, want decision=rejected approver=custodian sessionID=\"\" target=web-1", e)
+	}
+}
+
+func TestConnectHost_RecordsAuditOnTimeout(t *testing.T) {
+	withShrunkApprovalTimeout(t, 20*time.Millisecond)
+	host := domain.Host{ID: "host-1", Name: "web-1"}
+	svc, _, audit := newTestServiceWithAudit(host)
+
+	if _, err := svc.ConnectHost("client-1", "web-1"); !errors.Is(err, ErrConnectApprovalTimeout) {
+		t.Fatalf("ConnectHost() error = %v, want ErrConnectApprovalTimeout", err)
+	}
+
+	events := audit.all()
+	if len(events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(events))
+	}
+	if e := events[0]; e.Decision != "timeout" || e.Approver != "custodian" {
+		t.Errorf("audit event = %+v, want decision=timeout approver=custodian", e)
 	}
 }

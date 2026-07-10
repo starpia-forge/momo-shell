@@ -61,9 +61,11 @@ func (s *Service) RequestControl(clientID, sessionID string, scope domain.Contro
 
 	approved, err := s.awaitControlApproval(clientID, sessionID)
 	if err != nil {
+		s.recordControlAudit(clientID, sessionID, "custodian", "timeout")
 		return domain.Delegation{}, err
 	}
 	if !approved {
+		s.recordControlAudit(clientID, sessionID, "custodian", "rejected")
 		return domain.Delegation{}, ErrControlDenied
 	}
 
@@ -77,6 +79,7 @@ func (s *Service) RequestControl(clientID, sessionID string, scope domain.Contro
 	s.mu.Unlock()
 
 	s.publishDelegation(sessionID, clientID, "delegated", "granted", deleg.AICreated)
+	s.recordControlAudit(clientID, sessionID, "custodian", "granted")
 	return *deleg, nil
 }
 
@@ -103,6 +106,7 @@ func (s *Service) ReleaseControl(clientID, sessionID string) error {
 	s.mu.Unlock()
 
 	s.publishDelegation(sessionID, clientID, "none", "released", deleg.AICreated)
+	s.recordControlAudit(clientID, sessionID, "", "released")
 	return nil
 }
 
@@ -136,6 +140,7 @@ func (s *Service) KillControl(sessionID string) error {
 	s.mu.Unlock()
 
 	s.publishDelegation(sessionID, clientID, "none", "killed", aiCreated)
+	s.recordControlAudit(clientID, sessionID, "custodian", "killed")
 
 	if aiCreated {
 		_ = s.sessions.Close(sessionID)

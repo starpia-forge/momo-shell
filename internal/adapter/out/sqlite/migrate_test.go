@@ -127,3 +127,42 @@ func TestMigrate_V3ToV4AddsMCPClients(t *testing.T) {
 		t.Fatalf("table mcp_clients not queryable after migration: %v", err)
 	}
 }
+
+// TestMigrate_V4ToV5AddsMCPAudit simulates an existing v4 database
+// (schema_version=4, no mcp_audit table) being opened by the current code,
+// asserting the v5 migration runs and the new table is queryable.
+func TestMigrate_V4ToV5AddsMCPAudit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.db")
+
+	db, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if _, err := db.Exec("PRAGMA user_version = 4"); err != nil {
+		t.Fatalf("reset schema version: %v", err)
+	}
+	if _, err := db.Exec("DROP TABLE IF EXISTS mcp_audit"); err != nil {
+		t.Fatalf("drop mcp_audit: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open() (reopen) error = %v", err)
+	}
+	defer reopened.Close()
+
+	var version int
+	if err := reopened.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("read schema version: %v", err)
+	}
+	if version != schemaVersion {
+		t.Fatalf("schema version = %d, want %d", version, schemaVersion)
+	}
+
+	if _, err := reopened.Exec("SELECT * FROM mcp_audit LIMIT 1"); err != nil {
+		t.Fatalf("table mcp_audit not queryable after migration: %v", err)
+	}
+}

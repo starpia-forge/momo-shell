@@ -28,6 +28,7 @@ import (
 	"momo-shell/internal/adapter/out/zmodem"
 	"momo-shell/internal/core/service/aicontrol"
 	"momo-shell/internal/core/service/aicontrol/resolve"
+	"momo-shell/internal/core/service/audit"
 	"momo-shell/internal/core/service/custodian"
 	"momo-shell/internal/core/service/history"
 	"momo-shell/internal/core/service/host"
@@ -94,6 +95,7 @@ func main() {
 	peerRepo := sqlite.NewPeerRepo(db)
 	settingsRepo := sqlite.NewSettingsRepo(db)
 	mcpClientRepo := sqlite.NewMCPClientRepo(db)
+	auditRepo := sqlite.NewAuditRepo(db)
 	sshOpener := sshconn.New(sshconn.WithFileSystemFactory(sftp.NewFromClient))
 	localOpener := pty.NewOpener()
 
@@ -146,6 +148,7 @@ func main() {
 	})
 
 	resolverSvc := resolve.New(resolve.Deps{Parser: shparse.New()})
+	auditSvc := audit.New(auditRepo)
 
 	aiSvc := aicontrol.New(aicontrol.Deps{
 		Hosts:      hostRepo,
@@ -156,6 +159,7 @@ func main() {
 		Masker:     maskSvc,
 		Clients:    mcpClientRepo,
 		ShellState: shellStateAdapter{si: shellIntegrationSvc}, // B4: GetShellState's cwd/env probe source
+		Audit:      auditSvc,                                  // doc 18 E3: AI-control decision audit trail
 	})
 	shellIntegrationSvc.AddObserver(aiSvc) // D1: drive CommandHandle from OSC133 events
 

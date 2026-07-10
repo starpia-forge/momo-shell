@@ -139,6 +139,37 @@ func TestKillControl_CleanupErrorIsNotFatal(t *testing.T) {
 	}
 }
 
+// TestKillControl_RecordsAudit confirms the custodian's emergency stop
+// (US-1) is itself an audited decision.
+func TestKillControl_RecordsAudit(t *testing.T) {
+	svc, pub, sessions, audit := newTestServiceForControlWithAudit()
+	sessions.sessionShellFunc = existingSession("sess-1")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = svc.RequestControl("client-1", "sess-1", domain.ControlScope{})
+	}()
+	requestID := waitForControlApprovalRequest(t, pub)
+	if err := svc.RespondControlApproval(requestID, true); err != nil {
+		t.Fatalf("RespondControlApproval() error = %v", err)
+	}
+	wg.Wait()
+
+	if err := svc.KillControl("sess-1"); err != nil {
+		t.Fatalf("KillControl() error = %v", err)
+	}
+
+	events := audit.all()
+	if len(events) != 2 { // granted, then killed
+		t.Fatalf("audit events = %d, want 2", len(events))
+	}
+	if e := events[1]; e.Decision != "killed" || e.Approver != "custodian" || e.ClientID != "client-1" {
+		t.Errorf("audit event = %+v, want decision=killed approver=custodian clientID=client-1", e)
+	}
+}
+
 // TestKillControl_OriginFlag confirms ConnectHost marks its delegation
 // AICreated and RequestControl does not -- KillControl's routing depends on
 // this flag being set correctly by each grant path.
